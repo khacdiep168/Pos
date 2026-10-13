@@ -1,11 +1,10 @@
-'use client';
-
 import React, { useState } from 'react';
-import { CartItem, RestaurantTable, Order, OrderItem, Promotion } from '@/types';
+import { CartItem, RestaurantTable, Order, OrderItem, Promotion, Customer } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
 import { TableSelector } from './TableSelector';
 import { orderService } from '@/services/orderService';
 import { promotionService } from '@/services/promotionService';
+import { customerService } from '@/services/customerService';
 import {
   ShoppingBag,
   Trash2,
@@ -19,6 +18,11 @@ import {
   Tag,
   Ticket,
   X,
+  UserCheck,
+  UserPlus,
+  Phone,
+  Search,
+  Sparkles,
 } from 'lucide-react';
 
 interface CartSidebarProps {
@@ -46,6 +50,13 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState<Order | null>(null);
+
+  // Customer CRM State
+  const [customerPhoneInput, setCustomerPhoneInput] = useState('');
+  const [attachedCustomer, setAttachedCustomer] = useState<Customer | null>(null);
+  const [customerLookupMsg, setCustomerLookupMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const [showAddCustomerQuick, setShowAddCustomerQuick] = useState(false);
+  const [quickCustomerName, setQuickCustomerName] = useState('');
 
   // Promotion Voucher State
   const [promoCodeInput, setPromoCodeInput] = useState('');
@@ -95,6 +106,42 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     setPromoMessage(null);
   };
 
+  const handleLookupCustomer = (phoneToSearch?: string) => {
+    const p = (phoneToSearch !== undefined ? phoneToSearch : customerPhoneInput).trim();
+    if (!p) {
+      setCustomerLookupMsg(null);
+      return;
+    }
+    const found = customerService.getCustomerByPhone(p);
+    if (found) {
+      setAttachedCustomer(found);
+      setCustomerLookupMsg({ text: `Đã gắn: ${found.name} (${(found.membership_tier || 'bronze').toUpperCase()})`, isError: false });
+      setShowAddCustomerQuick(false);
+    } else {
+      setCustomerLookupMsg({ text: 'Chưa có thông tin. Có thể tạo mới!', isError: true });
+      setShowAddCustomerQuick(true);
+    }
+  };
+
+  const handleCreateQuickCustomer = () => {
+    if (!quickCustomerName.trim() || !customerPhoneInput.trim()) return;
+    const newCust = customerService.addCustomer({
+      name: quickCustomerName.trim(),
+      phone: customerPhoneInput.trim(),
+    });
+    setAttachedCustomer(newCust);
+    setShowAddCustomerQuick(false);
+    setQuickCustomerName('');
+    setCustomerLookupMsg({ text: `Đã tạo & gắn: ${newCust.name}`, isError: false });
+  };
+
+  const handleRemoveCustomer = () => {
+    setAttachedCustomer(null);
+    setCustomerPhoneInput('');
+    setCustomerLookupMsg(null);
+    setShowAddCustomerQuick(false);
+  };
+
   const handleSendOrder = () => {
     if (!selectedTable) {
       alert('Vui lòng chọn số bàn trước khi gửi order!');
@@ -128,6 +175,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
       id: orderId,
       table_id: selectedTable.id,
       table_number: selectedTable.table_number,
+      customer_id: attachedCustomer?.id,
+      customer_name: attachedCustomer?.name,
+      customer_phone: attachedCustomer?.phone,
       order_status: 'pending',
       payment_status: 'unpaid',
       subtotal,
@@ -145,6 +195,10 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     setTimeout(() => {
       setIsSubmitting(false);
       setSuccessOrder(newOrder);
+      setAttachedCustomer(null);
+      setCustomerPhoneInput('');
+      setCustomerLookupMsg(null);
+      setShowAddCustomerQuick(false);
       onClearCart();
     }, 400);
   };
@@ -208,6 +262,128 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             orderService.updateTableStatus(tableId, newStatus);
           }}
         />
+      </div>
+
+      {/* Customer CRM Attachment Bar */}
+      <div className="px-3 sm:px-4 py-2.5 bg-stone-50/50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800">
+        {attachedCustomer ? (
+          <div className="flex items-center justify-between p-2 rounded-xl bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800/60 text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                <UserCheck className="w-3.5 h-3.5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="font-bold text-stone-900 dark:text-white truncate">
+                    {attachedCustomer.name}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
+                      attachedCustomer.membership_tier === 'diamond'
+                        ? 'bg-purple-500 text-white'
+                        : attachedCustomer.membership_tier === 'gold'
+                        ? 'bg-amber-400 text-stone-900'
+                        : attachedCustomer.membership_tier === 'silver'
+                        ? 'bg-slate-300 text-stone-800'
+                        : 'bg-amber-800/30 text-amber-700 dark:text-amber-300'
+                    }`}
+                  >
+                    {attachedCustomer.membership_tier}
+                  </span>
+                </div>
+                <div className="text-[11px] text-stone-400 flex items-center gap-2">
+                  <span>{attachedCustomer.phone}</span>
+                  <span>•</span>
+                  <span className="text-purple-600 dark:text-purple-400 font-bold">
+                    {attachedCustomer.points} điểm
+                  </span>
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleRemoveCustomer}
+              className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-lg text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 transition-colors"
+              title="Gỡ khách hàng"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <div className="relative flex-1">
+                <Phone className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="tel"
+                  placeholder="Số ĐT khách hàng (CRM)..."
+                  value={customerPhoneInput}
+                  onChange={(e) => {
+                    setCustomerPhoneInput(e.target.value);
+                    if (!e.target.value.trim()) {
+                      setCustomerLookupMsg(null);
+                      setShowAddCustomerQuick(false);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleLookupCustomer();
+                    }
+                  }}
+                  className="w-full pl-8 pr-2 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleLookupCustomer()}
+                className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
+              >
+                <Search className="w-3 h-3" />
+                <span>Gắn</span>
+              </button>
+            </div>
+
+            {customerLookupMsg && (
+              <p
+                className={`text-[11px] px-1 font-medium ${
+                  customerLookupMsg.isError
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-emerald-600 dark:text-emerald-400'
+                }`}
+              >
+                {customerLookupMsg.text}
+              </p>
+            )}
+
+            {showAddCustomerQuick && (
+              <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                <input
+                  type="text"
+                  placeholder="Nhập tên khách mới..."
+                  value={quickCustomerName}
+                  onChange={(e) => setQuickCustomerName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateQuickCustomer();
+                    }
+                  }}
+                  className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-hidden"
+                />
+                <button
+                  type="button"
+                  onClick={handleCreateQuickCustomer}
+                  disabled={!quickCustomerName.trim()}
+                  className="px-2 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <UserPlus className="w-3 h-3" />
+                  <span>Lưu & Gắn</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Order Item List (Scrollable) */}

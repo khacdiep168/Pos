@@ -149,49 +149,99 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-stone-100 dark:divide-stone-800">
-            {audits.map((audit) => {
-              const diffItems = audit.items.filter((i) => i.difference !== 0);
-              return (
-                <div
-                  key={audit.id}
-                  onClick={() => setSelectedAuditDetail(audit)}
-                  className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors cursor-pointer"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono font-bold text-amber-600 dark:text-amber-400 uppercase">
-                        #{audit.id}
-                      </span>
-                      <span className="font-bold text-stone-900 dark:text-white">
-                        {audit.performed_by}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
-                        Đã Cân Bằng Kho
-                      </span>
+          <>
+            {/* Desktop Audit List */}
+            <div className="hidden md:block divide-y divide-stone-100 dark:divide-stone-800">
+              {audits.map((audit) => {
+                const diffItems = audit.items.filter((i) => i.difference !== 0);
+                return (
+                  <div
+                    key={audit.id}
+                    onClick={() => setSelectedAuditDetail(audit)}
+                    className="p-4 flex items-center justify-between gap-3 text-xs hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors cursor-pointer"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-amber-600 dark:text-amber-400 uppercase">
+                          #{audit.id}
+                        </span>
+                        <span className="font-bold text-stone-900 dark:text-white">
+                          {audit.performed_by}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                          Đã Cân Bằng Kho
+                        </span>
+                      </div>
+
+                      <div className="text-[11px] text-stone-500 flex items-center gap-2">
+                        <span>{diffItems.length} mặt hàng có chênh lệch</span>
+                        {audit.notes && <span>• {audit.notes}</span>}
+                      </div>
                     </div>
 
-                    <div className="text-[11px] text-stone-500 flex items-center gap-2">
-                      <span>{diffItems.length} mặt hàng có chênh lệch</span>
-                      {audit.notes && <span>• {audit.notes}</span>}
+                    <div className="text-right">
+                      <div className="font-mono font-bold text-sm">
+                        <span className={audit.total_difference_value < 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                          {audit.total_difference_value > 0 ? '+' : ''}
+                          {formatCurrencyVND(audit.total_difference_value)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-stone-400">
+                        {formatDateTime(audit.audit_date)}
+                      </div>
                     </div>
                   </div>
+                );
+              })}
+            </div>
 
-                  <div className="text-right">
-                    <div className="font-mono font-bold text-sm">
-                      <span className={audit.total_difference_value < 0 ? 'text-rose-600' : 'text-emerald-600'}>
-                        {audit.total_difference_value > 0 ? '+' : ''}
-                        {formatCurrencyVND(audit.total_difference_value)}
-                      </span>
+            {/* Mobile Audit Card List (md:hidden) */}
+            <div className="md:hidden space-y-2.5 p-3">
+              {audits.map((audit) => {
+                const diffItems = audit.items.filter((i) => i.difference !== 0);
+                return (
+                  <div
+                    key={audit.id}
+                    onClick={() => setSelectedAuditDetail(audit)}
+                    className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-3.5 shadow-xs space-y-2 cursor-pointer active:scale-98 transition-all"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono font-bold text-amber-600 dark:text-amber-400 text-xs">
+                            #{audit.id}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                            Đã cân bằng
+                          </span>
+                        </div>
+                        <h5 className="font-extrabold text-stone-900 dark:text-white text-sm mt-0.5">
+                          {audit.performed_by}
+                        </h5>
+                      </div>
+
+                      <div className="text-right">
+                        <div className="font-mono font-bold text-sm">
+                          <span className={audit.total_difference_value < 0 ? 'text-rose-600' : 'text-emerald-600'}>
+                            {audit.total_difference_value > 0 ? '+' : ''}
+                            {formatCurrencyVND(audit.total_difference_value)}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-stone-400">
+                          {formatDateTime(audit.audit_date)}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-[10px] text-stone-400">
-                      {formatDateTime(audit.audit_date)}
+
+                    <div className="text-[11px] text-stone-500 flex items-center justify-between pt-1 border-t border-stone-100 dark:border-stone-800">
+                      <span>{diffItems.length} mặt hàng lệch</span>
+                      {audit.notes && <span className="truncate max-w-[180px]">{audit.notes}</span>}
                     </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -217,7 +267,8 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
               </button>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-stone-50 dark:bg-stone-800 text-stone-500 font-bold uppercase text-[10px]">
                   <tr>
@@ -254,6 +305,56 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Audited Items List (md:hidden) */}
+            <div className="md:hidden space-y-2 max-h-72 overflow-y-auto">
+              {selectedAuditDetail.items.map((item) => (
+                <div
+                  key={item.raw_material_id}
+                  className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-xl space-y-1.5 text-xs"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-extrabold text-stone-900 dark:text-white">
+                      {item.raw_material_name}
+                    </span>
+                    <span
+                      className={`font-mono font-bold ${
+                        item.difference_value < 0
+                          ? 'text-rose-500'
+                          : item.difference_value > 0
+                          ? 'text-emerald-500'
+                          : 'text-stone-400'
+                      }`}
+                    >
+                      {item.difference_value > 0 ? '+' : ''}
+                      {formatCurrencyVND(item.difference_value)}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 text-[11px] text-stone-500">
+                    <div>
+                      Sổ: <strong className="text-stone-700 dark:text-stone-300 font-mono">{item.system_stock}</strong>
+                    </div>
+                    <div>
+                      Thực tế: <strong className="text-stone-900 dark:text-white font-mono font-bold">{item.actual_stock}</strong>
+                    </div>
+                    <div className="text-right">
+                      Lệch:{' '}
+                      <strong
+                        className={`font-mono ${
+                          item.difference < 0
+                            ? 'text-rose-500'
+                            : item.difference > 0
+                            ? 'text-emerald-500'
+                            : 'text-stone-400'
+                        }`}
+                      >
+                        {item.difference > 0 ? `+${item.difference}` : item.difference}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t border-stone-200 dark:border-stone-800 text-xs font-bold">
@@ -407,8 +508,8 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
                 </div>
               </div>
 
-              {/* Bảng nhập đếm tay */}
-              <div className="border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
+              {/* Bảng nhập đếm tay: Desktop Table & Mobile Cards */}
+              <div className="hidden md:block border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
                 <table className="w-full text-left text-xs">
                   <thead className="bg-stone-50 dark:bg-stone-800 text-stone-500 font-bold uppercase text-[10px] sticky top-0 z-10">
                     <tr>
@@ -488,6 +589,58 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile Manual Count Input Cards (md:hidden) */}
+              <div className="md:hidden space-y-2.5 max-h-72 overflow-y-auto p-1">
+                {filteredAuditMaterials.length === 0 ? (
+                  <div className="p-6 text-center text-stone-400 bg-stone-50 dark:bg-stone-800/40 rounded-xl">
+                    Không có sản phẩm nào phù hợp
+                  </div>
+                ) : (
+                  filteredAuditMaterials.map((m) => {
+                    const actual = actualCounts[m.id] !== undefined ? actualCounts[m.id] : m.current_stock;
+                    const diff = actual - m.current_stock;
+                    const diffVal = diff * m.avg_cost;
+
+                    return (
+                      <div
+                        key={m.id}
+                        className="p-3 bg-white dark:bg-stone-800/80 rounded-2xl border border-stone-200/80 dark:border-stone-700/60 shadow-xs space-y-2 text-xs"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-stone-900 dark:text-white">{m.name}</span>
+                          <span className="text-[11px] text-stone-400">
+                            Sổ: <strong className="text-stone-600 dark:text-stone-300 font-mono">{m.current_stock}</strong> {m.recipe_unit}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-stone-100 dark:border-stone-700/50">
+                          <div className="flex items-center gap-1.5 flex-1">
+                            <span className="text-[11px] text-stone-500 shrink-0 font-medium">Đếm thực tế:</span>
+                            <input
+                              type="number"
+                              min="0"
+                              value={actual}
+                              onChange={(e) => handleCountChange(m.id, parseFloat(e.target.value) || 0)}
+                              className="w-full max-w-[110px] px-2 py-1.5 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg font-mono font-bold text-center text-xs"
+                            />
+                            <span className="text-[11px] text-stone-400 shrink-0">{m.recipe_unit}</span>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <div className={`font-mono font-bold text-xs ${diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-500' : 'text-stone-400'}`}>
+                              {diff > 0 ? `+${diff}` : diff}
+                            </div>
+                            <div className="text-[10px] font-mono text-stone-400">
+                              {diffVal > 0 ? '+' : ''}{formatCurrencyVND(diffVal)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
 
               {/* Summary Box */}

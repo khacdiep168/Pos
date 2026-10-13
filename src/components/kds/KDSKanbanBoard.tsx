@@ -27,6 +27,7 @@ interface KDSKanbanBoardProps {
   onToggleMute: () => void;
   onTestSound: () => void;
   onClearCompleted: () => void;
+  onPrintTicket?: (ticket: KDSTicket) => void;
 }
 
 export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
@@ -39,6 +40,7 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
   onToggleMute,
   onTestSound,
   onClearCompleted,
+  onPrintTicket,
 }) => {
   // Filter tickets by station
   const filteredTickets = tickets.filter((t) => {
@@ -46,14 +48,188 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
     return t.station === selectedStation;
   });
 
+  const [mobileStatus, setMobileStatus] = useState<'pending' | 'cooking' | 'ready'>('pending');
+
   const pendingTickets = filteredTickets.filter((t) => t.status === 'pending');
   const cookingTickets = filteredTickets.filter((t) => t.status === 'cooking');
   const readyTickets = filteredTickets.filter((t) => t.status === 'ready');
 
   return (
     <div className="flex flex-col h-full w-full bg-stone-950 text-stone-100 select-none overflow-hidden">
-      {/* KDS Header Controls */}
-      <header className="px-5 py-3 bg-stone-900 border-b border-stone-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      {/* Mobile Fixed Top Header for KDS (md:hidden) */}
+      <div className="md:hidden bg-stone-900 border-b border-stone-800 p-3 shrink-0 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold">
+              <ChefHat className="w-4 h-4" />
+            </div>
+            <div>
+              <h1 className="text-sm font-extrabold text-white flex items-center gap-1.5">
+                KDS - Bếp & Bar
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onTestSound}
+              className="p-1.5 rounded-lg bg-stone-800 text-stone-300 active:scale-95"
+              title="Thử chuông"
+            >
+              <BellRing className="w-3.5 h-3.5 text-amber-400" />
+            </button>
+            <button
+              onClick={onToggleMute}
+              className={`p-1.5 rounded-lg active:scale-95 ${
+                isMuted ? 'bg-rose-950/60 text-rose-400' : 'bg-stone-800 text-stone-300'
+              }`}
+              title="Chuông"
+            >
+              {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+            </button>
+            {readyTickets.length > 0 && (
+              <button
+                onClick={onClearCompleted}
+                className="p-1.5 rounded-lg bg-stone-800 text-stone-400 hover:text-rose-400"
+                title="Dọn xong"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Mobile Station Filter Tabs */}
+        <div className="grid grid-cols-3 gap-1 p-1 bg-stone-950 rounded-xl border border-stone-800 text-center">
+          <button
+            onClick={() => onStationChange('all')}
+            className={`py-1 rounded-lg text-xs font-bold transition-all ${
+              selectedStation === 'all' ? 'bg-stone-800 text-white shadow-xs' : 'text-stone-400'
+            }`}
+          >
+            Tất cả ({tickets.length})
+          </button>
+          <button
+            onClick={() => onStationChange('kitchen')}
+            className={`py-1 rounded-lg text-xs font-bold transition-all ${
+              selectedStation === 'kitchen' ? 'bg-orange-500 text-white shadow-xs' : 'text-stone-400'
+            }`}
+          >
+            Bếp ({tickets.filter((t) => t.station === 'kitchen').length})
+          </button>
+          <button
+            onClick={() => onStationChange('bar')}
+            className={`py-1 rounded-lg text-xs font-bold transition-all ${
+              selectedStation === 'bar' ? 'bg-cyan-600 text-white shadow-xs' : 'text-stone-400'
+            }`}
+          >
+            Bar ({tickets.filter((t) => t.station === 'bar').length})
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Segmented Control Sticky Bar: [Chờ xử lý (X)] | [Đang làm (Y)] | [Xong (Z)] */}
+      <div className="md:hidden grid grid-cols-3 gap-1.5 p-2 bg-stone-900 border-b border-stone-800 shrink-0">
+        <button
+          onClick={() => setMobileStatus('pending')}
+          className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-black transition-all ${
+            mobileStatus === 'pending'
+              ? 'bg-amber-500 text-white shadow-md'
+              : 'bg-stone-800/80 text-amber-300/80 hover:bg-stone-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-300 animate-pulse" />
+          <span>Chờ ({pendingTickets.length})</span>
+        </button>
+
+        <button
+          onClick={() => setMobileStatus('cooking')}
+          className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-black transition-all ${
+            mobileStatus === 'cooking'
+              ? 'bg-orange-500 text-white shadow-md'
+              : 'bg-stone-800/80 text-orange-300/80 hover:bg-stone-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
+          <span>Làm ({cookingTickets.length})</span>
+        </button>
+
+        <button
+          onClick={() => setMobileStatus('ready')}
+          className={`flex items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-black transition-all ${
+            mobileStatus === 'ready'
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'bg-stone-800/80 text-emerald-300/80 hover:bg-stone-800'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-400" />
+          <span>Xong ({readyTickets.length})</span>
+        </button>
+      </div>
+
+      {/* Mobile Single Column Ticket View (md:hidden) */}
+      <div className="md:hidden flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+        {mobileStatus === 'pending' && (
+          pendingTickets.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center p-6 text-center text-stone-600 bg-stone-900/40 rounded-2xl border border-stone-800">
+              <Inbox className="w-10 h-10 mb-2 opacity-40" />
+              <p className="text-xs font-semibold">Chưa có order chờ xử lý</p>
+            </div>
+          ) : (
+            pendingTickets.map((ticket) => (
+              <KDSTicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onUpdateTicketStatus={onUpdateTicketStatus}
+                onUpdateItemStatus={onUpdateItemStatus}
+                onPrintTicket={onPrintTicket}
+              />
+            ))
+          )
+        )}
+
+        {mobileStatus === 'cooking' && (
+          cookingTickets.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center p-6 text-center text-stone-600 bg-stone-900/40 rounded-2xl border border-stone-800">
+              <ChefHat className="w-10 h-10 mb-2 opacity-40" />
+              <p className="text-xs font-semibold">Không có món đang chế biến</p>
+            </div>
+          ) : (
+            cookingTickets.map((ticket) => (
+              <KDSTicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onUpdateTicketStatus={onUpdateTicketStatus}
+                onUpdateItemStatus={onUpdateItemStatus}
+                onPrintTicket={onPrintTicket}
+              />
+            ))
+          )
+        )}
+
+        {mobileStatus === 'ready' && (
+          readyTickets.length === 0 ? (
+            <div className="h-64 flex flex-col items-center justify-center p-6 text-center text-stone-600 bg-stone-900/40 rounded-2xl border border-stone-800">
+              <CheckCircle2 className="w-10 h-10 mb-2 opacity-40" />
+              <p className="text-xs font-semibold">Chưa có món ra</p>
+            </div>
+          ) : (
+            readyTickets.map((ticket) => (
+              <KDSTicketCard
+                key={ticket.id}
+                ticket={ticket}
+                onUpdateTicketStatus={onUpdateTicketStatus}
+                onUpdateItemStatus={onUpdateItemStatus}
+                onPrintTicket={onPrintTicket}
+              />
+            ))
+          )
+        )}
+      </div>
+
+      {/* Desktop Header Controls (hidden md:flex) */}
+      <header className="hidden md:flex px-5 py-3 bg-stone-900 border-b border-stone-800 flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-bold">
@@ -160,8 +336,8 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
         </div>
       </header>
 
-      {/* 3-Column Kanban Board (Optimized for Horizontal Landscape Desktop/Tablet) */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 p-3 md:p-4 overflow-y-auto md:overflow-hidden min-h-0">
+      {/* 3-Column Kanban Board (Desktop Only: hidden md:grid) */}
+      <div className="hidden md:grid flex-1 grid-cols-3 gap-3 md:gap-4 p-3 md:p-4 overflow-hidden min-h-0">
         {/* Column 1: Chờ xử lý (Pending) */}
         <div className="flex flex-col bg-stone-900/60 rounded-2xl border border-stone-800/80 overflow-hidden min-h-[380px] md:min-h-0">
           <div className="p-3.5 bg-stone-900 border-b border-stone-800 flex items-center justify-between shrink-0">
@@ -192,6 +368,7 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
                   ticket={ticket}
                   onUpdateTicketStatus={onUpdateTicketStatus}
                   onUpdateItemStatus={onUpdateItemStatus}
+                  onPrintTicket={onPrintTicket}
                 />
               ))
             )}
@@ -228,6 +405,7 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
                   ticket={ticket}
                   onUpdateTicketStatus={onUpdateTicketStatus}
                   onUpdateItemStatus={onUpdateItemStatus}
+                  onPrintTicket={onPrintTicket}
                 />
               ))
             )}
@@ -264,6 +442,7 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
                   ticket={ticket}
                   onUpdateTicketStatus={onUpdateTicketStatus}
                   onUpdateItemStatus={onUpdateItemStatus}
+                  onPrintTicket={onPrintTicket}
                 />
               ))
             )}

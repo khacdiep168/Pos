@@ -11,7 +11,9 @@ export type RealtimeEventType =
   | 'TABLE_STATUS_CHANGED'
   | 'PAYMENT_COMPLETED'
   | 'STOCK_ALERT'
-  | 'CALL_WAITER';
+  | 'CALL_WAITER'
+  | 'CUSTOMER_UPDATED'
+  | 'SUPPLIER_DEBT_UPDATED';
 
 class RealtimeEngine {
   private listeners: Map<RealtimeEventType, Set<EventCallback>> = new Map();

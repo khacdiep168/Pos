@@ -3,11 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { KDSView } from '@/components/kds/KDSView';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
 
 export default function KDSPage() {
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-950 font-sans">
+    <RouteGuard requiredModule="kds">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-950 font-sans">
       {/* Top Bar with Navigation Link to FOH */}
       <nav className="h-10 bg-stone-900 border-b border-stone-800 px-4 flex items-center justify-between shrink-0 select-none z-30">
         <div className="flex items-center gap-3">
@@ -43,5 +45,6 @@ export default function KDSPage() {
         <KDSView />
       </div>
     </div>
+  </RouteGuard>
   );
 }

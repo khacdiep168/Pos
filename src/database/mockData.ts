@@ -12,6 +12,9 @@ import {
   Promotion,
   WorkShift,
   StockAuditReport,
+  Order,
+  Customer,
+  SupplierDebtTransaction,
 } from '@/types';
 
 export const initialStoreSettings: StoreSettings = {
@@ -135,9 +138,9 @@ export const initialMenuItems: MenuItem[] = [
 ];
 
 export const initialSuppliers: Supplier[] = [
-  { id: 'sup-1', name: 'Công ty Thực Phẩm MeatWorld (Thịt Bò & Gia Súc)', phone: '0912 345 678', address: 'Bình Tân, TP. HCM', total_debt: 25000000 },
-  { id: 'sup-2', name: 'Tổng kho Nông Sản & Trà Cao Nguyên', phone: '0933 888 999', address: 'Bảo Lộc, Lâm Đồng', total_debt: 8500000 },
-  { id: 'sup-3', name: 'Hải Sản Đại Dương Xanh Phan Thiết', phone: '0909 777 666', address: 'Phan Thiết, Bình Thuận', total_debt: 12000000 },
+  { id: 'sup-1', name: 'Công ty Thực Phẩm MeatWorld (Thịt Bò & Gia Súc)', phone: '0912 345 678', email: 'sales@meatworld.vn', address: 'Bình Tân, TP. HCM', total_debt: 25000000, total_purchase: 95000000 },
+  { id: 'sup-2', name: 'Tổng kho Nông Sản & Trà Cao Nguyên', phone: '0933 888 999', email: 'contact@tra-caonguyen.vn', address: 'Bảo Lộc, Lâm Đồng', total_debt: 8500000, total_purchase: 42000000 },
+  { id: 'sup-3', name: 'Hải Sản Đại Dương Xanh Phan Thiết', phone: '0909 777 666', email: 'haisanphan_thiet@gmail.com', address: 'Phan Thiết, Bình Thuận', total_debt: 12000000, total_purchase: 68000000 },
 ];
 
 export const initialRawMaterials: RawMaterial[] = [
@@ -299,13 +302,6 @@ export const initialPurchaseOrders: PurchaseOrder[] = [
   }
 ];
 
-export const initialUsers: UserAccount[] = [
-  { id: 'usr-admin', full_name: 'Nguyễn Quản Trị', username: 'admin', role: 'admin', is_active: true },
-  { id: 'usr-cashier', full_name: 'Trần Thu Ngân', username: 'cashier', role: 'cashier', is_active: true },
-  { id: 'usr-kitchen', full_name: 'Lê Bếp Trưởng', username: 'chef', role: 'kitchen', is_active: true },
-  { id: 'usr-bar', full_name: 'Phạm Bartender', username: 'bar', role: 'bar', is_active: true },
-  { id: 'usr-waiter', full_name: 'Hoàng Phục Vụ', username: 'waiter', role: 'waiter', is_active: true },
-];
 
 export const initialPromotions: Promotion[] = [
   {
@@ -336,3 +332,575 @@ export const initialPromotions: Promotion[] = [
     is_active: false,
   },
 ];
+
+// Helper functions for direct supplier array mutation in mockData (Requirement 2)
+export const getMockSuppliers = (): Supplier[] => [...initialSuppliers];
+export const addMockSupplier = (newSup: Supplier) => {
+  initialSuppliers.push(newSup);
+};
+export const updateMockSupplier = (id: string, updates: Partial<Supplier>) => {
+  const idx = initialSuppliers.findIndex((s) => s.id === id);
+  if (idx !== -1) {
+    initialSuppliers[idx] = { ...initialSuppliers[idx], ...updates };
+  }
+};
+export const deleteMockSupplier = (id: string) => {
+  const idx = initialSuppliers.findIndex((s) => s.id === id);
+  if (idx !== -1) {
+    initialSuppliers.splice(idx, 1);
+  }
+};
+
+// ==================== CUSTOMERS (CRM) MOCK DATA ====================
+export const initialCustomers: Customer[] = [
+  {
+    id: 'cus-1',
+    name: 'Nguyễn Văn Hùng',
+    phone: '0909123456',
+    email: 'hung.nguyen@gmail.com',
+    membership_tier: 'diamond',
+    total_spent: 12500000,
+    points: 1250,
+    created_at: new Date(Date.now() - 86400000 * 60).toISOString(),
+    notes: 'Khách VIP quen, thích ngồi Tầng 2 cạnh cửa sổ',
+  },
+  {
+    id: 'cus-2',
+    name: 'Trần Thị Thu Mai',
+    phone: '0988654321',
+    email: 'thumai.tran@yahoo.com',
+    membership_tier: 'gold',
+    total_spent: 6800000,
+    points: 680,
+    created_at: new Date(Date.now() - 86400000 * 30).toISOString(),
+    notes: 'Hay đi ăn cuối tuần cùng gia đình',
+  },
+  {
+    id: 'cus-3',
+    name: 'Lê Hoàng Minh',
+    phone: '0918777888',
+    email: 'minh.le@outlook.com',
+    membership_tier: 'silver',
+    total_spent: 3200000,
+    points: 320,
+    created_at: new Date(Date.now() - 86400000 * 15).toISOString(),
+  },
+  {
+    id: 'cus-4',
+    name: 'Phạm Quỳnh Như',
+    phone: '0933222111',
+    membership_tier: 'bronze',
+    total_spent: 850000,
+    points: 85,
+    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+  },
+];
+
+// Helper functions for Customers
+export const getMockCustomers = (): Customer[] => [...initialCustomers];
+export const addMockCustomer = (newCus: Customer) => {
+  initialCustomers.unshift(newCus);
+};
+export const updateMockCustomer = (id: string, updates: Partial<Customer>) => {
+  const idx = initialCustomers.findIndex((c) => c.id === id);
+  if (idx !== -1) {
+    initialCustomers[idx] = { ...initialCustomers[idx], ...updates };
+  }
+};
+export const deleteMockCustomer = (id: string) => {
+  const idx = initialCustomers.findIndex((c) => c.id === id);
+  if (idx !== -1) {
+    initialCustomers.splice(idx, 1);
+  }
+};
+
+// ==================== SUPPLIER DEBT TRANSACTIONS (SỔ CÔNG NỢ) ====================
+export const initialSupplierDebtTransactions: SupplierDebtTransaction[] = [
+  // sup-1 (MeatWorld)
+  {
+    id: 'tx-debt-101',
+    supplier_id: 'sup-1',
+    type: 'purchase',
+    amount: 19000000,
+    balance: 45000000,
+    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+    notes: 'Nhập lô Thịt Bò Wagyu A4 (PO-101)',
+    reference_id: 'po-101',
+  },
+  {
+    id: 'tx-debt-102',
+    supplier_id: 'sup-1',
+    type: 'payment',
+    amount: 20000000,
+    balance: 25000000,
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+    notes: 'Thanh toán chuyển khoản VietQR đợt 1',
+    reference_id: 'pay-201',
+  },
+  // sup-2 (Trà & Nông Sản)
+  {
+    id: 'tx-debt-103',
+    supplier_id: 'sup-2',
+    type: 'purchase',
+    amount: 15500000,
+    balance: 18500000,
+    created_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    notes: 'Nhập trà đen & rau củ quả',
+    reference_id: 'po-099',
+  },
+  {
+    id: 'tx-debt-104',
+    supplier_id: 'sup-2',
+    type: 'payment',
+    amount: 10000000,
+    balance: 8500000,
+    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
+    notes: 'Thanh toán tiền mặt kế toán duyệt',
+    reference_id: 'pay-202',
+  },
+  // sup-3 (Đại Dương Xanh)
+  {
+    id: 'tx-debt-105',
+    supplier_id: 'sup-3',
+    type: 'purchase',
+    amount: 7600000,
+    balance: 17000000,
+    created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
+    notes: 'Nhập lô Tôm sú & Mực tươi (PO-102)',
+    reference_id: 'po-102',
+  },
+  {
+    id: 'tx-debt-106',
+    supplier_id: 'sup-3',
+    type: 'payment',
+    amount: 5000000,
+    balance: 12000000,
+    created_at: new Date(Date.now() - 86400000 * 1).toISOString(),
+    notes: 'Chuyển khoản thanh toán công nợ hải sản',
+    reference_id: 'pay-203',
+  },
+];
+
+export const getMockSupplierDebtTransactions = (): SupplierDebtTransaction[] => [
+  ...initialSupplierDebtTransactions,
+];
+export const addMockSupplierDebtTransaction = (tx: SupplierDebtTransaction) => {
+  initialSupplierDebtTransactions.unshift(tx);
+};
+
+// Rich Mock Orders History for Invoice & Dashboard Analytics
+const now = new Date();
+const todayISO = (hour: number, minute: number = 0) => {
+  const d = new Date(now);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+};
+const daysAgoISO = (days: number, hour: number, minute: number = 0) => {
+  const d = new Date(now.getTime() - days * 86400000);
+  d.setHours(hour, minute, 0, 0);
+  return d.toISOString();
+};
+
+export const initialOrders: Order[] = [
+  {
+    id: 'ORD-20261013-001',
+    table_id: 'tbl-1',
+    table_number: 'Bàn 01',
+    order_status: 'completed',
+    payment_status: 'paid',
+    payment_method: 'transfer_qr',
+    subtotal: 375000,
+    discount_amount: 0,
+    tax_amount: 30000,
+    total_amount: 405000,
+    notes: 'Khách thanh toán quét mã VietQR thành công',
+    created_at: todayISO(11, 45),
+    updated_at: todayISO(12, 30),
+    items: [
+      {
+        id: 'ord-it-1',
+        order_id: 'ORD-20261013-001',
+        menu_item_id: 'item-1',
+        menu_item_name: 'Bò Bít Tết Sốt Tiêu Đen (Wagyu)',
+        quantity: 1,
+        price: 320000,
+        selected_modifiers: [
+          { id: 'mod-steak-2', name: 'Độ chín: Medium (Vừa)', price_adjustment: 0, group_name: 'Độ chín' },
+        ],
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: todayISO(11, 45),
+      },
+      {
+        id: 'ord-it-2',
+        order_id: 'ORD-20261013-001',
+        menu_item_id: 'item-3',
+        menu_item_name: 'Trà Đào Cam Sả Tươi Mát',
+        quantity: 1,
+        price: 55000,
+        selected_modifiers: [
+          { id: 'mod-tea-ice-2', name: '50% Đá', price_adjustment: 0, group_name: 'Mức đá' },
+        ],
+        item_status: 'served',
+        station: 'bar',
+        created_at: todayISO(11, 45),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20261013-002',
+    table_id: 'tbl-2',
+    table_number: 'Bàn 02',
+    order_status: 'completed',
+    payment_status: 'paid',
+    payment_method: 'cash',
+    subtotal: 230000,
+    discount_amount: 0,
+    tax_amount: 18400,
+    total_amount: 248400,
+    notes: 'Tiền mặt trả đủ',
+    created_at: todayISO(12, 15),
+    updated_at: todayISO(13, 0),
+    items: [
+      {
+        id: 'ord-it-3',
+        order_id: 'ORD-20261013-002',
+        menu_item_id: 'item-2',
+        menu_item_name: 'Mì Ý Hải Sản Tươi Sốt Cà Chua',
+        quantity: 1,
+        price: 185000,
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: todayISO(12, 15),
+      },
+      {
+        id: 'ord-it-4',
+        order_id: 'ORD-20261013-002',
+        menu_item_id: 'item-4',
+        menu_item_name: 'Cà Phê Muối Kem Béo Huế',
+        quantity: 1,
+        price: 45000,
+        item_status: 'served',
+        station: 'bar',
+        created_at: todayISO(12, 15),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20261013-003',
+    table_id: 'tbl-3',
+    table_number: 'Bàn 03',
+    order_status: 'cooking',
+    payment_status: 'unpaid',
+    subtotal: 440000,
+    discount_amount: 0,
+    tax_amount: 35200,
+    total_amount: 475200,
+    notes: 'Khách đang dùng bữa',
+    created_at: todayISO(14, 10),
+    updated_at: todayISO(14, 20),
+    items: [
+      {
+        id: 'ord-it-5',
+        order_id: 'ORD-20261013-003',
+        menu_item_id: 'item-1',
+        menu_item_name: 'Bò Bít Tết Sốt Tiêu Đen (Wagyu)',
+        quantity: 1,
+        price: 320000,
+        item_status: 'cooking',
+        station: 'kitchen',
+        created_at: todayISO(14, 10),
+      },
+      {
+        id: 'ord-it-6',
+        order_id: 'ORD-20261013-003',
+        menu_item_id: 'item-5',
+        menu_item_name: 'Salad Hoàng Gia Sốt Caesar & Gà Nướng',
+        quantity: 1,
+        price: 120000,
+        item_status: 'ready',
+        station: 'kitchen',
+        created_at: todayISO(14, 10),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20261013-004',
+    table_id: 'tbl-5',
+    table_number: 'Bàn 05',
+    order_status: 'cancelled',
+    payment_status: 'unpaid',
+    subtotal: 120000,
+    discount_amount: 0,
+    tax_amount: 9600,
+    total_amount: 129600,
+    notes: 'Khách có việc đột xuất xin hủy đơn trước khi ra món',
+    created_at: todayISO(10, 15),
+    updated_at: todayISO(10, 20),
+    items: [
+      {
+        id: 'ord-it-7',
+        order_id: 'ORD-20261013-004',
+        menu_item_id: 'item-5',
+        menu_item_name: 'Salad Hoàng Gia Sốt Caesar & Gà Nướng',
+        quantity: 1,
+        price: 120000,
+        item_status: 'cancelled',
+        station: 'kitchen',
+        created_at: todayISO(10, 15),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20261012-005',
+    table_id: 'tbl-11',
+    table_number: 'Bàn VIP 1',
+    order_status: 'completed',
+    payment_status: 'paid',
+    payment_method: 'card',
+    subtotal: 1365000,
+    discount_amount: 50000,
+    tax_amount: 105200,
+    total_amount: 1420200,
+    notes: 'Áp voucher VIP50K, quẹt thẻ Visa',
+    created_at: daysAgoISO(1, 19, 30),
+    updated_at: daysAgoISO(1, 21, 15),
+    items: [
+      {
+        id: 'ord-it-8',
+        order_id: 'ORD-20261012-005',
+        menu_item_id: 'item-1',
+        menu_item_name: 'Bò Bít Tết Sốt Tiêu Đen (Wagyu)',
+        quantity: 3,
+        price: 320000,
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: daysAgoISO(1, 19, 30),
+      },
+      {
+        id: 'ord-it-9',
+        order_id: 'ORD-20261012-005',
+        menu_item_id: 'item-5',
+        menu_item_name: 'Salad Hoàng Gia Sốt Caesar & Gà Nướng',
+        quantity: 2,
+        price: 120000,
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: daysAgoISO(1, 19, 30),
+      },
+      {
+        id: 'ord-it-10',
+        order_id: 'ORD-20261012-005',
+        menu_item_id: 'item-3',
+        menu_item_name: 'Trà Đào Cam Sả Tươi Mát',
+        quantity: 3,
+        price: 55000,
+        item_status: 'served',
+        station: 'bar',
+        created_at: daysAgoISO(1, 19, 30),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20261011-006',
+    table_id: 'tbl-9',
+    table_number: 'Bàn SV 2',
+    order_status: 'completed',
+    payment_status: 'paid',
+    payment_method: 'transfer_qr',
+    subtotal: 460000,
+    discount_amount: 46000,
+    tax_amount: 33120,
+    total_amount: 447120,
+    notes: 'Khuyến mãi Khai Trương 10% (OPEN10)',
+    created_at: daysAgoISO(2, 18, 0),
+    updated_at: daysAgoISO(2, 19, 30),
+    items: [
+      {
+        id: 'ord-it-11',
+        order_id: 'ORD-20261011-006',
+        menu_item_id: 'item-2',
+        menu_item_name: 'Mì Ý Hải Sản Tươi Sốt Cà Chua',
+        quantity: 2,
+        price: 185000,
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: daysAgoISO(2, 18, 0),
+      },
+      {
+        id: 'ord-it-12',
+        order_id: 'ORD-20261011-006',
+        menu_item_id: 'item-4',
+        menu_item_name: 'Cà Phê Muối Kem Béo Huế',
+        quantity: 2,
+        price: 45000,
+        item_status: 'served',
+        station: 'bar',
+        created_at: daysAgoISO(2, 18, 0),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20261010-007',
+    table_id: 'tbl-4',
+    table_number: 'Bàn 04',
+    order_status: 'cancelled',
+    payment_status: 'unpaid',
+    subtotal: 185000,
+    discount_amount: 0,
+    tax_amount: 14800,
+    total_amount: 199800,
+    notes: 'Order nhầm bàn, phục vụ đã hủy đơn và tạo lại',
+    created_at: daysAgoISO(3, 12, 30),
+    updated_at: daysAgoISO(3, 12, 35),
+    items: [
+      {
+        id: 'ord-it-13',
+        order_id: 'ORD-20261010-007',
+        menu_item_id: 'item-2',
+        menu_item_name: 'Mì Ý Hải Sản Tươi Sốt Cà Chua',
+        quantity: 1,
+        price: 185000,
+        item_status: 'cancelled',
+        station: 'kitchen',
+        created_at: daysAgoISO(3, 12, 30),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20261005-008',
+    table_id: 'tbl-12',
+    table_number: 'Bàn VIP 2',
+    order_status: 'completed',
+    payment_status: 'paid',
+    payment_method: 'card',
+    subtotal: 1540000,
+    discount_amount: 50000,
+    tax_amount: 119200,
+    total_amount: 1609200,
+    notes: 'Tiệc họp gia đình, thẻ Mastercard',
+    created_at: daysAgoISO(8, 20, 0),
+    updated_at: daysAgoISO(8, 22, 15),
+    items: [
+      {
+        id: 'ord-it-14',
+        order_id: 'ORD-20261005-008',
+        menu_item_id: 'item-1',
+        menu_item_name: 'Bò Bít Tết Sốt Tiêu Đen (Wagyu)',
+        quantity: 4,
+        price: 320000,
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: daysAgoISO(8, 20, 0),
+      },
+      {
+        id: 'ord-it-15',
+        order_id: 'ORD-20261005-008',
+        menu_item_id: 'item-6',
+        menu_item_name: 'Bánh Mousse Chanh Leo Phủ Dừa',
+        quantity: 4,
+        price: 65000,
+        item_status: 'served',
+        station: 'bar',
+        created_at: daysAgoISO(8, 20, 0),
+      },
+    ],
+  },
+  {
+    id: 'ORD-20260920-009',
+    table_id: 'tbl-6',
+    table_number: 'Bàn 06',
+    order_status: 'completed',
+    payment_status: 'paid',
+    payment_method: 'cash',
+    subtotal: 610000,
+    discount_amount: 0,
+    tax_amount: 48800,
+    total_amount: 658800,
+    notes: 'Tháng trước - Tiền mặt',
+    created_at: daysAgoISO(23, 19, 0),
+    updated_at: daysAgoISO(23, 20, 10),
+    items: [
+      {
+        id: 'ord-it-16',
+        order_id: 'ORD-20260920-009',
+        menu_item_id: 'item-2',
+        menu_item_name: 'Mì Ý Hải Sản Tươi Sốt Cà Chua',
+        quantity: 2,
+        price: 185000,
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: daysAgoISO(23, 19, 0),
+      },
+      {
+        id: 'ord-it-17',
+        order_id: 'ORD-20260920-009',
+        menu_item_id: 'item-5',
+        menu_item_name: 'Salad Hoàng Gia Sốt Caesar & Gà Nướng',
+        quantity: 2,
+        price: 120000,
+        item_status: 'served',
+        station: 'kitchen',
+        created_at: daysAgoISO(23, 19, 0),
+      },
+    ],
+  },
+];
+
+export const initialUsers: UserAccount[] = [
+  {
+    id: 'usr-admin',
+    full_name: 'Nguyễn Quản Trị',
+    username: 'admin',
+    password: 'password123',
+    role: 'admin',
+    is_active: true,
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80',
+  },
+  {
+    id: 'usr-manager',
+    full_name: 'Lê Quản Lý',
+    username: 'manager',
+    password: 'password123',
+    role: 'manager',
+    is_active: true,
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80',
+  },
+  {
+    id: 'usr-cashier',
+    full_name: 'Trần Thị Mai (Thu Ngân)',
+    username: 'cashier',
+    password: 'password123',
+    role: 'cashier',
+    is_active: true,
+    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80',
+  },
+  {
+    id: 'usr-chef',
+    full_name: 'Lê Văn Hùng (Bếp Trưởng)',
+    username: 'chef',
+    password: 'password123',
+    role: 'kitchen',
+    is_active: true,
+    avatar_url: 'https://images.unsplash.com/photo-1577219491135-ce391730fb2c?w=100&q=80',
+  },
+  {
+    id: 'usr-bar',
+    full_name: 'Phạm Minh Tuấn (Pha Chế Bar)',
+    username: 'bartender',
+    password: 'password123',
+    role: 'bar',
+    is_active: true,
+    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80',
+  },
+  {
+    id: 'usr-waiter',
+    full_name: 'Nguyễn Văn An (Phục Vụ)',
+    username: 'waiter',
+    password: 'password123',
+    role: 'waiter',
+    is_active: true,
+    avatar_url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80',
+  },
+];
+

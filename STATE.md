@@ -5,8 +5,8 @@
 ---
 
 ## 1. Trạng thái hiện tại (Project Status)
-* **Trạng thái tổng thể**: **HOÀN TẤT TOÀN DIỆN PHASE 1** (100% Cả 5 Module Cốt Lõi + Kiểm Thử Liên Thông End-to-End Simulation + Tối Ưu Hóa Responsive Mobile/Tablet + Lược Đồ Database Migration PostgreSQL/Supabase).
-* **Kết quả Build**: `next build` biên dịch thành công 100% (Turbopack, TypeScript strict mode, 0 lint/type errors, 5 static routes sẵn sàng).
+* **Trạng thái tổng thể**: **HOÀN TẤT TOÀN DIỆN PHASE 1, PHASE 1.9 & PHASE 1.10 - NATIVE MOBILE APP REDESIGN** (100% Giao diện Mobile Admin & ERP chuẩn KiotViet App: Bottom Navigation Bar 5 tabs, App Header cố định, Màn hình "Nhiều hơn" Grid App Menu, và Hệ thống Mobile Card List cho Hóa đơn, Khách hàng & Đối tác).
+* **Kết quả Build**: `next build` và `npx tsc --noEmit` biên dịch thành công 100% (Turbopack, TypeScript strict mode, 0 lỗi type/lint/prerender).
 * **Thời gian cập nhật**: 2026-10-13
 
 ---
@@ -229,7 +229,7 @@ POS/
 
 ---
 
-## 8. Full-System Mobile-First & Responsive Overhaul (Phase 1.8)
+## 8. Full-System Mobile-First & Responsive Overhaul (COMPLETED - 13/10/2026)
 1. **Top Module Navigation Bar ([src/app/page.tsx](file:///e:/Vibe%20Coding/POS/src/app/page.tsx))**:
    - Tích hợp cuộn ngang `overflow-x-auto no-scrollbar` cho 5 nút phân hệ (Gọi Món, Bếp & Bar, Thu Ngân, Kho ERP, Quản Trị) kèm thuộc tính `shrink-0`.
    - Ẩn các badge kỹ thuật (`M2 Live`, `M3 Live`,...) và rút gọn nhãn nút trên màn hình điện thoại nhỏ.
@@ -238,7 +238,7 @@ POS/
 2. **Trung Tâm Quản Trị ([AdminView.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AdminView.tsx))**:
    - Chuyển đổi kiến trúc sang `flex flex-col md:flex-row`.
    - Trên Desktop (`md:`): Sidebar 256px hiển thị cố định bên trái như bình thường.
-   - Trên Mobile (`< md`): Tự động ẩn Sidebar cố định và thay thế bằng **Mobile Sub-Navigation Bar** ngang có khả năng cuộn mượt mà với 6 tabs (Tổng Quan, Thực Đơn, Sơ Đồ Bàn, Khuyến Mãi, Nhân Sự, Cài Đặt).
+   - Trên Mobile (`< md`): Tự động ẩn Sidebar cố định và thay thế bằng **Mobile Sub-Navigation Bar** ngang có khả năng cuộn mượt mà.
    - Khung nội dung chính (`main`) chiếm 100% chiều rộng màn hình, giải quyết triệt để lỗi bảng biểu và form cài đặt bị chèn ép co dúm thành dải hẹp.
 
 3. **Phân Hệ ERP Quản Trị Kho ([ERPView.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ERPView.tsx))**:
@@ -252,14 +252,248 @@ POS/
 
 ---
 
-## 9. Các task tiếp theo cần làm (Phase 2 Roadmap)
+## 9. Bổ Sung Tính Năng Quản Trị Cốt Lõi (Phase 1.8 - Invoices, Suppliers & Dynamic Analytics) - COMPLETED (13/10/2026)
+Đã hoàn thành và kiểm thử toàn diện 3 tính năng quản trị cốt lõi giải quyết dứt điểm các lỗ hổng đối soát và quản lý:
+
+1. **Quản Lý Lịch Sử Hóa Đơn & Đối Soát Gian Lận ([InvoiceHistoryTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/InvoiceHistoryTab.tsx), [InvoiceDetailModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/InvoiceDetailModal.tsx))**:
+   - Bổ sung tab **"Lịch Sử Hóa Đơn"** (kèm badge đếm tổng số hóa đơn) tại cả Desktop Sidebar và Mobile Sub-nav của Trung tâm quản trị [AdminView.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AdminView.tsx).
+   - **Thẻ KPI Tổng Quan**: Tổng số hóa đơn lưu trữ, Tổng doanh thu đã thu và Số hóa đơn bị hủy.
+   - **Bộ Lọc Đa Chiều & Tìm Kiếm Nhanh**:
+     - Thanh Search lọc tức thì theo Mã đơn (`#ORD-...`), Tên bàn, Món ăn hoặc Ghi chú.
+     - 3 Tabs trạng thái 1-chạm: *Tất Cả*, *Thành Công* (`completed`/`paid`), và *Hóa Đơn Bị Hủy* (`cancelled` - giám sát đối soát chống gian lận/thất thoát).
+   - **Data Table Toàn Diện**: Hiển thị Mã đơn, Thời gian (chuẩn `dd/MM/yyyy HH:mm`), Bàn phục vụ, Danh sách tóm tắt món, Tổng tiền VNĐ, Badge hình thức thanh toán (Tiền mặt, VietQR, Thẻ POS, Ví điện tử) và Trạng thái hoàn tất/bị hủy.
+   - **Modal Chi Tiết Hóa Đơn ([InvoiceDetailModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/InvoiceDetailModal.tsx))**:
+     - Hiển thị layout chuẩn hóa đơn thanh toán: Thông tin bàn, thời gian tạo & cập nhật.
+     - Bảng chi tiết từng món kèm phân trạm Bếp/Bar, Modifiers (độ chín, đá, đường, topping), ghi chú, số lượng, đơn giá và thành tiền.
+     - Phân tích tài chính chi tiết: Tiền hàng (Subtotal), Giảm giá voucher (Discount), Thuế GTGT 8% (VAT) và Tổng thanh toán thực thu.
+     - Tích hợp nút in hóa đơn (`window.print()`).
+
+2. **Quản Lý Nhà Cung Cấp CRUD trong Phân Hệ ERP ([ProcurementTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ProcurementTab.tsx), [AddSupplierModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/AddSupplierModal.tsx), [EditSupplierModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/EditSupplierModal.tsx))**:
+   - Nâng cấp giao diện tab Nhập hàng & Nhà cung cấp: Hiển thị badge tổng công nợ đối tác toàn hệ thống và ô tìm kiếm nhanh đối tác theo tên, số điện thoại, địa chỉ.
+   - **Form Thêm Mới ([AddSupplierModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/AddSupplierModal.tsx))**: Cho phép đăng ký tên công ty, số điện thoại, email, địa chỉ kho và công nợ ban đầu.
+   - **Form Chỉnh Sửa ([EditSupplierModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/EditSupplierModal.tsx))**: Cập nhật thông tin liên hệ và đối soát, điều chỉnh số dư công nợ sau thanh toán.
+   - **Xóa & Thao Tác Nhanh**: Nút Sửa, Xóa (kèm confirm) và nút "Nhập hàng" 1-chạm tự động gán nhà cung cấp vào form Tạo Phiếu PO.
+   - **Đồng Bộ Dữ Liệu Hai Chiều**: Tích hợp các hàm helper `getMockSuppliers`, `addMockSupplier`, `updateMockSupplier`, `deleteMockSupplier` trong [mockData.ts](file:///e:/Vibe%20Coding/POS/src/database/mockData.ts) và lưu trữ cục bộ qua [inventoryService.ts](file:///e:/Vibe%20Coding/POS/src/services/inventoryService.ts).
+
+3. **Bộ Lọc Thời Gian Động Cho Dashboard & Phân Tích ([DateRangePicker.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/DateRangePicker.tsx), [DashboardTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/DashboardTab.tsx))**:
+   - Xây dựng component `DateRangePicker` với 5 lựa chọn linh hoạt:
+     - **Quick Picks**: *Hôm Nay*, *Tuần Này*, *Tháng Này*, *Năm Nay*.
+     - **Tùy Chỉnh**: Lựa chọn khoảng thời gian cụ thể (Từ ngày - Đến ngày).
+   - **Xử Lý Chuẩn Time Boundary**: Xác định chính xác mốc `00:00:00.000` (Start of Day) và `23:59:59.999` (End of Day) tránh lệch múi giờ hay mất dữ liệu giao dịch cận ngày.
+   - **Re-render Đồng Bộ Toàn Bộ Dashboard Khi Đổi Bộ Lọc**:
+     - **4 Thẻ KPI**: Doanh thu thực tế, Tổng số đơn hàng, Giá trị trung bình đơn (AOV) và Cảnh báo tồn kho tính toán theo đúng khoảng thời gian đã chọn.
+     - **Biểu Đồ Recharts Doanh Thu (Bar Chart)**: Tự động phân chia khung giờ (Hôm nay: theo các mốc 2 tiếng), theo các thứ trong tuần (Tuần này), theo khoảng ngày (Tháng này) hoặc theo 12 tháng (Năm nay).
+     - **Biểu Đồ Recharts Thanh Toán (Donut Chart)**: Thống kê tỷ trọng thanh toán (VietQR, Tiền mặt, Thẻ POS, Ví điện tử) của các đơn hoàn tất trong khoảng thời gian đã chọn.
+     - **Bảng Top 5 Best Sellers**: Tự động xếp hạng 5 món bán chạy nhất và tính tổng doanh thu món trong khoảng thời gian đã lọc.
+     - Hiển thị empty state thân thiện nếu khoảng thời gian chưa phát sinh đơn hàng.
+
+---
+
+## 10. Phase 1.9: Admin Center Expansion (Debt Ledger, CRM Customers & Report Center) [HOÀN TẤT 100%]
+
+Tham khảo chuẩn giao diện KiotViet, toàn bộ phân hệ Quản lý Nhà cung cấp, Sổ Công nợ, Khách hàng CRM và Trung tâm Báo cáo đã được quy hoạch tập trung tại **Trung tâm Quản trị (`/admin`)**:
+
+1. **Quy hoạch lại Thanh Điều Hướng Admin ([AdminView.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AdminView.tsx))**:
+   - Tích hợp 3 module mới trên cả Desktop Sidebar và Mobile Navigation:
+     - **Đối tác (Suppliers)**: Quản lý nhà cung cấp và sổ cái công nợ.
+     - **Khách hàng (Customers)**: Quản lý khách hàng thân thiết, điểm thưởng và hạng thẻ.
+     - **Báo cáo (Reports)**: Báo cáo bán hàng cuối ngày (Z-Report) và Báo cáo giá trị tồn kho.
+   - Thống nhất định tuyến tab, header title động và cơ chế làm mới dữ liệu realtime.
+
+2. **Sổ Công Nợ Nhà Cung Cấp Chuẩn KiotViet ([SupplierTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/SupplierTab.tsx), [SupplierDetailModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/SupplierDetailModal.tsx), [PaySupplierDebtModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/PaySupplierDebtModal.tsx))**:
+   - **Giao diện Master-Detail**:
+     - Danh sách Nhà cung cấp hiển thị: Tên đối tác, Số điện thoại, Email, Địa chỉ, Nợ hiện tại (với badge màu đỏ cảnh báo nợ), Tổng tiền mua hàng lũy kế.
+     - Thẻ thống kê tổng quan: Tổng nợ phải trả toàn hệ thống, Số lượng đối tác đang có nợ, Tổng mua lũy kế.
+     - Bộ lọc tìm kiếm nhanh theo tên/SĐT/địa chỉ và bộ lọc "Tất cả" vs "Đang nợ".
+   - **Master-Detail Panel (Modal chi tiết)**:
+     - **Tab Sổ Công Nợ (Debt Ledger)**: Hiển thị dạng Sổ cái chuẩn kế toán với các cột: Mã phiếu, Thời gian, Loại giao dịch (Nhập hàng làm tăng nợ `+`, Thanh toán làm giảm nợ `-`), Giá trị giao dịch và Nợ cần trả hiện tại (**Running Balance** lũy kế).
+     - **Tab Lịch Sử Nhập Hàng**: Danh sách các Purchase Order đã phát sinh với đối tác.
+     - **Tab Thông Tin**: Chi tiết hồ sơ pháp lý, địa chỉ, số điện thoại, ghi chú.
+   - **Nghiệp Vụ Thanh Toán Công Nợ ([PaySupplierDebtModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/PaySupplierDebtModal.tsx))**:
+     - Cho phép chọn/nhập số tiền trả (hỗ trợ nút chọn nhanh "Trả hết nợ"), tự động tính và hiển thị "Nợ còn lại sau thanh toán".
+     - Khi xác nhận thanh toán: tự động sinh 1 transaction loại `payment` vào sổ cái, trừ trực tiếp `total_debt` của nhà cung cấp và phát sự kiện realtime `SUPPLIER_DEBT_UPDATED`.
+     - Tự động cộng nợ khi lập đơn mua hàng mới (Purchase Order).
+
+3. **Quản Trị Khách Hàng Thân Thiết CRM ([CustomerTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/CustomerTab.tsx), [customerService.ts](file:///e:/Vibe%20Coding/POS/src/services/customerService.ts), [AddEditCustomerModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AddEditCustomerModal.tsx))**:
+   - **Data Table Quản Lý Khách Hàng**:
+     - Cột: Họ tên, Số điện thoại, Email, Hạng thành viên (Đồng, Bạc, Vàng, Kim Cương), Tổng chi tiêu lũy kế, Điểm tích lũy.
+     - Thống kê 4 thẻ VIP: Kim Cương (>= 10tr), Vàng (>= 5tr), Bạc (>= 2tr), Đồng (< 2tr).
+     - Tìm kiếm theo tên/SĐT và bộ lọc theo Hạng thành viên.
+     - Thao tác CRUD (Thêm mới / Sửa thông tin / Xóa khách hàng).
+   - **Tích hợp FOH & Cashier Flow ([CartSidebar.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/CartSidebar.tsx), [CheckoutPanel.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CheckoutPanel.tsx))**:
+     - Cho phép gõ số điện thoại để tìm kiếm và "Gắn khách hàng" trực tiếp vào đơn hàng tại Giỏ hàng hoặc màn hình Thanh toán.
+     - Hỗ trợ form tạo nhanh khách hàng mới ngay khi số điện thoại chưa tồn tại trong hệ thống.
+     - Hiển thị badge hạng thẻ và điểm thưởng của khách hàng đã gắn.
+     - **Tự Động Tích Điểm & Nâng Hạng**: Khi hóa đơn thanh toán hoàn tất (`PAYMENT_COMPLETED`), hệ thống tự động cộng dồn Tổng chi tiêu vào hồ sơ khách hàng, quy đổi điểm thưởng (1 điểm / 10.000 VNĐ) và tự động thăng hạng thành viên.
+     - In thông tin khách hàng trên hóa đơn nhiệt K80 ([ReceiptModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/ReceiptModal.tsx)).
+
+4. **Trung Tâm Báo Cáo Doanh Thu & Kho Hàng ([ReportTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/ReportTab.tsx))**:
+   - **Báo Cáo Bán Hàng (Z-Report)**:
+     - Thống kê tổng doanh thu ròng (Net Sales), Doanh thu gộp (Gross Sales), Tổng tiền giảm giá/Voucher, Tổng thuế VAT thu hộ, Số lượng đơn thành công.
+     - Bóc tách chi tiết theo Phương thức thanh toán (Tiền mặt, Chuyển khoản VietQR, Thẻ POS, Ví điện tử) với tỷ trọng phần trăm.
+     - Báo cáo kết ca (Cashier Shifts) và đối soát doanh thu theo ca làm việc.
+     - Hỗ trợ xuất dữ liệu / In báo cáo Z-Report.
+   - **Báo Cáo Giá Trị Tồn Kho (Inventory Valuation)**:
+     - Tính tổng giá trị vốn lưu kho hiện tại: $\sum (\text{current\_stock} \times \text{avg\_cost})$.
+     - Thống kê số lượng mặt hàng an toàn vs mặt hàng dưới định mức (Low Stock Warning).
+     - Bảng chi tiết toàn bộ nguyên vật liệu kèm tỷ trọng giá trị vốn của từng mặt hàng so với tổng kho.
+
+5. **Mô Hình Dữ Liệu & Mock Data ([types/index.ts](file:///e:/Vibe%20Coding/POS/src/types/index.ts), [mockData.ts](file:///e:/Vibe%20Coding/POS/src/database/mockData.ts))**:
+   - Bổ sung types: `Customer`, `SupplierDebtTransaction`, `Order.customer_id`, `Order.customer_name`, `Order.customer_phone`, `Supplier.total_purchase`.
+   - Bổ sung mảng `initialCustomers`, `initialSupplierDebtTransactions` phong phú và các hàm helper thao tác dữ liệu.
+   - Biên dịch TypeScript không lỗi (`npx tsc --noEmit` đạt 0 lỗi).
+
+---
+
+## 11. Phase 1.10: Native Mobile App Redesign (Admin & ERP) [HOÀN TẤT 100%]
+
+Tái cấu trúc toàn diện trải nghiệm người dùng trên thiết bị di động (< md) theo ngôn ngữ ứng dụng Native App chuẩn KiotViet Mobile, bảo toàn nguyên vẹn 100% giao diện Desktop:
+
+1. **Thanh Điều Hướng Đáy (Bottom Navigation Bar) & App Header ([AdminView.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AdminView.tsx))**:
+   - **Xóa bỏ hoàn toàn**: Thanh điều hướng ngang cuộn trên cùng trên Mobile gây chật chội và khó thao tác.
+   - **Bottom Navigation Bar Cố Định (`fixed bottom-0 w-full`)**:
+     - Thiết kế chuẩn Native App với 5 Tab cốt lõi:
+       1. **Tổng quan** (`LayoutDashboard`)
+       2. **Hóa đơn** (`Receipt` kèm badge đếm số lượng đơn)
+       3. **Thực đơn** (`UtensilsCrossed`)
+       4. **Báo cáo** (`FileBarChart`)
+       5. **Nhiều hơn** (`LayoutGrid` - trung tâm tính năng mở rộng)
+     - Hiệu ứng active nổi bật, font size chuẩn mobile và hỗ trợ `safe-area-inset-bottom`.
+   - **App Header Cố Định Trên Cùng (`fixed top-0 w-full`)**:
+     - Tiêu đề tab động tương ứng ("Tổng Quan", "Hóa Đơn", "Thực Đơn", "Báo Cáo", "Nhiều Hơn"...).
+     - Nút "← Nhiều hơn" quay lại menu khi đang duyệt các tính năng con (`customers`, `suppliers`, `tables`, `promotions`, `hr`, `settings`).
+     - Nút làm mới dữ liệu nhanh và logo/badge thương hiệu.
+   - Khoảng đệm cuộn an toàn (`pt-16 pb-20 md:pt-6 md:pb-6`) chống tràn/chống đè nội dung.
+
+2. **Màn Hình "Nhiều Hơn" (Grid App Menu Chuẩn KiotViet Mobile)**:
+   - Khi chọn tab "Nhiều hơn", render giao diện lưới `grid grid-cols-2 gap-3.5`:
+     - **Khách Hàng (CRM)**: Thẻ nền trắng nổi khối, icon `UserCheck` pastel, mô tả tích điểm & hạng VIP.
+     - **Đối Tác (NCC)**: Icon `Building2` pastel, mô tả sổ cái nợ nhà cung cấp.
+     - **Sơ Đồ Bàn & Khu Vực**: Icon `LayoutGrid` pastel, mô tả quản lý tầng & phòng.
+     - **Khuyến Mãi**: Icon `Ticket` pastel, mô tả voucher & chiết khấu.
+     - **Nhân Sự**: Icon `Users` pastel, mô tả phân quyền RBAC.
+     - **ERP Quản Trị Kho**: Icon `Boxes` pastel, chuyển hướng nhanh đến phân hệ ERP tồn kho & định mức BOM.
+     - **Cấu Hình Cửa Hàng**: Thẻ ngang full-width (col-span-2) với icon `Settings` và mũi tên điều hướng.
+
+3. **Chuyển Đổi Bảng Dữ Liệu Thành Danh Sách Thẻ (Mobile Card List)**:
+   - **Lịch Sử Hóa Đơn ([InvoiceHistoryTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/InvoiceHistoryTab.tsx))**:
+     - Desktop (`md:block`): Giữ nguyên Data Table ngang.
+     - Mobile (`md:hidden`): Danh sách thẻ hóa đơn nền trắng `divide-y`:
+       - Trái: Mã đơn `#ord-...` (chữ to, in đậm font-mono), Tên Bàn / Khách hàng, Giờ vào và Phương thức thanh toán.
+       - Phải: Tổng tiền VNĐ (chữ to, font-black, text-blue-600), badge trạng thái (Hoàn tất / Đã hủy / Chờ TT).
+       - Click thẻ mở trực tiếp `InvoiceDetailModal`.
+   - **Quản Lý Khách Hàng CRM ([CustomerTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/CustomerTab.tsx))**:
+     - Mobile Card List hiển thị: Tên khách hàng (in đậm), badge Hạng thành viên (Đồng, Bạc, Vàng, Kim Cương), SĐT, Điểm tích lũy, Tổng chi tiêu lũy kế font-mono và nút thao tác Sửa/Xóa.
+   - **Đối Tác & Công Nợ ([SupplierTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/SupplierTab.tsx))**:
+     - Mobile Card List hiển thị: Tên đối tác, SĐT, Mã NCC, Badge nợ (Còn nợ / Hết nợ), Lưới tóm tắt (Nợ cần trả vs Tổng mua hàng), Nút xem chi tiết sổ cái và Nút "Trả nợ" 1 chạm.
+
+4. **Nền Tảng & Kiểm Thử**:
+   - Nền app tổng thể trên Mobile: `bg-stone-100 dark:bg-stone-950`, các Card và List item: `bg-white dark:bg-stone-900` tạo độ nổi khối chuyên nghiệp.
+   - Khắc phục lỗi prerender Next.js 16 (`new Date()` trong Client Component tại `DashboardTab.tsx`).
+   - Kiểm thử thành công `next build` (0 lỗi build Turbopack/PPR) và `npx tsc --noEmit` (0 lỗi type).
+
+---
+
+### Phase 1.11: System-wide Native Mobile Overhaul (KDS, Thu Ngân, ERP & Global App Drawer) - HOÀN TẤT
+Đồng bộ ngôn ngữ thiết kế Native Mobile App hiện đại cho tất cả các phân hệ cốt lõi còn lại, bảo toàn 100% giao diện Desktop:
+
+1. **Global App Drawer & Mobile Navigation Bar ([app/page.tsx](file:///e:/Vibe%20Coding/POS/src/app/page.tsx))**:
+   - **Thay thế thanh cuộn ngang chật chội**: Trên màn hình Mobile (`< md`), loại bỏ thanh cuộn ngang tabs trên cùng.
+   - **Hamburger Menu (Menu 3 gạch)**: Nút Hamburger nằm ở góc trái trên cùng của thanh Header chính, kèm badge định danh phân hệ đang kích hoạt (`/ Gọi Món`, `/ Kho ERP`, `/ Thu Ngân`...).
+   - **Sliding Drawer Sidebar (Trượt từ trái sang)**: Chạm vào Menu 3 gạch mở ngăn kéo `fixed inset-0 z-50` với hiệu ứng trượt mượt mà:
+     - Header thương hiệu VIBE POS, logo gradient và nút Đóng (X).
+     - Danh sách 5 phân hệ với icon màu pastel, tiêu đề và mô tả trực quan: Gọi Món (FOH), Bếp & Bar (KDS), Thu Ngân (Cashier), Quản Trị Kho (ERP), Trung Tâm Quản Trị (Admin).
+     - Nút kích hoạt kịch bản giả lập E2E và trạng thái Realtime Online.
+   - **Desktop Navigation**: Giữ nguyên 100% thanh điều hướng ngang tabs tiện dụng trên máy tính.
+
+2. **Phân Hệ Quản Trị Kho & Định Mức (ERP - [ERPView.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ERPView.tsx))**:
+   - **App Header Cố Định**: Header mobile "Quản Trị Kho" với icon `Boxes`, tổng giá trị kho hàng thời gian thực, badge cảnh báo hết hàng và nút làm mới dữ liệu.
+   - **Horizontal Scrollable Segmented Tab Bar**: Thanh tab ngang cuộn mượt (`overflow-x-auto no-scrollbar`) gồm 4 tab: Tồn Kho, Định Mức (BOM), Nhập Hàng (PO), Kiểm Kê Kho.
+   - **Ẩn hoàn toàn `<table>` trên Mobile & chuyển đổi sang Mobile Card List**:
+     - **Tồn Kho ([InventoryTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/InventoryTab.tsx))**: Card nền trắng nổi khối gồm Tên nguyên liệu (chữ to, in đậm), badge cảnh báo `Low Stock (Sắp hết)` đỏ rực animate-pulse hoặc `Đủ dùng` xanh lá, lưới số liệu tồn hiện tại (màu nổi bật) kèm quy đổi đơn vị mua, hạn mức an toàn, giá vốn TB, tổng giá trị kho và nút Sửa nguyên liệu.
+     - **Định Mức BOM ([RecipeBOMTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/RecipeBOMTab.tsx))**: Danh sách món ăn dạng Card với ảnh thumbnail, trạm chế biến (Bếp/Bar), giá bán, giá vốn COGS, và tỷ suất lợi nhuận (Biên LN %) phân cấp màu sắc. Chạm vào bất kỳ Card nào sẽ mở **Bottom Sheet / Modal sửa BOM** đầy đủ tính năng: thêm/bớt nguyên liệu, chỉnh định lượng, xem phân tích COGS và lưu BOM.
+     - **Nhập Hàng ([ProcurementTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ProcurementTab.tsx))**: Phiếu nhập kho (PO) dạng Card List với mã PO, nhà cung cấp, badge trạng thái, danh sách nguyên liệu và tổng tiền nổi bật.
+     - **Kiểm Kê Kho ([AuditTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/AuditTab.tsx))**: Phiếu kiểm kê dạng Card List với người kiểm kê, ngày thực hiện, số mặt hàng lệch và giá trị chênh lệch. Cả Modal chi tiết phiếu kiểm kê và Modal lập phiếu kiểm kê đều tự động chuyển đổi bảng sang Card List trên điện thoại.
+
+3. **Phân Hệ Bếp & Quầy Bar (KDS - [KDSKanbanBoard.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSKanbanBoard.tsx))**:
+   - **App Header Cố Định**: Header mobile "KDS - Bếp & Bar" với đèn tín hiệu Live, bộ lọc trạm (Tất cả / Bếp / Bar) và các nút âm thanh (thử chuông, bật/tắt tiếng, dọn xong).
+   - **Mobile Kanban Redesign (Segmented Control)**: Trên Mobile, 3 cột song song Desktop được thay bằng thanh Segmented Control dính ngay dưới Header:
+     - `[Chờ (X)]` (màu hổ phách) | `[Làm (Y)]` (màu cam nổi bật) | `[Xong (Z)]` (màu xanh ngọc).
+     - Hệ thống CHỈ hiển thị duy nhất một cột danh sách Thẻ vé (Ticket Card) chiếm tràn màn hình dọc tương ứng với tab được chọn.
+
+4. **Phân Hệ Thu Ngân (Cashier - [CashierView.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CashierView.tsx), [CheckoutPanel.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CheckoutPanel.tsx))**:
+   - **App Header Cố Định**: Header mobile "Thu Ngân" với trạng thái mở ca, doanh thu ca thời gian thực và nút làm mới dữ liệu. Giữ nguyên Sơ đồ bàn dạng Grid cuộn dọc.
+   - **Checkout Panel Bottom Sheet Slide-up**: Khi thu ngân bấm vào một bàn đang phục vụ trên điện thoại, giao diện thanh toán biến thành một **Bottom Sheet** trượt từ dưới lên (`fixed inset-x-0 bottom-0 top-12 z-50 bg-white rounded-t-2xl shadow-2xl`) kèm backdrop tối mờ.
+   - **Nút "Đóng (X)" to và thanh Drag Handle**: Bố trí nút Đóng to, nổi bật ở góc trên cùng bên phải và thanh kéo drag handle ở cạnh trên để thu ngân hạ Bottom Sheet xuống quay lại Sơ đồ bàn ngay tức khắc.
+
+5. **Nền Tảng & Kiểm Thử Toàn Diện**:
+   - Tuân thủ nghiêm ngặt nguyên tắc: Mọi thay đổi áp dụng qua `md:hidden` / `hidden md:block` / `lg:hidden` / `hidden lg:grid`. Giao diện Desktop giữ nguyên 100%.
+   - Màu nền tổng thể mobile: `bg-stone-100 dark:bg-stone-950`, các Card và phần tử nổi khối: `bg-white dark:bg-stone-900`.
+   - Biên dịch TypeScript `npx tsc --noEmit` đạt 0 lỗi (Exit Code 0).
+   - Biên dịch Next.js 16 Production Build (`npm run build`) thành công 100% với Turbopack & PPR.
+
+---
+
+### Phase 1.12: Authentication, Audio Routing & Kitchen Ticket Printing - HOÀN TẤT
+Hệ thống hoàn thiện 3 trụ cột vận hành thực tế tại quán: Bảo mật phân quyền, Điều hướng âm thanh thông minh và In tem nhiệt bếp K80/K50 tự động:
+
+1. **Hệ Thống Đăng Nhập & Phân Quyền (Auth & RBAC)**:
+   - **Trang Đăng Nhập Chuyên Nghiệp ([src/app/login/page.tsx](file:///e:/Vibe%20Coding/POS/src/app/login/page.tsx))**:
+     - Thiết kế Mobile-first chuẩn phong cách ứng dụng POS cao cấp với thẻ đăng nhập nổi khối, logo gradient.
+     - Hỗ trợ nhập Username/Password với nút ẩn/hiện mật khẩu trực quan.
+     - **Tính năng Đăng Nhập Nhanh 1-Chạm (Demo Accounts)**: 5 thẻ tài khoản mẫu cho 5 vai trò (`Admin`, `Quản Lý`, `Thu Ngân`, `Bếp Trưởng`, `Pha Chế Bar`, `Phục Vụ`). Chạm vào thẻ nào lập tức điền thông tin và đăng nhập ngay.
+     - **User Gesture Unlock AudioContext**: Thao tác bấm nút "Đăng Nhập" tự động gọi `initAudioContext()`, kích hoạt Web Audio API vượt qua chính sách chặn âm thanh tự động (Autoplay Policy) của trình duyệt.
+   - **Auth Context & Dịch Vụ Phân Quyền ([src/services/authService.ts](file:///e:/Vibe%20Coding/POS/src/services/authService.ts), [src/context/AuthContext.tsx](file:///e:/Vibe%20Coding/POS/src/context/AuthContext.tsx))**:
+     - Lưu phiên đăng nhập `currentUser` vào `localStorage`, khôi phục tức thì khi F5 hoặc mở lại ứng dụng.
+     - Ma trận phân quyền chi tiết (RBAC):
+       - `waiter` (Phục vụ): Chỉ được truy cập `/` (FOH - Gọi món).
+       - `kitchen` & `bar` (Bếp / Pha chế): Chỉ được truy cập `/kds` (Màn hình điều phối Bếp).
+       - `cashier` (Thu ngân): Được truy cập `/` (FOH) và `/cashier` (Bàn & Thanh toán).
+       - `manager` & `admin` (Quản trị): Toàn quyền truy cập cả 5 phân hệ (thêm `/erp`, `/admin`).
+   - **Bảo Vệ Tuyến Đường (Route Guard - [src/components/auth/RouteGuard.tsx](file:///e:/Vibe%20Coding/POS/src/components/auth/RouteGuard.tsx))**:
+     - Bọc toàn bộ các trang con (`/admin`, `/cashier`, `/erp`, `/kds`) và trang chủ `/`.
+     - Nếu chưa đăng nhập $\rightarrow$ Lập tức chuyển hướng về `/login`.
+     - Nếu đã đăng nhập nhưng không đủ quyền $\rightarrow$ Hiển thị màn hình từ chối truy cập thân thiện và nút quay về phân hệ được phép.
+   - **Cập Nhật Drawer & Header ([src/app/page.tsx](file:///e:/Vibe%20Coding/POS/src/app/page.tsx))**:
+     - **Profile Card Nhân Viên**: Hiển thị Avatar, Họ tên nhân viên, Huy hiệu Vai trò (`Quản trị viên`, `Thu ngân`, `Bếp chính`...) và nút Đăng xuất.
+     - **Menu Động Theo Quyền**: Drawer chỉ hiển thị các phân hệ mà vai trò hiện tại được phép truy cập (`visibleModules`).
+
+2. **Hoàn Thiện Hệ Thống Âm Thanh (Web Audio Alerts - [src/lib/audioAlert.ts](file:///e:/Vibe%20Coding/POS/src/lib/audioAlert.ts))**:
+   - **2 Dải Âm Thanh Khác Biệt Bằng Web Audio API Tổng Hợp (Zero Dependency)**:
+     - `playNewOrderSound()`: Chuỗi 3 xung âm thanh cao độ dồn dập (880Hz $\rightarrow$ 1108Hz $\rightarrow$ 1318Hz, dạng sóng triangle) dồn dập, báo động nhanh cho Bếp & Bar khi có đơn món mới.
+     - `playReadySound()`: Tiếng chuông "Ting" thanh thoát ngân vang (dao động tần số gốc C6 1046Hz lướt lên E6 1318Hz kết hợp họa âm phụ C7 2093Hz, decay êm dịu kéo dài 0.85s) cho nhân viên phục vụ FOH ra quầy bưng món.
+   - **Luồng Kích Hoạt Đa Tab (BroadcastChannel & RealtimeEngine)**:
+     - **Bếp & Bar ([KDSView.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSView.tsx))**: Lắng nghe sự kiện `ORDER_CREATED` $\rightarrow$ Tự động phát `playNewOrderSound()`.
+     - **Phục Vụ FOH ([FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx))**: Lắng nghe sự kiện `ITEM_STATUS_CHANGED` (trạng thái `ready`) $\rightarrow$ Tự động phát `playReadySound()`. Khi bếp bấm hoàn thành ticket, phục vụ ở bất kỳ máy tính/tablet nào cũng nghe tiếng chuông Ting báo món đã sẵn sàng.
+
+3. **Tự Động In Tem / Phiếu Bếp Ra Món ([src/components/kds/KitchenReceiptModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KitchenReceiptModal.tsx))**:
+   - **Khổ Giấy Nhiệt Tiêu Chuẩn K80 / K50**: Tối ưu hóa kích thước chiều rộng 80mm/50mm, nền trắng mực đen tương phản cao cho máy in nhiệt.
+   - **Font Chữ RẤT TO & Cấu Trúc Phiếu Kẹp Dĩa / Dán Ly**:
+     - Tiêu đề nổi bật: `[TÊN KHU VỰC - BÀN SỐ]` (Ví dụ: `[TẦNG 1 - BÀN 04]`) với font cực đại nền đen chữ trắng.
+     - Phân khu trạm: `PHIẾU BẾP (KITCHEN)` hoặc `PHIẾU BAR (BEVERAGE)`.
+     - Tên món ăn chữ lớn, số lượng in đậm trong khung viền to nét (`x2`, `x1`).
+     - Danh sách tùy chọn / topping (+ 50% Đường, 70% Đá, + Trân châu).
+     - Khung ghi chú riêng của khách hàng: `GHI CHÚ: KHÔNG CAY, ÍT HÀNH`.
+     - Thông tin chân trang: Thời gian hoàn tất, Tên nhân viên đứng bếp và chỉ dẫn `*** KẸP DĨA / DÁN LY - BƯNG RA BÀN ***`.
+   - **Kích Hoạt Tự Động**: Khi nhân viên bếp/bar bấm **"HOÀN TẤT & RA MÓN"** trên thẻ ticket KDS $\rightarrow$ Hệ thống lập tức mở modal tem ra món và tự động gọi lệnh `window.print()`.
+   - **Hỗ Trợ In Lại 1-Chạm**: Bổ sung icon máy in nhiệt `Printer` trực tiếp trên thanh tiêu đề của mỗi Ticket Card để in lại phiếu bất cứ khi nào cần.
+
+4. **Kiểm Thử Toàn Diện**:
+   - `npx tsc --noEmit`: 0 lỗi type (Exit Code 0).
+   - `npm run build`: Production Build thành công 100% trên Next.js 16 (Turbopack + PPR).
+
+---
+
+## 12. Các task tiếp theo cần làm (Phase 2 Roadmap)
 1. Kết nối Backend API thật với Supabase Cloud Project (chạy file migration trong `DATABASE_MIGRATION.md`).
 2. Tích hợp Webhook đồng bộ biến động số dư ngân hàng tự động (Cass.vn / SePay / PayOS API) cho cổng VietQR.
 3. Đóng gói PWA (Progressive Web App) hỗ trợ cài đặt trên Tablet/Điện thoại và máy in Bluetooth/LAN.
 
 ---
 
-## 10. Luật vận hành (Agent Working Rules)
+## 13. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
+
+

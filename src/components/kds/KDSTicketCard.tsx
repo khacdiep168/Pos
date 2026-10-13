@@ -12,6 +12,7 @@ import {
   RotateCcw,
   Check,
   AlertTriangle,
+  Printer,
 } from 'lucide-react';
 
 export interface KDSTicket {
@@ -29,12 +30,14 @@ interface KDSTicketCardProps {
   ticket: KDSTicket;
   onUpdateTicketStatus: (ticket: KDSTicket, newStatus: 'pending' | 'cooking' | 'ready') => void;
   onUpdateItemStatus: (orderId: string, itemId: string, newStatus: ItemStatus) => void;
+  onPrintTicket?: (ticket: KDSTicket) => void;
 }
 
 export const KDSTicketCard: React.FC<KDSTicketCardProps> = ({
   ticket,
   onUpdateTicketStatus,
   onUpdateItemStatus,
+  onPrintTicket,
 }) => {
   const [elapsedMinutes, setElapsedMinutes] = useState(0);
 
@@ -100,8 +103,8 @@ export const KDSTicketCard: React.FC<KDSTicketCardProps> = ({
           </div>
         </div>
 
-        {/* Elapsed Timer & Order Ref */}
-        <div className="flex items-center gap-2">
+        {/* Elapsed Timer & Order Ref & Print Button */}
+        <div className="flex items-center gap-1.5">
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${timerColor}`}
             title={`Tạo lúc: ${new Date(ticket.createdAt).toLocaleTimeString('vi-VN')}`}
@@ -111,7 +114,17 @@ export const KDSTicketCard: React.FC<KDSTicketCardProps> = ({
             <span>{elapsedMinutes < 1 ? 'Vừa xong' : `${elapsedMinutes}m`}</span>
           </span>
 
-          <span className="text-[11px] font-mono text-stone-500">
+          {onPrintTicket && (
+            <button
+              onClick={() => onPrintTicket(ticket)}
+              className="p-1 rounded-md bg-stone-800/80 hover:bg-stone-700 text-stone-300 hover:text-white transition-colors border border-stone-700/60"
+              title="In Tem Dán / Kẹp Dĩa (K80/K50)"
+            >
+              <Printer className="w-3.5 h-3.5" />
+            </button>
+          )}
+
+          <span className="text-[11px] font-mono text-stone-500 hidden sm:inline">
             #{ticket.orderId.slice(-4)}
           </span>
         </div>

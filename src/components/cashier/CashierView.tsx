@@ -99,8 +99,50 @@ export const CashierView: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full w-full bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-hidden">
-      {/* Top Shift Metrics Bar */}
-      <header className="px-3 sm:px-6 py-2.5 sm:py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+      {/* Mobile Fixed Top App Header for Cashier (md:hidden) */}
+      <div className="md:hidden bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 px-3 py-2 flex items-center justify-between shrink-0 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+            <CreditCard className="w-4 h-4" />
+          </div>
+          <div>
+            <h1 className="text-xs font-black uppercase tracking-wide text-stone-900 dark:text-white">
+              Thu Ngân
+            </h1>
+            <p className="text-[10px] text-stone-400">Sơ đồ bàn & Thanh toán</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setIsShiftModalOpen(true)}
+            className={`px-2 py-1 rounded-lg text-[11px] font-bold border transition-all ${
+              currentShift && currentShift.status === 'open'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300'
+            }`}
+          >
+            {currentShift && currentShift.status === 'open'
+              ? `Ca: ${currentShift.cashier_name.split(' ').pop()}`
+              : 'Mở Ca'}
+          </button>
+
+          <div className="px-2 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px]">
+            {formatCurrencyVND(shiftRevenue)}
+          </div>
+
+          <button
+            onClick={refreshData}
+            className="p-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-500 active:scale-95 transition-all"
+            title="Làm mới dữ liệu"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Top Shift Metrics Bar (Desktop only: hidden md:flex) */}
+      <header className="hidden md:flex px-4 sm:px-6 py-2.5 sm:py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 items-center justify-between gap-2.5 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-1">
           <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
             <CreditCard className="w-4 h-4" />
@@ -109,7 +151,7 @@ export const CashierView: React.FC = () => {
             <h1 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white leading-tight truncate">
               QUẦY THU NGÂN & ĐIỀU PHỐI BÀN
             </h1>
-            <p className="text-[11px] sm:text-xs text-stone-400 truncate hidden sm:block">
+            <p className="text-[11px] sm:text-xs text-stone-400 truncate">
               Quản lý thanh toán, hóa đơn và doanh thu thời gian thực
             </p>
           </div>
@@ -162,7 +204,7 @@ export const CashierView: React.FC = () => {
 
       {/* Main Layout Area: Table Map + Responsive Checkout Panel */}
       <div className="flex-1 flex overflow-hidden p-3 md:p-4 gap-4 relative">
-        {/* Table Map Area */}
+        {/* Table Map Area (Full width on mobile, flexible on desktop) */}
         <div className="flex-1 h-full overflow-hidden">
           <TableMap
             tables={tables}
@@ -175,11 +217,11 @@ export const CashierView: React.FC = () => {
           />
         </div>
 
-        {/* Checkout Panel Area (Desktop & Tablet Landscape side-by-side) */}
+        {/* Checkout Panel Area */}
         {selectedTable && (
           <>
-            {/* Desktop / iPad Landscape */}
-            <div className="hidden lg:block w-96 xl:w-[440px] h-full shrink-0 animate-fade-in">
+            {/* Desktop / Tablet Landscape side-by-side */}
+            <div className="hidden md:block w-96 xl:w-[440px] h-full shrink-0 animate-fade-in">
               <CheckoutPanel
                 table={selectedTable}
                 order={selectedOrder}
@@ -188,13 +230,13 @@ export const CashierView: React.FC = () => {
               />
             </div>
 
-            {/* Tablet Portrait / Mobile Overlay Drawer */}
-            <div className="lg:hidden fixed inset-0 z-50 flex justify-end">
+            {/* Mobile Bottom Sheet Slide-up (fixed inset-x-0 bottom-0 top-12 z-50) */}
+            <div className="md:hidden fixed inset-0 z-50">
               <div
-                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
                 onClick={() => setSelectedTable(null)}
               />
-              <div className="relative w-full max-w-md h-full z-10 animate-in slide-in-from-right duration-200">
+              <div className="fixed inset-x-0 bottom-0 top-12 z-50 bg-white dark:bg-stone-900 rounded-t-2xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-300">
                 <CheckoutPanel
                   table={selectedTable}
                   order={selectedOrder}

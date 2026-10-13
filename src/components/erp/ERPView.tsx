@@ -185,14 +185,52 @@ export const ERPView: React.FC = () => {
         </div>
       </aside>
 
-      {/* Mobile Sub-Navigation Bar for ERP */}
-      <div className="flex md:hidden items-center gap-1.5 px-3 py-2 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 overflow-x-auto no-scrollbar shrink-0">
+      {/* Mobile Fixed Top App Header for ERP */}
+      <div className="md:hidden bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 px-3 py-2 flex items-center justify-between shrink-0 shadow-2xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+            <Boxes className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="text-xs font-black uppercase tracking-wide text-stone-900 dark:text-white truncate">
+              Quản Trị Kho
+            </h1>
+            <p className="text-[10px] text-stone-400 truncate">Inventory & Recipe BOM</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 text-[11px]">
+            <TrendingUp className="w-3 h-3 text-amber-500" />
+            <span className="font-extrabold text-stone-900 dark:text-white">
+              {formatCurrencyVND(totalStockValue)}
+            </span>
+          </div>
+
+          {lowStockCount > 0 && (
+            <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-500 text-white animate-pulse">
+              {lowStockCount} thiếu
+            </span>
+          )}
+
+          <button
+            onClick={refreshData}
+            className="p-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 text-stone-500 active:scale-95 transition-all"
+            title="Làm mới"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Horizontal Scrollable Segmented Tab Bar for ERP */}
+      <div className="flex md:hidden items-center gap-1.5 px-3 py-2 bg-stone-50 dark:bg-stone-950/70 border-b border-stone-200 dark:border-stone-800 overflow-x-auto no-scrollbar shrink-0">
         <button
           onClick={() => setActiveTab('inventory')}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
             activeTab === 'inventory'
               ? 'bg-amber-500 text-white shadow-xs'
-              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+              : 'text-stone-600 dark:text-stone-400 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700/60'
           }`}
         >
           <Boxes className="w-3.5 h-3.5" />
@@ -209,7 +247,7 @@ export const ERPView: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
             activeTab === 'recipes'
               ? 'bg-amber-500 text-white shadow-xs'
-              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+              : 'text-stone-600 dark:text-stone-400 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700/60'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
@@ -221,7 +259,7 @@ export const ERPView: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
             activeTab === 'procurement'
               ? 'bg-amber-500 text-white shadow-xs'
-              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+              : 'text-stone-600 dark:text-stone-400 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700/60'
           }`}
         >
           <Truck className="w-3.5 h-3.5" />
@@ -233,7 +271,7 @@ export const ERPView: React.FC = () => {
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
             activeTab === 'audit'
               ? 'bg-amber-500 text-white shadow-xs'
-              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+              : 'text-stone-600 dark:text-stone-400 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700/60'
           }`}
         >
           <ClipboardCheck className="w-3.5 h-3.5" />
@@ -243,8 +281,8 @@ export const ERPView: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
-        {/* Top Header Metrics */}
-        <header className="px-4 sm:px-6 py-2.5 sm:py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between gap-2 shrink-0">
+        {/* Top Header Metrics (Desktop only) */}
+        <header className="hidden md:flex px-4 sm:px-6 py-2.5 sm:py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 items-center justify-between gap-2 shrink-0">
           <div className="flex items-center gap-3 min-w-0 pr-2">
             <h1 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white truncate">
               {activeTab === 'inventory' && 'Quản Lý Danh Mục Tồn Kho & Cảnh Báo'}
@@ -264,7 +302,7 @@ export const ERPView: React.FC = () => {
             </div>
 
             {lowStockCount > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-pulse">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-pulse">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 <span>{lowStockCount} sắp hết</span>
               </div>

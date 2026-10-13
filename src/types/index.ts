@@ -91,10 +91,38 @@ export interface Order {
   discount_amount: number;
   tax_amount: number;
   total_amount: number;
+  customer_id?: string;
+  customer_name?: string;
+  customer_phone?: string;
   notes?: string;
   items: OrderItem[];
   created_at: string;
   updated_at: string;
+}
+
+// CRM & Customers
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  membership_tier?: 'bronze' | 'silver' | 'gold' | 'diamond';
+  total_spent: number;
+  points: number;
+  created_at: string;
+  notes?: string;
+}
+
+// Supplier Debt Ledger (Sổ Công Nợ Đối Tác)
+export interface SupplierDebtTransaction {
+  id: string;
+  supplier_id: string;
+  type: 'purchase' | 'payment';
+  amount: number;
+  balance: number; // Running balance after transaction
+  created_at: string;
+  notes?: string;
+  reference_id?: string;
 }
 
 // ERP & Inventory
@@ -125,6 +153,7 @@ export interface Supplier {
   email?: string;
   address?: string;
   total_debt?: number;
+  total_purchase?: number;
 }
 
 export interface PurchaseOrderItem {
@@ -165,6 +194,7 @@ export interface UserAccount {
   id: string;
   full_name: string;
   username: string;
+  password?: string;
   role: UserRole;
   is_active: boolean;
   avatar_url?: string;

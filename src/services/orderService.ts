@@ -1,5 +1,5 @@
 import { Order, OrderItem, RestaurantTable, PaymentMethod, Zone, WorkShift } from '@/types';
-import { initialTables, initialZones } from '@/database/mockData';
+import { initialTables, initialZones, initialOrders } from '@/database/mockData';
 import { realtimeEngine } from './realtimeEngine';
 
 const STORAGE_ORDERS_KEY = 'pos_orders_data';
@@ -24,10 +24,14 @@ class OrderService {
       const savedOrders = localStorage.getItem(STORAGE_ORDERS_KEY);
       if (savedOrders) {
         try {
-          this.orders = JSON.parse(savedOrders);
+          const parsed = JSON.parse(savedOrders);
+          this.orders = parsed && parsed.length > 0 ? parsed : [...initialOrders];
         } catch {
-          this.orders = [];
+          this.orders = [...initialOrders];
         }
+      } else {
+        this.orders = [...initialOrders];
+        localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(this.orders));
       }
 
       const savedZones = localStorage.getItem(STORAGE_ZONES_KEY);
@@ -174,6 +178,33 @@ class OrderService {
     return [...this.orders];
   }
 
+  public getOrderById(id: string): Order | null {
+    return this.orders.find((o) => o.id === id) || null;
+  }
+
+  public cancelOrder(orderId: string, reason?: string): Order | null {
+    const order = this.orders.find((o) => o.id === orderId);
+    if (!order) return null;
+    order.order_status = 'cancelled';
+    if (reason) {
+      order.notes = [order.notes, `[Lý do hủy: ${reason}]`].filter(Boolean).join(' - ');
+    }
+    order.updated_at = new Date().toISOString();
+    
+    // Free table if this was the current order
+    const table = this.tables.find((t) => t.id === order.table_id);
+    if (table && table.current_order_id === orderId) {
+      table.status = 'available';
+      table.current_order_id = undefined;
+      realtimeEngine.emit('TABLE_STATUS_CHANGED', table);
+    }
+    
+    this.save();
+    realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
+    realtimeEngine.emit('ORDER_UPDATED', order);
+    return order;
+  }
+
   public getOrderByTableId(tableId: string): Order | null {
     return (
       this.orders.find(
@@ -196,6 +227,21 @@ class OrderService {
     this.save();
     realtimeEngine.emit('ORDER_CREATED', newOrder);
     return newOrder;
+  }
+
+  public attachCustomerToOrder(
+    orderId: string,
+    customer: { id: string; name: string; phone: string }
+  ): Order | null {
+    const order = this.orders.find((o) => o.id === orderId);
+    if (!order) return null;
+    order.customer_id = customer.id;
+    order.customer_name = customer.name;
+    order.customer_phone = customer.phone;
+    order.updated_at = new Date().toISOString();
+    this.save();
+    realtimeEngine.emit('ORDER_UPDATED', order);
+    return order;
   }
 
   public updateItemStatus(
@@ -239,6 +285,7 @@ class OrderService {
       .forEach((item) => {
         item.item_status = newStatus;
         item.updated_at = new Date().toISOString();
+        realtimeEngine.emit('ITEM_STATUS_CHANGED', { orderId, item });
       });
 
     const hasCooking = order.items.some((i) => i.item_status === 'cooking');

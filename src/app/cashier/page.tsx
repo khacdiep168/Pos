@@ -3,11 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { CashierView } from '@/components/cashier/CashierView';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ArrowLeft, ExternalLink, ChefHat, Utensils } from 'lucide-react';
 
 export default function CashierPage() {
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-950 font-sans">
+    <RouteGuard requiredModule="cashier">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-950 font-sans">
       {/* Top Bar with Navigation Links */}
       <nav className="h-10 bg-stone-900 border-b border-stone-800 px-4 flex items-center justify-between shrink-0 select-none z-30">
         <div className="flex items-center gap-3">
@@ -51,5 +53,6 @@ export default function CashierPage() {
         <CashierView />
       </div>
     </div>
+  </RouteGuard>
   );
 }

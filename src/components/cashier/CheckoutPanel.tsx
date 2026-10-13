@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Order, RestaurantTable, PaymentMethod, Promotion } from '@/types';
+import { Order, RestaurantTable, PaymentMethod, Promotion, Customer } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
 import { VietQRCode } from './VietQRCode';
 import { ReceiptModal } from './ReceiptModal';
 import { orderService } from '@/services/orderService';
 import { promotionService } from '@/services/promotionService';
+import { customerService } from '@/services/customerService';
 import {
   Banknote,
   QrCode,
@@ -20,6 +21,10 @@ import {
   Percent,
   Tag,
   Ticket,
+  UserCheck,
+  UserPlus,
+  Phone,
+  Search,
 } from 'lucide-react';
 
 interface CheckoutPanelProps {
@@ -45,6 +50,85 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [paidOrder, setPaidOrder] = useState<Order | null>(null);
+
+  // Customer CRM State
+  const [customerPhone, setCustomerPhone] = useState(order?.customer_phone || '');
+  const [currentCustomer, setCurrentCustomer] = useState<Customer | null>(() => {
+    if (order?.customer_id) {
+      return customerService.getCustomerById(order.customer_id) || null;
+    }
+    if (order?.customer_phone) {
+      return customerService.getCustomerByPhone(order.customer_phone) || null;
+    }
+    return null;
+  });
+  const [custLookupMsg, setCustLookupMsg] = useState<{ text: string; isError: boolean } | null>(null);
+  const [showAddCustQuick, setShowAddCustQuick] = useState(false);
+  const [quickCustName, setQuickCustName] = useState('');
+
+  useEffect(() => {
+    if (order) {
+      setCustomerPhone(order.customer_phone || '');
+      if (order.customer_id) {
+        setCurrentCustomer(customerService.getCustomerById(order.customer_id) || null);
+      } else if (order.customer_phone) {
+        setCurrentCustomer(customerService.getCustomerByPhone(order.customer_phone) || null);
+      } else {
+        setCurrentCustomer(null);
+      }
+    }
+  }, [order]);
+
+  const handleAttachCustomerByPhone = () => {
+    if (!order) return;
+    const p = customerPhone.trim();
+    if (!p) {
+      setCustLookupMsg(null);
+      return;
+    }
+    const found = customerService.getCustomerByPhone(p);
+    if (found) {
+      setCurrentCustomer(found);
+      orderService.attachCustomerToOrder(order.id, {
+        id: found.id,
+        name: found.name,
+        phone: found.phone,
+      });
+      setCustLookupMsg({ text: `Đã gắn: ${found.name}`, isError: false });
+      setShowAddCustQuick(false);
+    } else {
+      setCustLookupMsg({ text: 'Số ĐT chưa có trong hệ thống', isError: true });
+      setShowAddCustQuick(true);
+    }
+  };
+
+  const handleCreateAndAttachQuickCust = () => {
+    if (!order || !quickCustName.trim() || !customerPhone.trim()) return;
+    const newCust = customerService.addCustomer({
+      name: quickCustName.trim(),
+      phone: customerPhone.trim(),
+    });
+    setCurrentCustomer(newCust);
+    orderService.attachCustomerToOrder(order.id, {
+      id: newCust.id,
+      name: newCust.name,
+      phone: newCust.phone,
+    });
+    setShowAddCustQuick(false);
+    setQuickCustName('');
+    setCustLookupMsg({ text: `Đã tạo & gắn: ${newCust.name}`, isError: false });
+  };
+
+  const handleRemoveCustomerFromOrder = () => {
+    if (!order) return;
+    setCurrentCustomer(null);
+    setCustomerPhone('');
+    setCustLookupMsg(null);
+    setShowAddCustQuick(false);
+    order.customer_id = undefined;
+    order.customer_name = undefined;
+    order.customer_phone = undefined;
+  };
 
   // If no active order on this table
   if (!order) {
@@ -142,32 +226,40 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
   return (
     <div className="flex flex-col h-full bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden shadow-xl">
       {/* Panel Header */}
-      <div className="p-4 border-b border-stone-200 dark:border-stone-800 bg-stone-900 text-white flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold">
-            <Receipt className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-extrabold flex items-center gap-2">
-              <span>
-                THANH TOÁN: {table.zone_id ? `${orderService.getZones().find((z) => z.id === table.zone_id)?.name || ''} - ` : ''}{table.table_number}
-              </span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-stone-800 text-amber-400">
-                #{order.id.slice(-6)}
-              </span>
-            </h3>
-            <p className="text-[11px] text-stone-400">
-              Giờ vào: {new Date(order.created_at).toLocaleTimeString('vi-VN')}
-            </p>
-          </div>
-        </div>
+      <div className="border-b border-stone-200 dark:border-stone-800 bg-stone-900 text-white shrink-0">
+        {/* Mobile Drag Indicator Bar */}
+        <div className="w-12 h-1 bg-stone-700 rounded-full mx-auto mt-2 md:hidden" />
 
-        <button
-          onClick={onClose}
-          className="p-1.5 rounded-lg text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
-        >
-          <X className="w-5 h-5" />
-        </button>
+        <div className="p-3 sm:p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0 pr-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold shrink-0">
+              <Receipt className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xs sm:text-sm font-extrabold flex items-center gap-2 truncate">
+                <span className="truncate">
+                  THANH TOÁN: {table.zone_id ? `${orderService.getZones().find((z) => z.id === table.zone_id)?.name || ''} - ` : ''}{table.table_number}
+                </span>
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-stone-800 text-amber-400 shrink-0">
+                  #{order.id.slice(-6)}
+                </span>
+              </h3>
+              <p className="text-[11px] text-stone-400 truncate">
+                Giờ vào: {new Date(order.created_at).toLocaleTimeString('vi-VN')}
+              </p>
+            </div>
+          </div>
+
+          {/* Prominent Mobile Close (X) Button */}
+          <button
+            onClick={onClose}
+            className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white flex items-center justify-center active:scale-95 transition-all shrink-0 shadow-xs"
+            aria-label="Đóng ngăn kéo thanh toán"
+            title="Đóng (Quay lại sơ đồ bàn)"
+          >
+            <X className="w-5 h-5 text-stone-200" />
+          </button>
+        </div>
       </div>
 
       {/* Main Content Area */}
@@ -202,6 +294,132 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Customer CRM Attachment Block */}
+        <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-stone-200 dark:border-stone-800 space-y-2 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-stone-700 dark:text-stone-300 flex items-center gap-1.5 text-purple-600 dark:text-purple-400">
+              <UserCheck className="w-3.5 h-3.5" />
+              Khách hàng thân thiết (CRM):
+            </span>
+            {currentCustomer && (
+              <button
+                type="button"
+                onClick={handleRemoveCustomerFromOrder}
+                className="text-[10px] text-stone-400 hover:text-red-500 font-bold transition-colors"
+              >
+                Gỡ khách
+              </button>
+            )}
+          </div>
+
+          {currentCustomer ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-stone-900 dark:text-white">
+                    {currentCustomer.name}
+                  </span>
+                  <span
+                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase ${
+                      currentCustomer.membership_tier === 'diamond'
+                        ? 'bg-purple-500 text-white'
+                        : currentCustomer.membership_tier === 'gold'
+                        ? 'bg-amber-400 text-stone-900'
+                        : currentCustomer.membership_tier === 'silver'
+                        ? 'bg-slate-300 text-stone-800'
+                        : 'bg-amber-800/30 text-amber-700 dark:text-amber-300'
+                    }`}
+                  >
+                    {currentCustomer.membership_tier}
+                  </span>
+                </div>
+                <div className="text-[11px] text-stone-400 flex items-center gap-2 mt-0.5">
+                  <span>{currentCustomer.phone}</span>
+                  <span>•</span>
+                  <span className="text-purple-600 dark:text-purple-400 font-bold">
+                    Tích lũy: {currentCustomer.points} điểm ({formatCurrencyVND(currentCustomer.total_spent)})
+                  </span>
+                </div>
+              </div>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="relative flex-1">
+                  <Phone className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="tel"
+                    placeholder="Nhập số ĐT khách hàng..."
+                    value={customerPhone}
+                    onChange={(e) => {
+                      setCustomerPhone(e.target.value);
+                      if (!e.target.value.trim()) {
+                        setCustLookupMsg(null);
+                        setShowAddCustQuick(false);
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAttachCustomerByPhone();
+                      }
+                    }}
+                    className="w-full pl-8 pr-2 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-hidden focus:ring-1 focus:ring-purple-500"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAttachCustomerByPhone}
+                  className="px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-colors flex items-center gap-1 shrink-0"
+                >
+                  <Search className="w-3 h-3" />
+                  <span>Gắn</span>
+                </button>
+              </div>
+
+              {custLookupMsg && (
+                <p
+                  className={`text-[11px] px-1 font-medium ${
+                    custLookupMsg.isError
+                      ? 'text-amber-600 dark:text-amber-400'
+                      : 'text-emerald-600 dark:text-emerald-400'
+                  }`}
+                >
+                  {custLookupMsg.text}
+                </p>
+              )}
+
+              {showAddCustQuick && (
+                <div className="flex items-center gap-1.5 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                  <input
+                    type="text"
+                    placeholder="Nhập họ tên khách..."
+                    value={quickCustName}
+                    onChange={(e) => setQuickCustName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateAndAttachQuickCust();
+                      }
+                    }}
+                    className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleCreateAndAttachQuickCust}
+                    disabled={!quickCustName.trim()}
+                    className="px-2 py-1 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-[11px] font-bold rounded-lg transition-colors flex items-center gap-1"
+                  >
+                    <UserPlus className="w-3 h-3" />
+                    <span>Lưu & Gắn</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Discount & Promotion Selector */}

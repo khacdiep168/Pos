@@ -4,14 +4,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Order, OrderItem, StationType, ItemStatus } from '@/types';
 import { orderService } from '@/services/orderService';
 import { realtimeEngine } from '@/services/realtimeEngine';
-import { playOrderNotificationSound, toggleAudioMute, isAudioAlertMuted } from '@/lib/audioAlert';
+import { playNewOrderSound, toggleAudioMute, isAudioAlertMuted } from '@/lib/audioAlert';
 import { KDSTicket } from './KDSTicketCard';
 import { KDSKanbanBoard } from './KDSKanbanBoard';
+import { KitchenReceiptModal } from './KitchenReceiptModal';
 
 export const KDSView: React.FC = () => {
   const [tickets, setTickets] = useState<KDSTicket[]>([]);
   const [selectedStation, setSelectedStation] = useState<StationType | 'all'>('all');
   const [isMuted, setIsMuted] = useState(false);
+  const [printTicket, setPrintTicket] = useState<KDSTicket | null>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Convert an Order into 1 or 2 station tickets (Kitchen and/or Bar)
   const breakOrderIntoTickets = useCallback((order: Order): KDSTicket[] => {
@@ -95,8 +98,8 @@ export const KDSView: React.FC = () => {
 
     // 1. Subscribe to ORDER_CREATED (New orders incoming)
     const unsubOrderCreated = realtimeEngine.subscribe<Order>('ORDER_CREATED', (newOrder) => {
-      // Play audible chime alert for kitchen & bar staff
-      playOrderNotificationSound();
+      // Bếp & Bar: Tiếng bíp dồn dập báo món mới
+      playNewOrderSound();
 
       const newTickets = breakOrderIntoTickets(newOrder);
       setTickets((prev) => {
@@ -154,6 +157,12 @@ export const KDSView: React.FC = () => {
     );
 
     if (updatedOrder) {
+      // Tự động mở modal và kích hoạt lệnh in tem nhiệt K80/K50 khi bấm Hoàn tất ra món
+      if (newStatus === 'ready') {
+        setPrintTicket(ticket);
+        setIsPrintModalOpen(true);
+      }
+
       // Optimistic local update
       setTickets((prev) =>
         prev.map((t) => {
@@ -168,6 +177,12 @@ export const KDSView: React.FC = () => {
         })
       );
     }
+  };
+
+  // In tem nhiệt thủ công theo yêu cầu nhân viên
+  const handlePrintTicket = (ticket: KDSTicket) => {
+    setPrintTicket(ticket);
+    setIsPrintModalOpen(true);
   };
 
   // Handle single item status change
@@ -185,7 +200,7 @@ export const KDSView: React.FC = () => {
   };
 
   const handleTestSound = () => {
-    playOrderNotificationSound();
+    playNewOrderSound();
   };
 
   // Clear completed tickets from the board view
@@ -201,10 +216,19 @@ export const KDSView: React.FC = () => {
         onStationChange={setSelectedStation}
         onUpdateTicketStatus={handleUpdateTicketStatus}
         onUpdateItemStatus={handleUpdateItemStatus}
+        onPrintTicket={handlePrintTicket}
         isMuted={isMuted}
         onToggleMute={handleToggleMute}
         onTestSound={handleTestSound}
         onClearCompleted={handleClearCompleted}
+      />
+
+      {/* Kitchen & Bar Thermal Ticket Printing Modal */}
+      <KitchenReceiptModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        ticket={printTicket}
+        autoPrint={true}
       />
     </div>
   );

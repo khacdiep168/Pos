@@ -19,6 +19,7 @@ import { MenuGrid } from './MenuGrid';
 import { ModifierModal } from './ModifierModal';
 import { CartSidebar } from './CartSidebar';
 import { TableSelector } from './TableSelector';
+import { playReadySound } from '@/lib/audioAlert';
 import {
   ShoppingBag,
   ChevronRight,
@@ -58,9 +59,20 @@ export const FOHView: React.FC = () => {
       refreshTablesAndZones();
     });
 
+    // Lắng nghe khi Bếp/Bar hoàn thành món -> Chuông Ting thanh thoát cho phục vụ
+    const unsubItemReady = realtimeEngine.subscribe<{ orderId: string; item: any }>(
+      'ITEM_STATUS_CHANGED',
+      (payload) => {
+        if (payload?.item?.item_status === 'ready') {
+          playReadySound();
+        }
+      }
+    );
+
     return () => {
       unsubOrder();
       unsubTable();
+      unsubItemReady();
     };
   }, [refreshMenuItems, refreshTablesAndZones]);
 

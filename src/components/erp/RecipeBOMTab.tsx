@@ -18,6 +18,7 @@ import {
   Percent,
   DollarSign,
   Layers,
+  X,
 } from 'lucide-react';
 import { SearchableSelect, SearchableOption } from '@/components/ui/SearchableSelect';
 
@@ -45,6 +46,7 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
   // Local draft of current item's BOM for editing
   const [draftBOM, setDraftBOM] = useState<{ raw_material_id: string; quantity: number }[]>([]);
   const [isSaved, setIsSaved] = useState(false);
+  const [isMobileBOMModalOpen, setIsMobileBOMModalOpen] = useState(false);
 
   // Sync draft BOM when selectedItem changes
   React.useEffect(() => {
@@ -71,12 +73,11 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     return sum + (mat ? b.quantity * mat.avg_cost : 0);
   }, 0);
 
-  const grossProfit = selectedItem.price - cogs;
-  const profitMargin = Math.round((grossProfit / selectedItem.price) * 100);
+  const grossProfit = selectedItem ? selectedItem.price - cogs : 0;
+  const profitMargin = selectedItem ? Math.round((grossProfit / selectedItem.price) * 100) : 0;
 
   // Handle adding an ingredient
   const handleAddIngredient = () => {
-    // Pick first unused material
     const usedIds = new Set(draftBOM.map((b) => b.raw_material_id));
     const availableMat = materials.find((m) => !usedIds.has(m.id)) || materials[0];
 
@@ -110,6 +111,7 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
 
   // Save BOM
   const handleSaveBOM = () => {
+    if (!selectedItem) return;
     inventoryService.saveRecipeBOM(selectedItem.id, draftBOM);
     onRefresh();
     setIsSaved(true);
@@ -117,7 +119,101 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 h-full">
+    <div className="h-full">
+      {/* Mobile Dish Card List (lg:hidden) */}
+      <div className="lg:hidden space-y-3 pb-6">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="font-extrabold text-sm text-stone-900 dark:text-white flex items-center gap-2">
+            <UtensilsCrossed className="w-4 h-4 text-amber-500" />
+            <span>Định Mức Món Ăn ({menuItems.length} món)</span>
+          </h3>
+          <span className="text-[11px] text-stone-400">Chạm thẻ để sửa BOM</span>
+        </div>
+
+        <div className="space-y-2.5">
+          {menuItems.map((item) => {
+            const itemBoms = recipes.filter((r) => r.menu_item_id === item.id);
+            const itemCogs = itemBoms.reduce((sum, b) => {
+              const mat = materials.find((m) => m.id === b.raw_material_id);
+              return sum + (mat ? b.quantity * mat.avg_cost : 0);
+            }, 0);
+            const itemGrossProfit = item.price - itemCogs;
+            const itemMargin = Math.round((itemGrossProfit / item.price) * 100);
+
+            return (
+              <div
+                key={item.id}
+                onClick={() => {
+                  setSelectedItem(item);
+                  setIsMobileBOMModalOpen(true);
+                }}
+                className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-3.5 shadow-xs flex items-center gap-3 cursor-pointer active:scale-98 transition-all hover:border-amber-500/50"
+              >
+                <img
+                  src={item.image_url}
+                  alt={item.name}
+                  className="w-14 h-14 rounded-xl object-cover bg-stone-100 shrink-0"
+                />
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shrink-0 ${
+                        item.station === 'kitchen' ? 'bg-orange-500' : 'bg-cyan-600'
+                      }`}
+                    >
+                      {item.station === 'kitchen' ? (
+                        <Flame className="w-2.5 h-2.5" />
+                      ) : (
+                        <Wine className="w-2.5 h-2.5" />
+                      )}
+                      {item.station === 'kitchen' ? 'Bếp' : 'Bar'}
+                    </span>
+                    <h4 className="font-extrabold text-xs text-stone-900 dark:text-stone-100 truncate">
+                      {item.name}
+                    </h4>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-stone-500">
+                    <div>
+                      <span>Giá: </span>
+                      <strong className="text-amber-600 dark:text-amber-400 font-bold">
+                        {formatCurrencyVND(item.price)}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>COGS: </span>
+                      <strong className="text-stone-900 dark:text-stone-200 font-mono font-bold">
+                        {formatCurrencyVND(itemCogs)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-stone-100 dark:border-stone-800 text-[10px]">
+                    <span className="text-stone-400">
+                      {itemBoms.length} nguyên liệu
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-full font-bold ${
+                        itemMargin >= 60
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : itemMargin >= 40
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                      }`}
+                    >
+                      Biên LN: {itemMargin}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop 2-Column Split View (hidden lg:grid) */}
+      <div className="hidden lg:grid lg:grid-cols-12 gap-5 h-full">
       {/* Left Column: Menu Items List (5 Cols) */}
       <div className="lg:col-span-5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 flex flex-col overflow-hidden shadow-xs">
         <div className="pb-3 border-b border-stone-200 dark:border-stone-800">
@@ -339,6 +435,174 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
           </button>
         </div>
       </div>
+      </div>
+
+      {/* Mobile Modal for Editing BOM */}
+      {isMobileBOMModalOpen && selectedItem && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end">
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsMobileBOMModalOpen(false)}
+          />
+          <div className="relative w-full max-h-[92vh] bg-white dark:bg-stone-900 rounded-t-3xl shadow-2xl z-10 flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300">
+            {/* Header */}
+            <div className="p-4 bg-stone-900 text-white flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <img
+                  src={selectedItem.image_url}
+                  alt={selectedItem.name}
+                  className="w-10 h-10 rounded-xl object-cover bg-stone-800 shrink-0"
+                />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-white shrink-0 ${
+                        selectedItem.station === 'kitchen' ? 'bg-orange-500' : 'bg-cyan-600'
+                      }`}
+                    >
+                      {selectedItem.station === 'kitchen' ? 'Bếp' : 'Bar'}
+                    </span>
+                    <h3 className="font-extrabold text-sm truncate text-white">
+                      {selectedItem.name}
+                    </h3>
+                  </div>
+                  <p className="text-[11px] text-stone-400 mt-0.5">
+                    Giá niêm yết: <span className="font-bold text-amber-400">{formatCurrencyVND(selectedItem.price)}</span>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsMobileBOMModalOpen(false)}
+                className="w-8 h-8 rounded-xl bg-stone-800 text-stone-300 flex items-center justify-center hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Financial Summary */}
+            <div className="grid grid-cols-3 gap-2 p-3 bg-stone-100 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 text-xs text-center shrink-0">
+              <div className="p-2 bg-white dark:bg-stone-800 rounded-xl">
+                <span className="text-stone-400 text-[10px] block">Giá vốn (COGS)</span>
+                <span className="font-mono font-bold text-stone-900 dark:text-white mt-0.5 block">
+                  {formatCurrencyVND(cogs)}
+                </span>
+              </div>
+              <div className="p-2 bg-white dark:bg-stone-800 rounded-xl">
+                <span className="text-stone-400 text-[10px] block">Lợi nhuận gộp</span>
+                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">
+                  {formatCurrencyVND(grossProfit)}
+                </span>
+              </div>
+              <div className="p-2 bg-white dark:bg-stone-800 rounded-xl">
+                <span className="text-stone-400 text-[10px] block">Biên LN</span>
+                <span
+                  className={`font-black mt-0.5 block ${
+                    profitMargin >= 60 ? 'text-emerald-500' : profitMargin >= 40 ? 'text-amber-500' : 'text-rose-500'
+                  }`}
+                >
+                  {profitMargin}%
+                </span>
+              </div>
+            </div>
+
+            {/* Ingredients Form */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-xs text-stone-700 dark:text-stone-300">
+                  Nguyên vật liệu cấu thành ({draftBOM.length})
+                </span>
+                <button
+                  onClick={handleAddIngredient}
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs font-bold active:scale-95"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm nguyên liệu</span>
+                </button>
+              </div>
+
+              {draftBOM.length === 0 ? (
+                <div className="p-6 text-center text-stone-400 bg-stone-50 dark:bg-stone-800/40 rounded-xl">
+                  Chưa có định mức BOM. Bấm &quot;Thêm nguyên liệu&quot; để thiết lập.
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {draftBOM.map((bom, idx) => {
+                    const mat = materials.find((m) => m.id === bom.raw_material_id);
+                    const lineCost = mat ? mat.avg_cost * bom.quantity : 0;
+
+                    return (
+                      <div
+                        key={idx}
+                        className="p-3 bg-stone-50 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-700/60 rounded-xl space-y-2"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex-1">
+                            <SearchableSelect
+                              options={materialOptions}
+                              value={bom.raw_material_id}
+                              onChange={(val) => handleUpdateMaterial(idx, val)}
+                              placeholder="-- Chọn nguyên liệu --"
+                              searchPlaceholder="Gõ tên nguyên liệu..."
+                              buttonClassName="px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-xs font-bold"
+                            />
+                          </div>
+                          <button
+                            onClick={() => handleRemoveIngredient(idx)}
+                            className="p-2 text-stone-400 hover:text-rose-500"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-stone-200/60 dark:border-stone-700/60">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-stone-400 text-[11px]">Định mức:</span>
+                            <input
+                              type="number"
+                              value={bom.quantity}
+                              onChange={(e) => handleUpdateQuantity(idx, parseFloat(e.target.value) || 0)}
+                              className="w-20 px-2 py-1 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg font-mono font-bold"
+                            />
+                            <span className="text-stone-400 font-medium">
+                              {mat?.recipe_unit || 'g'}
+                            </span>
+                          </div>
+
+                          <div className="font-bold text-stone-800 dark:text-stone-200 font-mono">
+                            {formatCurrencyVND(lineCost)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Bottom Sheet Actions */}
+            <div className="p-3.5 border-t border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-900 flex items-center justify-between gap-3 shrink-0">
+              <span className="text-xs text-stone-400 truncate">
+                {isSaved ? (
+                  <span className="text-emerald-500 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-4 h-4" /> Đã lưu thành công!
+                  </span>
+                ) : (
+                  'Tự động trừ kho theo định mức'
+                )}
+              </span>
+
+              <button
+                onClick={handleSaveBOM}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-500/20 active:scale-95"
+              >
+                <Save className="w-4 h-4" />
+                <span>Lưu Định Mức BOM</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

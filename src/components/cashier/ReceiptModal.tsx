@@ -105,6 +105,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
               <span>THU NGÂN:</span>
               <span>Thu Ngân Ca 1</span>
             </div>
+            {order.customer_name && (
+              <div className="flex justify-between">
+                <span>KHÁCH HÀNG:</span>
+                <span className="font-bold">
+                  {order.customer_name} {order.customer_phone ? `(${order.customer_phone})` : ''}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Items Table */}

@@ -117,102 +117,203 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
         </div>
       </div>
 
-      {/* Main Raw Materials Table */}
+      {/* Main Raw Materials: Desktop Table (hidden md:block) & Mobile Card List (md:hidden) */}
       {!showHistory ? (
-        <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-stone-50 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider text-[11px]">
-                <tr>
-                  <th className="p-3.5">Nguyên Vật Liệu</th>
-                  <th className="p-3.5 text-center">Tồn Kho Hiện Tại</th>
-                  <th className="p-3.5 text-center">Mức An Toàn</th>
-                  <th className="p-3.5 text-right">Giá Vốn TB (Recipe Unit)</th>
-                  <th className="p-3.5 text-right">Tổng Giá Trị</th>
-                  <th className="p-3.5 text-center">Trạng Thái</th>
-                  <th className="p-3.5 text-center">Thao Tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100 dark:divide-stone-800/70 font-medium">
-                {filteredMaterials.map((m) => {
-                  const isLow = m.current_stock < m.min_stock_level;
-                  const stockValue = m.current_stock * m.avg_cost;
-                  const ratio = Math.min(100, Math.round((m.current_stock / (m.min_stock_level * 2)) * 100));
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden shadow-xs">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-stone-50 dark:bg-stone-800/60 border-b border-stone-200 dark:border-stone-800 text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider text-[11px]">
+                  <tr>
+                    <th className="p-3.5">Nguyên Vật Liệu</th>
+                    <th className="p-3.5 text-center">Tồn Kho Hiện Tại</th>
+                    <th className="p-3.5 text-center">Mức An Toàn</th>
+                    <th className="p-3.5 text-right">Giá Vốn TB (Recipe Unit)</th>
+                    <th className="p-3.5 text-right">Tổng Giá Trị</th>
+                    <th className="p-3.5 text-center">Trạng Thái</th>
+                    <th className="p-3.5 text-center">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100 dark:divide-stone-800/70 font-medium">
+                  {filteredMaterials.map((m) => {
+                    const isLow = m.current_stock < m.min_stock_level;
+                    const stockValue = m.current_stock * m.avg_cost;
 
-                  return (
-                    <tr
-                      key={m.id}
-                      className={`hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors ${
-                        isLow ? 'bg-rose-50/40 dark:bg-rose-950/20' : ''
-                      }`}
-                    >
-                      <td className="p-3.5">
-                        <div className="font-bold text-stone-900 dark:text-stone-100 text-sm">
-                          {m.name}
-                        </div>
-                        <div className="text-[11px] text-stone-400 mt-0.5">
-                          1 {m.purchase_unit} = {m.conversion_factor.toLocaleString()} {m.recipe_unit}
-                        </div>
-                      </td>
+                    return (
+                      <tr
+                        key={m.id}
+                        className={`hover:bg-stone-50 dark:hover:bg-stone-800/40 transition-colors ${
+                          isLow ? 'bg-rose-50/40 dark:bg-rose-950/20' : ''
+                        }`}
+                      >
+                        <td className="p-3.5">
+                          <div className="font-bold text-stone-900 dark:text-stone-100 text-sm">
+                            {m.name}
+                          </div>
+                          <div className="text-[11px] text-stone-400 mt-0.5">
+                            1 {m.purchase_unit} = {m.conversion_factor.toLocaleString()} {m.recipe_unit}
+                          </div>
+                        </td>
 
-                      <td className="p-3.5 text-center">
-                        <div className="inline-flex flex-col items-center">
-                          <span
-                            className={`font-mono text-sm font-black ${
-                              isLow ? 'text-rose-600 dark:text-rose-400' : 'text-stone-900 dark:text-white'
-                            }`}
+                        <td className="p-3.5 text-center">
+                          <div className="inline-flex flex-col items-center">
+                            <span
+                              className={`font-mono text-sm font-black ${
+                                isLow ? 'text-rose-600 dark:text-rose-400' : 'text-stone-900 dark:text-white'
+                              }`}
+                            >
+                              {m.current_stock.toLocaleString()} {m.recipe_unit}
+                            </span>
+                            <span className="text-[10px] text-stone-400 font-normal">
+                              ≈ {(m.current_stock / m.conversion_factor).toFixed(1)} {m.purchase_unit}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="p-3.5 text-center font-mono text-stone-500">
+                          {m.min_stock_level.toLocaleString()} {m.recipe_unit}
+                        </td>
+
+                        <td className="p-3.5 text-right font-mono font-bold text-stone-700 dark:text-stone-300">
+                          {formatCurrencyVND(m.avg_cost)} / {m.recipe_unit}
+                        </td>
+
+                        <td className="p-3.5 text-right font-bold text-stone-900 dark:text-stone-100">
+                          {formatCurrencyVND(stockValue)}
+                        </td>
+
+                        <td className="p-3.5 text-center">
+                          {isLow ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse">
+                              <AlertTriangle className="w-3 h-3" />
+                              Low Stock
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                              <CheckCircle2 className="w-3 h-3" />
+                              Đủ dùng
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="p-3.5 text-center">
+                          <button
+                            onClick={() => setEditingMaterial(m)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-white transition-all active:scale-95 shadow-2xs border border-amber-500/20"
+                            title="Sửa thông tin nguyên vật liệu"
                           >
-                            {m.current_stock.toLocaleString()} {m.recipe_unit}
-                          </span>
-                          <span className="text-[10px] text-stone-400 font-normal">
-                            ≈ {(m.current_stock / m.conversion_factor).toFixed(1)} {m.purchase_unit}
-                          </span>
-                        </div>
-                      </td>
-
-                      <td className="p-3.5 text-center font-mono text-stone-500">
-                        {m.min_stock_level.toLocaleString()} {m.recipe_unit}
-                      </td>
-
-                      <td className="p-3.5 text-right font-mono font-bold text-stone-700 dark:text-stone-300">
-                        {formatCurrencyVND(m.avg_cost)} / {m.recipe_unit}
-                      </td>
-
-                      <td className="p-3.5 text-right font-bold text-stone-900 dark:text-stone-100">
-                        {formatCurrencyVND(stockValue)}
-                      </td>
-
-                      <td className="p-3.5 text-center">
-                        {isLow ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse">
-                            <AlertTriangle className="w-3 h-3" />
-                            Low Stock
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-                            <CheckCircle2 className="w-3 h-3" />
-                            Đủ dùng
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="p-3.5 text-center">
-                        <button
-                          onClick={() => setEditingMaterial(m)}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-white transition-all active:scale-95 shadow-2xs border border-amber-500/20"
-                          title="Sửa thông tin nguyên vật liệu"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          <span>Sửa</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                            <Pencil className="w-3.5 h-3.5" />
+                            <span>Sửa</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Mobile Card List (md:hidden) */}
+          <div className="md:hidden space-y-3">
+            {filteredMaterials.length === 0 ? (
+              <div className="p-8 text-center text-stone-400 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800">
+                <Boxes className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-semibold">Không tìm thấy nguyên liệu</p>
+              </div>
+            ) : (
+              filteredMaterials.map((m) => {
+                const isLow = m.current_stock < m.min_stock_level;
+                const stockValue = m.current_stock * m.avg_cost;
+
+                return (
+                  <div
+                    key={m.id}
+                    className="bg-white dark:bg-stone-900 border border-stone-200/80 dark:border-stone-800 rounded-2xl p-4 shadow-xs space-y-3"
+                  >
+                    {/* Header: Name + Badge */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h4 className="font-extrabold text-stone-900 dark:text-white text-sm sm:text-base leading-snug">
+                          {m.name}
+                        </h4>
+                        <p className="text-[11px] text-stone-400 mt-0.5">
+                          1 {m.purchase_unit} = {m.conversion_factor.toLocaleString()} {m.recipe_unit}
+                        </p>
+                      </div>
+
+                      {isLow ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse shrink-0">
+                          <AlertTriangle className="w-3 h-3" />
+                          Sắp hết
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shrink-0">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Đủ dùng
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Stock Metrics Info Grid */}
+                    <div className="grid grid-cols-2 gap-2 p-2.5 bg-stone-50 dark:bg-stone-800/60 rounded-xl text-xs">
+                      <div>
+                        <span className="text-stone-400 text-[10px] block">Tồn kho hiện tại:</span>
+                        <span
+                          className={`font-mono text-sm font-black block ${
+                            isLow ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {m.current_stock.toLocaleString()} {m.recipe_unit}
+                        </span>
+                        <span className="text-[10px] text-stone-400 block">
+                          ≈ {(m.current_stock / m.conversion_factor).toFixed(1)} {m.purchase_unit}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className="text-stone-400 text-[10px] block">Mức an toàn:</span>
+                        <span className="font-mono text-xs font-bold text-stone-700 dark:text-stone-300 block">
+                          {m.min_stock_level.toLocaleString()} {m.recipe_unit}
+                        </span>
+                        <span className="text-[10px] text-stone-400 block">
+                          {isLow ? '⚠️ Cần nhập thêm' : '✓ Trong hạn mức'}
+                        </span>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-stone-200/60 dark:border-stone-700/50">
+                        <span className="text-stone-400 text-[10px] block">Giá vốn TB:</span>
+                        <span className="font-mono font-bold text-stone-800 dark:text-stone-200">
+                          {formatCurrencyVND(m.avg_cost)}
+                        </span>
+                        <span className="text-[10px] text-stone-400">/{m.recipe_unit}</span>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-stone-200/60 dark:border-stone-700/50">
+                        <span className="text-stone-400 text-[10px] block">Tổng giá trị:</span>
+                        <span className="font-mono font-black text-stone-900 dark:text-white">
+                          {formatCurrencyVND(stockValue)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Footer Action Button */}
+                    <div className="flex items-center justify-end pt-0.5">
+                      <button
+                        onClick={() => setEditingMaterial(m)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-500/10 hover:bg-amber-500 text-amber-700 dark:text-amber-400 hover:text-white transition-all border border-amber-500/20 active:scale-95"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                        <span>Chỉnh sửa nguyên liệu</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
       ) : (
         /* Inventory Transactions History Log */
         <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 shadow-xs space-y-3">

@@ -3,11 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { AdminView } from '@/components/admin/AdminView';
+import { RouteGuard } from '@/components/auth/RouteGuard';
 import { ArrowLeft, ExternalLink, ChefHat, CreditCard, Boxes } from 'lucide-react';
 
 export default function AdminPage() {
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-950 font-sans">
+    <RouteGuard requiredModule="admin">
+      <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-950 font-sans">
       {/* Top Bar with Navigation Links */}
       <nav className="h-10 bg-stone-900 border-b border-stone-800 px-4 flex items-center justify-between shrink-0 select-none z-30">
         <div className="flex items-center gap-3">
@@ -57,5 +59,6 @@ export default function AdminPage() {
         <AdminView />
       </div>
     </div>
+  </RouteGuard>
   );
 }

@@ -7,12 +7,18 @@ import {
   Order,
   StockAuditReport,
   StockAuditItem,
+  SupplierDebtTransaction,
 } from '@/types';
 import {
   initialRawMaterials,
   initialRecipes,
   initialSuppliers,
   initialPurchaseOrders,
+  initialSupplierDebtTransactions,
+  addMockSupplier,
+  updateMockSupplier,
+  deleteMockSupplier,
+  addMockSupplierDebtTransaction,
 } from '@/database/mockData';
 import { realtimeEngine } from './realtimeEngine';
 
@@ -22,6 +28,7 @@ const STORAGE_SUPPLIERS = 'pos_suppliers';
 const STORAGE_PURCHASE_ORDERS = 'pos_purchase_orders';
 const STORAGE_TRANSACTIONS = 'pos_inventory_transactions';
 const STORAGE_STOCK_AUDITS = 'pos_stock_audits';
+const STORAGE_SUPPLIER_DEBTS = 'pos_supplier_debts';
 
 class InventoryService {
   private rawMaterials: RawMaterial[] = [];
@@ -30,6 +37,7 @@ class InventoryService {
   private purchaseOrders: PurchaseOrder[] = [];
   private transactions: InventoryTransaction[] = [];
   private stockAudits: StockAuditReport[] = [];
+  private debtTransactions: SupplierDebtTransaction[] = [];
   private isListening = false;
 
   constructor() {
@@ -57,6 +65,9 @@ class InventoryService {
 
         const savedAudits = localStorage.getItem(STORAGE_STOCK_AUDITS);
         this.stockAudits = savedAudits ? JSON.parse(savedAudits) : [];
+
+        const savedDebts = localStorage.getItem(STORAGE_SUPPLIER_DEBTS);
+        this.debtTransactions = savedDebts ? JSON.parse(savedDebts) : [...initialSupplierDebtTransactions];
       } catch {
         this.fallbackDefaults();
       }
@@ -72,6 +83,7 @@ class InventoryService {
     this.purchaseOrders = [...initialPurchaseOrders];
     this.transactions = [];
     this.stockAudits = [];
+    this.debtTransactions = [...initialSupplierDebtTransactions];
   }
 
   private save() {
@@ -82,6 +94,7 @@ class InventoryService {
       localStorage.setItem(STORAGE_PURCHASE_ORDERS, JSON.stringify(this.purchaseOrders));
       localStorage.setItem(STORAGE_TRANSACTIONS, JSON.stringify(this.transactions));
       localStorage.setItem(STORAGE_STOCK_AUDITS, JSON.stringify(this.stockAudits));
+      localStorage.setItem(STORAGE_SUPPLIER_DEBTS, JSON.stringify(this.debtTransactions));
     }
   }
 
@@ -154,6 +167,81 @@ class InventoryService {
 
   public getSuppliers(): Supplier[] {
     return [...this.suppliers];
+  }
+
+  public addSupplier(supplier: Omit<Supplier, 'id'>): Supplier {
+    const newSup: Supplier = {
+      ...supplier,
+      id: `sup-${Date.now().toString().slice(-6)}`,
+      total_debt: supplier.total_debt ?? 0,
+    };
+    this.suppliers.push(newSup);
+    addMockSupplier(newSup);
+    this.save();
+    realtimeEngine.emit('STOCK_ALERT', { type: 'SUPPLIER_ADDED', supplier: newSup });
+    return newSup;
+  }
+
+  public updateSupplier(id: string, updates: Partial<Supplier>): Supplier | null {
+    const idx = this.suppliers.findIndex((s) => s.id === id);
+    if (idx === -1) return null;
+    this.suppliers[idx] = { ...this.suppliers[idx], ...updates };
+    updateMockSupplier(id, updates);
+    this.save();
+    realtimeEngine.emit('STOCK_ALERT', { type: 'SUPPLIER_UPDATED', supplier: this.suppliers[idx] });
+    return this.suppliers[idx];
+  }
+
+  public deleteSupplier(id: string): boolean {
+    const idx = this.suppliers.findIndex((s) => s.id === id);
+    if (idx === -1) return false;
+    this.suppliers.splice(idx, 1);
+    deleteMockSupplier(id);
+    this.save();
+    realtimeEngine.emit('STOCK_ALERT', { type: 'SUPPLIER_DELETED', supplierId: id });
+    return true;
+  }
+
+  // ==================== SUPPLIER DEBT LEDGER (SỔ CÔNG NỢ) ====================
+  public getSupplierDebtTransactions(supplierId?: string): SupplierDebtTransaction[] {
+    if (supplierId) {
+      return this.debtTransactions.filter((tx) => tx.supplier_id === supplierId);
+    }
+    return [...this.debtTransactions];
+  }
+
+  public paySupplierDebt(
+    supplierId: string,
+    amount: number,
+    notes?: string
+  ): { transaction: SupplierDebtTransaction; supplier: Supplier } | null {
+    const supplier = this.suppliers.find((s) => s.id === supplierId);
+    if (!supplier || amount <= 0) return null;
+
+    const currentDebt = supplier.total_debt || 0;
+    const newDebt = Math.max(0, currentDebt - amount);
+    supplier.total_debt = newDebt;
+    updateMockSupplier(supplierId, { total_debt: newDebt });
+
+    const now = new Date().toISOString();
+    const txId = `pay-${Date.now().toString().slice(-6)}`;
+    const debtTx: SupplierDebtTransaction = {
+      id: txId,
+      supplier_id: supplierId,
+      type: 'payment',
+      amount: amount,
+      balance: newDebt,
+      created_at: now,
+      notes: notes || 'Thanh toán tiền công nợ cho nhà cung cấp',
+      reference_id: txId,
+    };
+
+    this.debtTransactions.unshift(debtTx);
+    addMockSupplierDebtTransaction(debtTx);
+    this.save();
+
+    realtimeEngine.emit('STOCK_ALERT', { type: 'SUPPLIER_PAYMENT', supplier, transaction: debtTx });
+    return { transaction: debtTx, supplier };
   }
 
   public getPurchaseOrders(): PurchaseOrder[] {
@@ -284,6 +372,28 @@ class InventoryService {
       items: poItems,
       created_at: now,
     };
+
+    // Update supplier debt & purchase totals
+    if (supplier) {
+      const newDebt = (supplier.total_debt || 0) + totalAmount;
+      const newPurchase = (supplier.total_purchase || 0) + totalAmount;
+      supplier.total_debt = newDebt;
+      supplier.total_purchase = newPurchase;
+      updateMockSupplier(supplierId, { total_debt: newDebt, total_purchase: newPurchase });
+
+      const debtTx: SupplierDebtTransaction = {
+        id: `tx-debt-${Date.now().toString().slice(-6)}`,
+        supplier_id: supplierId,
+        type: 'purchase',
+        amount: totalAmount,
+        balance: newDebt,
+        created_at: now,
+        notes: `Nhập kho đơn hàng #${poId}`,
+        reference_id: poId,
+      };
+      this.debtTransactions.unshift(debtTx);
+      addMockSupplierDebtTransaction(debtTx);
+    }
 
     this.purchaseOrders.unshift(newPO);
     this.save();
