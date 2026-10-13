@@ -6,10 +6,12 @@ import { KDSView } from '@/components/kds/KDSView';
 import { CashierView } from '@/components/cashier/CashierView';
 import { ERPView } from '@/components/erp/ERPView';
 import { AdminView } from '@/components/admin/AdminView';
+import { E2ESimulationModal } from '@/components/ui/E2ESimulationModal';
 import { Utensils, ChefHat, CreditCard, Boxes, Shield, ExternalLink } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'foh' | 'kds' | 'cashier' | 'erp' | 'admin'>('foh');
+  const [isE2EModalOpen, setIsE2EModalOpen] = useState(false);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-stone-100 dark:bg-stone-950 font-sans">
@@ -96,6 +98,14 @@ export default function Home() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsE2EModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all"
+          >
+            <span>⚡</span>
+            <span>Giả Lập E2E</span>
+          </button>
+
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-800/80 border border-stone-700/60 text-[11px] text-stone-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span className="font-mono text-emerald-400 font-semibold">Real-time Online</span>
@@ -115,6 +125,12 @@ export default function Home() {
 
         {activeTab === 'admin' && <AdminView />}
       </div>
+
+      {/* End-to-End Simulation Modal */}
+      <E2ESimulationModal
+        isOpen={isE2EModalOpen}
+        onClose={() => setIsE2EModalOpen(false)}
+      />
     </div>
   );
 }

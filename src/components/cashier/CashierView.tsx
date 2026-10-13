@@ -134,8 +134,8 @@ export const CashierView: React.FC = () => {
         </div>
       </header>
 
-      {/* Main Layout Area: Table Map (Left) + Checkout Panel (Right) */}
-      <div className="flex-1 flex overflow-hidden p-4 gap-4">
+      {/* Main Layout Area: Table Map + Responsive Checkout Panel */}
+      <div className="flex-1 flex overflow-hidden p-3 md:p-4 gap-4 relative">
         {/* Table Map Area */}
         <div className="flex-1 h-full overflow-hidden">
           <TableMap
@@ -147,16 +147,35 @@ export const CashierView: React.FC = () => {
           />
         </div>
 
-        {/* Checkout Panel Area (Desktop Right Sidebar / Drawer) */}
+        {/* Checkout Panel Area (Desktop & Tablet Landscape side-by-side) */}
         {selectedTable && (
-          <div className="w-96 xl:w-[440px] h-full shrink-0 animate-fade-in">
-            <CheckoutPanel
-              table={selectedTable}
-              order={selectedOrder}
-              onClose={() => setSelectedTable(null)}
-              onPaymentSuccess={handlePaymentSuccess}
-            />
-          </div>
+          <>
+            {/* Desktop / iPad Landscape */}
+            <div className="hidden lg:block w-96 xl:w-[440px] h-full shrink-0 animate-fade-in">
+              <CheckoutPanel
+                table={selectedTable}
+                order={selectedOrder}
+                onClose={() => setSelectedTable(null)}
+                onPaymentSuccess={handlePaymentSuccess}
+              />
+            </div>
+
+            {/* Tablet Portrait / Mobile Overlay Drawer */}
+            <div className="lg:hidden fixed inset-0 z-50 flex justify-end">
+              <div
+                className="fixed inset-0 bg-black/60 backdrop-blur-xs"
+                onClick={() => setSelectedTable(null)}
+              />
+              <div className="relative w-full max-w-md h-full z-10 animate-in slide-in-from-right duration-200">
+                <CheckoutPanel
+                  table={selectedTable}
+                  order={selectedOrder}
+                  onClose={() => setSelectedTable(null)}
+                  onPaymentSuccess={handlePaymentSuccess}
+                />
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

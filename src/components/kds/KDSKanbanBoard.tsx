@@ -161,9 +161,9 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
       </header>
 
       {/* 3-Column Kanban Board (Optimized for Horizontal Landscape Desktop/Tablet) */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4 p-4 overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 p-3 md:p-4 overflow-y-auto md:overflow-hidden min-h-0">
         {/* Column 1: Chờ xử lý (Pending) */}
-        <div className="flex flex-col bg-stone-900/60 rounded-2xl border border-stone-800/80 overflow-hidden">
+        <div className="flex flex-col bg-stone-900/60 rounded-2xl border border-stone-800/80 overflow-hidden min-h-[380px] md:min-h-0">
           <div className="p-3.5 bg-stone-900 border-b border-stone-800 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
@@ -199,7 +199,7 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
         </div>
 
         {/* Column 2: Đang làm (Cooking) */}
-        <div className="flex flex-col bg-stone-900/60 rounded-2xl border border-stone-800/80 overflow-hidden">
+        <div className="flex flex-col bg-stone-900/60 rounded-2xl border border-stone-800/80 overflow-hidden min-h-[380px] md:min-h-0">
           <div className="p-3.5 bg-stone-900 border-b border-stone-800 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
@@ -235,7 +235,7 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
         </div>
 
         {/* Column 3: Hoàn thành (Ready) */}
-        <div className="flex flex-col bg-stone-900/60 rounded-2xl border border-stone-800/80 overflow-hidden">
+        <div className="flex flex-col bg-stone-900/60 rounded-2xl border border-stone-800/80 overflow-hidden min-h-[380px] md:min-h-0">
           <div className="p-3.5 bg-stone-900 border-b border-stone-800 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />

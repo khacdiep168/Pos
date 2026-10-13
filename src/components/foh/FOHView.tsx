@@ -158,16 +158,34 @@ export const FOHView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Quick table indicator */}
+          <div className="flex items-center gap-2">
+            {/* Table indicator (mobile and desktop) */}
             {selectedTable && (
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold">
-                <span>Phục vụ:</span>
+              <button
+                onClick={() => setIsMobileCartOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold active:scale-95 transition-transform"
+                title="Bấm để xem giỏ hàng / đổi bàn"
+              >
+                <span className="hidden xs:inline">Bàn:</span>
                 <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded-md text-[11px]">
                   {selectedTable.table_number}
                 </span>
-              </div>
+              </button>
             )}
+
+            {/* Mobile quick cart icon */}
+            <button
+              onClick={() => setIsMobileCartOpen(true)}
+              className="lg:hidden relative p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:text-amber-500"
+              title="Mở giỏ hàng"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {totalCartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                  {totalCartCount}
+                </span>
+              )}
+            </button>
           </div>
         </header>
 
