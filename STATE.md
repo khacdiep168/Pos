@@ -205,14 +205,38 @@ POS/
 
 ---
 
-## 7. Các task tiếp theo cần làm (Phase 2 Roadmap)
+## 7. Mobile-First & KiotViet-like FOH Redesign (Phase 1.7) - COMPLETED (13/10/2026)
+Đã khắc phục triệt để lỗi UX trên màn hình di động, hoàn thiện trải nghiệm chọn món linh hoạt:
+
+1. **Tái Cấu Trúc Layout Responsive (Split-View vs Slide-in Drawer)**:
+   - **Desktop / Tablet Landscape (`md:` & `lg:`)**: Giữ cấu trúc Side-by-Side tối ưu năng suất. MenuGrid bên trái (linh hoạt) và Giỏ hàng CartSidebar bên phải (cố định width).
+   - **Mobile / Tablet Portrait (`< md`)**:
+     - `MenuGrid` chiếm trọn 100% không gian màn hình để nhân viên và khách dễ dàng lướt xem món, có padding chân trang `pb-28` tránh bị che khuất.
+     - `CartSidebar` chuyển thành Slide-in Right Drawer trượt từ phải sang (`fixed inset-0 z-50 flex`).
+     - Bổ sung **nút Đóng (X)** to rõ ràng ở Header của Giỏ hàng cùng cơ chế click backdrop để thoát nhanh về danh sách món.
+
+2. **UX Trải Nghiệm Chọn Món Chuẩn KiotViet (Mobile Optimization)**:
+   - **Smart Table Selector Button ở Top Header**:
+     - Hiển thị thông tin bàn phục vụ trực quan ngay trên thanh tiêu đề: `[Tên Khu Vực] • Bàn [Số Bàn] [Trạng Thái]`.
+     - Bấm vào mở popup **Dedicated Table Selector Modal** chọn bàn 2 bước độc lập mà không cần mở giỏ hàng.
+   - **Thanh Cố Định Dưới Cùng (Mobile Fixed Bottom Bar)**:
+     - Luôn ghim cố định ở đáy màn hình điện thoại: Icon giỏ hàng kèm badge số lượng món, thông tin bàn, tổng tiền VNĐ và nút **"Xem Giỏ Hàng"**.
+     - Giúp nhân viên kiểm tra tức thì giá tiền và số lượng món khi đang tư vấn cho khách.
+
+3. **Luồng Chọn Bàn Tự Động Thu Gọn (Auto-Collapse & Auto-Close Drawer)**:
+   - Trong Giỏ hàng: Component [TableSelector.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/TableSelector.tsx) tích hợp chế độ `collapsible`. Khi bàn đã được chọn, tự động thu gọn thành 1 thẻ tóm tắt nhỏ gọn (tiết kiệm không gian), kèm nút **"Đổi bàn"** để mở lại khi cần.
+   - Khi chọn bàn thành công trên Mobile: Tự động đóng popup / đóng Cart Drawer ngay lập tức, đưa nhân viên trở về thẳng lưới món ăn `MenuGrid` để tiếp tục chạm chọn món.
+
+---
+
+## 8. Các task tiếp theo cần làm (Phase 2 Roadmap)
 1. Kết nối Backend API thật với Supabase Cloud Project (chạy file migration trong `DATABASE_MIGRATION.md`).
 2. Tích hợp Webhook đồng bộ biến động số dư ngân hàng tự động (Cass.vn / SePay / PayOS API) cho cổng VietQR.
 3. Đóng gói PWA (Progressive Web App) hỗ trợ cài đặt trên Tablet/Điện thoại và máy in Bluetooth/LAN.
 
 ---
 
-## 6. Luật vận hành (Agent Working Rules)
+## 9. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.

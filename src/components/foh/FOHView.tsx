@@ -8,6 +8,7 @@ import {
   CartItem,
   MenuItemModifier,
   StationType,
+  Zone,
 } from '@/types';
 import { initialCategories } from '@/database/mockData';
 import { menuService } from '@/services/menuService';
@@ -17,7 +18,16 @@ import { CategoryNav } from './CategoryNav';
 import { MenuGrid } from './MenuGrid';
 import { ModifierModal } from './ModifierModal';
 import { CartSidebar } from './CartSidebar';
-import { ShoppingBag, ChevronRight, Sparkles } from 'lucide-react';
+import { TableSelector } from './TableSelector';
+import {
+  ShoppingBag,
+  ChevronRight,
+  ChevronDown,
+  MapPin,
+  X,
+  AlertCircle,
+  Sparkles,
+} from 'lucide-react';
 import { formatCurrencyVND } from '@/lib/utils';
 
 export const FOHView: React.FC = () => {
@@ -25,32 +35,34 @@ export const FOHView: React.FC = () => {
   const [categories] = useState<Category[]>(initialCategories);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => menuService.getMenuItems());
   const [tables, setTables] = useState<RestaurantTable[]>(() => orderService.getTables());
+  const [zones, setZones] = useState<Zone[]>(() => orderService.getZones());
 
   const refreshMenuItems = useCallback(() => {
     setMenuItems(menuService.getMenuItems());
   }, []);
 
-  const refreshTables = useCallback(() => {
+  const refreshTablesAndZones = useCallback(() => {
     setTables(orderService.getTables());
+    setZones(orderService.getZones());
   }, []);
 
   useEffect(() => {
     refreshMenuItems();
-    refreshTables();
+    refreshTablesAndZones();
 
     const unsubOrder = realtimeEngine.subscribe('ORDER_UPDATED', () => {
       refreshMenuItems();
     });
 
     const unsubTable = realtimeEngine.subscribe('TABLE_STATUS_CHANGED', () => {
-      refreshTables();
+      refreshTablesAndZones();
     });
 
     return () => {
       unsubOrder();
       unsubTable();
     };
-  }, [refreshMenuItems, refreshTables]);
+  }, [refreshMenuItems, refreshTablesAndZones]);
 
   // Filters State
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -60,6 +72,7 @@ export const FOHView: React.FC = () => {
   // Modal State
   const [activeItemForModal, setActiveItemForModal] = useState<MenuItem | null>(null);
   const [isModifierModalOpen, setIsModifierModalOpen] = useState(false);
+  const [isTableModalOpen, setIsTableModalOpen] = useState(false);
 
   // Cart State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -68,6 +81,11 @@ export const FOHView: React.FC = () => {
     return all.find((t) => t.status === 'available' || t.status === 'reserved') || null;
   });
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
+
+  // Find active zone for selected table
+  const selectedZone = selectedTable?.zone_id
+    ? zones.find((z) => z.id === selectedTable.zone_id)
+    : undefined;
 
   // Filtered Menu Items
   const filteredItems = useMemo(() => {
@@ -93,7 +111,6 @@ export const FOHView: React.FC = () => {
 
   // Click on menu item handler
   const handleSelectItem = (item: MenuItem) => {
-    // If has modifiers, open modal; otherwise open modal too so user can choose qty/notes
     setActiveItemForModal(item);
     setIsModifierModalOpen(true);
   };
@@ -174,46 +191,66 @@ export const FOHView: React.FC = () => {
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100">
-      {/* Left Column: Menu Browsing & Filtering */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      {/* Main Column: Menu Browsing & Filtering (Full width on Mobile, Flexible on Desktop) */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden relative">
         {/* Top Header */}
-        <header className="px-6 py-4 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between shrink-0">
+        <header className="px-4 sm:px-6 py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between gap-3 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              <h1 className="text-lg font-black tracking-tight text-stone-900 dark:text-white">
-                VIBE TASTE POS <span className="text-amber-500 font-normal">| Đặt Món Trực Quan</span>
+              <h1 className="text-base sm:text-lg font-black tracking-tight text-stone-900 dark:text-white truncate">
+                VIBE TASTE POS <span className="text-amber-500 font-normal hidden sm:inline">| Đặt Món Trực Quan</span>
               </h1>
             </div>
-            <p className="text-xs text-stone-400 mt-0.5">
-              Phân hệ Khách hàng & Nhân viên phục vụ (Front-of-House)
+            <p className="text-[11px] sm:text-xs text-stone-400 mt-0.5 truncate hidden xs:block">
+              Phân hệ Phục vụ & Khách hàng (Front-of-House)
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Table indicator (mobile and desktop) */}
-            {selectedTable && (
-              <button
-                onClick={() => setIsMobileCartOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold active:scale-95 transition-transform"
-                title="Bấm để xem giỏ hàng / đổi bàn"
-              >
-                <span className="hidden xs:inline">Bàn:</span>
-                <span className="px-1.5 py-0.5 bg-amber-500 text-white rounded-md text-[11px]">
-                  {selectedTable.table_number}
-                </span>
-              </button>
-            )}
-
-            {/* Mobile quick cart icon */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Smart Table Indicator Button (KiotViet Inspiration) */}
             <button
+              type="button"
+              onClick={() => setIsTableModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-black active:scale-95 transition-all shadow-2xs cursor-pointer"
+              title="Bấm để chọn hoặc đổi bàn phục vụ"
+            >
+              <MapPin className="w-3.5 h-3.5 text-amber-500" />
+              {selectedTable ? (
+                <span className="flex items-center gap-1">
+                  <span className="hidden sm:inline font-bold text-stone-500 dark:text-stone-400">
+                    {selectedZone ? `${selectedZone.name} •` : ''}
+                  </span>
+                  <span>Bàn {selectedTable.table_number}</span>
+                  <span
+                    className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
+                      selectedTable.status === 'reserved'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-emerald-600 text-white'
+                    }`}
+                  >
+                    {selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
+                  </span>
+                </span>
+              ) : (
+                <span className="text-rose-500 font-bold flex items-center gap-1">
+                  <AlertCircle className="w-3 h-3" />
+                  <span>Chọn bàn</span>
+                </span>
+              )}
+              <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+            </button>
+
+            {/* Mobile Header Quick Cart Icon */}
+            <button
+              type="button"
               onClick={() => setIsMobileCartOpen(true)}
-              className="lg:hidden relative p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:text-amber-500"
+              className="md:hidden relative p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:text-amber-500 active:scale-95 transition-all cursor-pointer"
               title="Mở giỏ hàng"
             >
               <ShoppingBag className="w-4 h-4" />
               {totalCartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-4.5 px-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shadow-2xs">
                   {totalCartCount}
                 </span>
               )}
@@ -221,8 +258,8 @@ export const FOHView: React.FC = () => {
           </div>
         </header>
 
-        {/* Scrollable Menu Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* Scrollable Menu Content (Extra bottom padding on mobile for Fixed Bottom Bar) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-28 md:pb-6">
           <CategoryNav
             categories={categories}
             selectedCategoryId={selectedCategoryId}
@@ -235,10 +272,52 @@ export const FOHView: React.FC = () => {
 
           <MenuGrid items={filteredItems} onSelectItem={handleSelectItem} />
         </div>
+
+        {/* Mobile Fixed Bottom Bar (KiotViet Inspiration) */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-t border-stone-200 dark:border-stone-800 p-2.5 sm:p-3 shadow-2xl">
+          <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
+            {/* Left side: Cart Info & Total */}
+            <div
+              onClick={() => setIsMobileCartOpen(true)}
+              className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0 active:opacity-80 transition-opacity"
+            >
+              <div className="relative w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30 shrink-0">
+                <ShoppingBag className="w-5 h-5" />
+                {totalCartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-4.5 px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-stone-900 shadow-2xs">
+                    {totalCartCount}
+                  </span>
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="text-[11px] text-stone-500 dark:text-stone-400 font-medium truncate">
+                  {totalCartCount > 0 ? (
+                    <span>{totalCartCount} món • Bàn {selectedTable?.table_number || '?'}</span>
+                  ) : (
+                    <span>Giỏ hàng đang trống</span>
+                  )}
+                </div>
+                <div className="text-sm font-black text-stone-900 dark:text-white truncate">
+                  {formatCurrencyVND(totalCartPrice)}
+                </div>
+              </div>
+            </div>
+
+            {/* Right side: Open Cart Drawer Button */}
+            <button
+              type="button"
+              onClick={() => setIsMobileCartOpen(true)}
+              className="py-2.5 px-4 rounded-xl bg-stone-900 dark:bg-amber-500 text-white dark:text-stone-950 text-xs font-black flex items-center gap-1.5 active:scale-95 shadow-md transition-all shrink-0 cursor-pointer"
+            >
+              <span>Xem Giỏ Hàng</span>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Right Column: Cart Sidebar (Desktop) */}
-      <div className="hidden lg:block w-96 xl:w-[420px] h-full shrink-0">
+      {/* Right Column: Cart Sidebar (Desktop & Tablet Landscape md: and above) */}
+      <div className="hidden md:block w-80 lg:w-96 xl:w-[420px] h-full shrink-0">
         <CartSidebar
           items={cartItems}
           tables={tables}
@@ -250,43 +329,70 @@ export const FOHView: React.FC = () => {
         />
       </div>
 
-      {/* Mobile Floating Cart Button */}
-      {totalCartCount > 0 && (
-        <div className="lg:hidden fixed bottom-5 left-4 right-4 z-40">
-          <button
-            onClick={() => setIsMobileCartOpen(true)}
-            className="w-full py-3.5 px-5 bg-stone-900 dark:bg-amber-500 text-white dark:text-stone-950 font-bold rounded-2xl shadow-2xl flex items-center justify-between"
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-amber-500 dark:bg-stone-950 text-white dark:text-white text-xs flex items-center justify-center font-bold">
-                {totalCartCount}
-              </span>
-              <span>Xem giỏ order</span>
-            </div>
-            <div className="flex items-center gap-2 font-extrabold">
-              <span>{formatCurrencyVND(totalCartPrice)}</span>
-              <ChevronRight className="w-4 h-4" />
-            </div>
-          </button>
-        </div>
-      )}
-
-      {/* Mobile Cart Drawer */}
+      {/* Mobile Cart Drawer (Slide-in Drawer with Close Button X) */}
       {isMobileCartOpen && (
-        <div className="lg:hidden fixed inset-0 z-50 flex">
+        <div className="md:hidden fixed inset-0 z-50 flex animate-in fade-in duration-200">
           <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
             onClick={() => setIsMobileCartOpen(false)}
           />
-          <div className="relative ml-auto w-full max-w-md h-full z-10">
+          <div className="relative ml-auto w-full max-w-md h-full z-10 flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
             <CartSidebar
               items={cartItems}
               tables={tables}
               selectedTable={selectedTable}
-              onSelectTable={setSelectedTable}
+              onSelectTable={(table) => {
+                setSelectedTable(table);
+              }}
+              onTableSelected={() => {
+                // Auto-collapse / close cart drawer when table is picked on mobile!
+                setIsMobileCartOpen(false);
+              }}
               onUpdateQuantity={handleUpdateQuantity}
               onRemoveItem={handleRemoveItem}
               onClearCart={handleClearCart}
+              onClose={() => setIsMobileCartOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Dedicated Smart Table Selector Modal (Triggered by Top Header Button) */}
+      {isTableModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full p-5 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-stone-900 dark:text-white">
+                    Chọn Bàn Phục Vụ
+                  </h3>
+                  <p className="text-xs text-stone-400">
+                    Chọn khu vực và bàn ăn để lên order
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsTableModalOpen(false)}
+                className="p-1.5 rounded-xl text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 bg-stone-100 dark:bg-stone-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <TableSelector
+              tables={tables}
+              selectedTableId={selectedTable?.id || null}
+              onSelectTable={(table) => {
+                setSelectedTable(table);
+                // Auto close modal immediately so staff can start tapping items on MenuGrid!
+                setIsTableModalOpen(false);
+              }}
+              collapsible={false}
             />
           </div>
         </div>

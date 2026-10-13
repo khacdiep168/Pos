@@ -9,10 +9,10 @@ import {
   CheckCircle2,
   AlertCircle,
   MapPin,
-  BookmarkCheck,
   CalendarCheck,
   RotateCcw,
-  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 
 interface TableSelectorProps {
@@ -20,6 +20,8 @@ interface TableSelectorProps {
   selectedTableId: string | null;
   onSelectTable: (table: RestaurantTable) => void;
   onTableStatusChange?: (tableId: string, newStatus: TableStatus) => void;
+  collapsible?: boolean;
+  onAfterSelect?: () => void;
 }
 
 export const TableSelector: React.FC<TableSelectorProps> = ({
@@ -27,6 +29,8 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
   selectedTableId,
   onSelectTable,
   onTableStatusChange,
+  collapsible = false,
+  onAfterSelect,
 }) => {
   const [zones, setZones] = useState<Zone[]>(() => orderService.getZones());
 
@@ -46,6 +50,12 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
     return zones[0]?.id || '';
   });
 
+  // Collapsible state (if collapsible is true and a table is already selected, start collapsed)
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+    if (collapsible && selectedTableId) return false;
+    return true;
+  });
+
   // Keep selected zone in sync if selectedTable changes from outside
   useEffect(() => {
     if (selectedTable?.zone_id && selectedTable.zone_id !== selectedZoneId) {
@@ -62,6 +72,14 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
     } else {
       orderService.updateTableStatus(table.id, newStatus);
     }
+  };
+
+  const handleSelect = (table: RestaurantTable) => {
+    onSelectTable(table);
+    if (collapsible) {
+      setIsExpanded(false);
+    }
+    onAfterSelect?.();
   };
 
   // Filter tables: Step 1 must match selectedZoneId,
@@ -93,6 +111,46 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
 
   const activeZone = zones.find((z) => z.id === selectedZoneId);
 
+  // If collapsible and not expanded, render compact view
+  if (collapsible && !isExpanded && selectedTable) {
+    const tableZone = zones.find((z) => z.id === selectedTable.zone_id);
+    return (
+      <div className="p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-bold text-stone-900 dark:text-white truncate flex items-center gap-1.5">
+              <span>{tableZone ? `${tableZone.name} - ` : ''}Bàn {selectedTable.table_number}</span>
+              <span
+                className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                  selectedTable.status === 'reserved'
+                    ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'
+                    : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
+                }`}
+              >
+                {selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
+              </span>
+            </div>
+            <p className="text-[10px] text-stone-500 dark:text-stone-400">
+              {selectedTable.capacity} chỗ ngồi • Bấm để đổi bàn
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsExpanded(true)}
+          className="px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-amber-500/40 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors shrink-0 flex items-center gap-1"
+        >
+          <span>Đổi bàn</span>
+          <ChevronDown className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {/* Header Info */}
@@ -101,12 +159,24 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
           <MapPin className="w-3.5 h-3.5 text-amber-500" />
           <span>Luồng chọn bàn 2 bước</span>
         </span>
-        {selectedTable && (
-          <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-500/20">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            Bàn: {selectedTable.table_number} ({selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'})
-          </span>
-        )}
+        <div className="flex items-center gap-1.5">
+          {selectedTable && (
+            <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-500/20 text-[11px]">
+              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              Bàn: {selectedTable.table_number}
+            </span>
+          )}
+          {collapsible && selectedTable && (
+            <button
+              type="button"
+              onClick={() => setIsExpanded(false)}
+              className="p-1 rounded text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+              title="Thu gọn"
+            >
+              <ChevronUp className="w-4 h-4" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* BƯỚC 1: Chọn Khu Vực (Zone) Trước */}
@@ -176,7 +246,7 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
               return (
                 <div
                   key={table.id}
-                  onClick={() => onSelectTable(table)}
+                  onClick={() => handleSelect(table)}
                   className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between text-left relative group ${
                     isSelected
                       ? 'border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 ring-2 ring-amber-500/20 shadow-xs'
