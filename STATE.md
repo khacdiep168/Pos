@@ -543,12 +543,13 @@ Hoàn thành kiểm thử tự động TDD, nâng cấp kiến trúc đồng b�
 
 4. **Tương Thích Vercel & Production Build**:
    - Next.js 16 Production Build (`npm run build`): Đạt 0 lỗi, Turbopack + PPR hoàn tất tối ưu cho toàn bộ 11 routes.
+   - **Tối ưu hóa CI/CD Vercel**: Đã cấu hình `.npmrc` với `legacy-peer-deps=true` và nâng cấp `@types/node` lên `^22` để triệt tiêu hoàn toàn xung đột npm ERESOLVE giữa Vitest 5 và Next.js.
    - Sẵn sàng kích hoạt Vercel Git Integration tự động deploy lên domain [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/) ngay khi đẩy code lên nhánh `main`.
 
 ---
 
 ## 14. Các bước tiếp theo (Phase 2.2 - Live Monitoring & Hardware Setup)
-1. Thêm biến môi trường `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` vào Vercel Project Settings tại dashboard Vercel ([https://vercel.com/](https://vercel.com/)).
+1. Kiểm tra bản build mới nhất trên Vercel tại [https://vercel.com/dashboard](https://vercel.com/dashboard) (đang tự động deploy xanh mượt).
 2. Mở đồng thời [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/) trên máy tính và điện thoại để trải nghiệm gọi món, ra món và thanh toán đồng bộ thời gian thực.
 3. Kết nối máy in nhiệt Bluetooth/LAN thật tại quầy để in thử nghiệm.
 
