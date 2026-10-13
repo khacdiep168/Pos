@@ -109,11 +109,40 @@ export interface RecipeBOM {
   quantity: number; // in recipe_unit
 }
 
+export interface Supplier {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  total_debt?: number;
+}
+
+export interface PurchaseOrderItem {
+  raw_material_id: string;
+  raw_material_name: string;
+  quantity: number; // in purchase_unit
+  unit_price: number;
+  total: number;
+}
+
+export interface PurchaseOrder {
+  id: string;
+  supplier_id: string;
+  supplier_name: string;
+  total_amount: number;
+  status: 'pending' | 'received' | 'cancelled';
+  items: PurchaseOrderItem[];
+  created_at: string;
+}
+
 export interface InventoryTransaction {
   id: string;
   raw_material_id: string;
+  raw_material_name?: string;
   type: 'in' | 'out' | 'waste' | 'adjustment';
   quantity_changed: number;
+  unit: string;
   reference_type: 'order' | 'purchase_order' | 'audit' | 'manual';
   reference_id: string;
   created_at: string;

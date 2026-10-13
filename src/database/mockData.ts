@@ -5,6 +5,9 @@ import {
   StoreSettings,
   UserAccount,
   RawMaterial,
+  Supplier,
+  PurchaseOrder,
+  RecipeBOM,
 } from '@/types';
 
 export const initialStoreSettings: StoreSettings = {
@@ -111,6 +114,12 @@ export const initialMenuItems: MenuItem[] = [
   },
 ];
 
+export const initialSuppliers: Supplier[] = [
+  { id: 'sup-1', name: 'Công ty Thực Phẩm MeatWorld (Thịt Bò & Gia Súc)', phone: '0912 345 678', address: 'Bình Tân, TP. HCM', total_debt: 25000000 },
+  { id: 'sup-2', name: 'Tổng kho Nông Sản & Trà Cao Nguyên', phone: '0933 888 999', address: 'Bảo Lộc, Lâm Đồng', total_debt: 8500000 },
+  { id: 'sup-3', name: 'Hải Sản Đại Dương Xanh Phan Thiết', phone: '0909 777 666', address: 'Phan Thiết, Bình Thuận', total_debt: 12000000 },
+];
+
 export const initialRawMaterials: RawMaterial[] = [
   {
     id: 'raw-1',
@@ -120,7 +129,7 @@ export const initialRawMaterials: RawMaterial[] = [
     recipe_unit: 'gram',
     conversion_factor: 1000,
     current_stock: 12500, // 12.5 kg
-    min_stock_level: 3000,
+    min_stock_level: 4000,
     avg_cost: 950, // 950 VND / gram
   },
   {
@@ -134,6 +143,140 @@ export const initialRawMaterials: RawMaterial[] = [
     min_stock_level: 2000,
     avg_cost: 150,
   },
+  {
+    id: 'raw-3',
+    name: 'Khoai Tây Nghiền Đà Lạt',
+    supplier_id: 'sup-2',
+    purchase_unit: 'kg',
+    recipe_unit: 'gram',
+    conversion_factor: 1000,
+    current_stock: 18000,
+    min_stock_level: 5000,
+    avg_cost: 45,
+  },
+  {
+    id: 'raw-4',
+    name: 'Hạt Tiêu Đen Phú Quốc',
+    supplier_id: 'sup-2',
+    purchase_unit: 'kg',
+    recipe_unit: 'gram',
+    conversion_factor: 1000,
+    current_stock: 2500,
+    min_stock_level: 1000,
+    avg_cost: 180,
+  },
+  {
+    id: 'raw-5',
+    name: 'Mì Ý Barilla Spaghetti',
+    supplier_id: 'sup-1',
+    purchase_unit: 'kg',
+    recipe_unit: 'gram',
+    conversion_factor: 1000,
+    current_stock: 15000,
+    min_stock_level: 3000,
+    avg_cost: 65,
+  },
+  {
+    id: 'raw-6',
+    name: 'Tôm Sú Biển Tươi Cấp Đông',
+    supplier_id: 'sup-3',
+    purchase_unit: 'kg',
+    recipe_unit: 'gram',
+    conversion_factor: 1000,
+    current_stock: 3500, // Low stock alert! (min is 5000)
+    min_stock_level: 5000,
+    avg_cost: 380,
+  },
+  {
+    id: 'raw-7',
+    name: 'Mực Ống Tươi Côn Đảo',
+    supplier_id: 'sup-3',
+    purchase_unit: 'kg',
+    recipe_unit: 'gram',
+    conversion_factor: 1000,
+    current_stock: 6000,
+    min_stock_level: 3000,
+    avg_cost: 290,
+  },
+  {
+    id: 'raw-8',
+    name: 'Đào Ngâm Miếng Hộp Golden',
+    supplier_id: 'sup-2',
+    purchase_unit: 'hộp',
+    recipe_unit: 'gram',
+    conversion_factor: 800,
+    current_stock: 6400,
+    min_stock_level: 2000,
+    avg_cost: 95,
+  },
+  {
+    id: 'raw-9',
+    name: 'Cam Vàng Tươi Mọng Nước',
+    supplier_id: 'sup-2',
+    purchase_unit: 'kg',
+    recipe_unit: 'gram',
+    conversion_factor: 1000,
+    current_stock: 9000,
+    min_stock_level: 3000,
+    avg_cost: 40,
+  },
+  {
+    id: 'raw-10',
+    name: 'Cà Phê Hạt Robusta Buôn Ma Thuột',
+    supplier_id: 'sup-2',
+    purchase_unit: 'kg',
+    recipe_unit: 'gram',
+    conversion_factor: 1000,
+    current_stock: 7500,
+    min_stock_level: 2500,
+    avg_cost: 160,
+  },
+];
+
+// Bill of Materials (BOM) Recipes for Menu Items
+export const initialRecipes: RecipeBOM[] = [
+  // item-1: Bò Bít Tết Sốt Tiêu Đen (Wagyu)
+  { id: 'bom-1', menu_item_id: 'item-1', raw_material_id: 'raw-1', quantity: 200 }, // 200g Bò Wagyu
+  { id: 'bom-2', menu_item_id: 'item-1', raw_material_id: 'raw-3', quantity: 150 }, // 150g Khoai tây
+  { id: 'bom-3', menu_item_id: 'item-1', raw_material_id: 'raw-4', quantity: 15 },  // 15g Tiêu đen
+
+  // item-2: Mì Ý Hải Sản Tươi Sốt Cà Chua
+  { id: 'bom-4', menu_item_id: 'item-2', raw_material_id: 'raw-5', quantity: 120 }, // 120g Mì Ý
+  { id: 'bom-5', menu_item_id: 'item-2', raw_material_id: 'raw-6', quantity: 100 }, // 100g Tôm sú
+  { id: 'bom-6', menu_item_id: 'item-2', raw_material_id: 'raw-7', quantity: 80 },  // 80g Mực tươi
+
+  // item-3: Trà Đào Cam Sả Tươi Mát
+  { id: 'bom-7', menu_item_id: 'item-3', raw_material_id: 'raw-2', quantity: 15 },  // 15g Trà đen
+  { id: 'bom-8', menu_item_id: 'item-3', raw_material_id: 'raw-8', quantity: 45 },  // 45g Đào ngâm
+  { id: 'bom-9', menu_item_id: 'item-3', raw_material_id: 'raw-9', quantity: 60 },  // 60g Cam vàng
+
+  // item-4: Cà Phê Muối Kem Béo Huế
+  { id: 'bom-10', menu_item_id: 'item-4', raw_material_id: 'raw-10', quantity: 25 }, // 25g Cà phê hạt
+];
+
+export const initialPurchaseOrders: PurchaseOrder[] = [
+  {
+    id: 'po-101',
+    supplier_id: 'sup-1',
+    supplier_name: 'Công ty Thực Phẩm MeatWorld',
+    total_amount: 19000000,
+    status: 'received',
+    items: [
+      { raw_material_id: 'raw-1', raw_material_name: 'Thịt Bò Wagyu A4', quantity: 20, unit_price: 950000, total: 19000000 }
+    ],
+    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
+  },
+  {
+    id: 'po-102',
+    supplier_id: 'sup-3',
+    supplier_name: 'Hải Sản Đại Dương Xanh Phan Thiết',
+    total_amount: 7600000,
+    status: 'received',
+    items: [
+      { raw_material_id: 'raw-6', raw_material_name: 'Tôm Sú Biển Tươi', quantity: 20, unit_price: 380000, total: 7600000 }
+    ],
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+  }
 ];
 
 export const initialUsers: UserAccount[] = [
