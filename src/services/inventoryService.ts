@@ -477,6 +477,15 @@ class InventoryService {
     realtimeEngine.emit('STOCK_ALERT', { type: 'STOCK_AUDIT_COMPLETED', audit: report });
     return report;
   }
+
+  // ==================== COST OF GOODS SOLD (COGS / GIÁ VỐN) ====================
+  public calculateMenuItemCost(menuItemId: string): number {
+    const boms = this.getRecipesByMenuItem(menuItemId);
+    return boms.reduce((sum, b) => {
+      const mat = this.rawMaterials.find((m) => m.id === b.raw_material_id);
+      return sum + (mat ? b.quantity * mat.avg_cost : 0);
+    }, 0);
+  }
 }
 
 export const inventoryService = new InventoryService();
