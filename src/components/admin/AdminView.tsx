@@ -58,9 +58,9 @@ export const AdminView: React.FC = () => {
   }, [refreshData]);
 
   return (
-    <div className="flex h-full w-full bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-hidden font-sans">
-      {/* Admin Sidebar Navigation */}
-      <aside className="w-64 bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 p-4 flex flex-col justify-between shrink-0">
+    <div className="flex flex-col md:flex-row h-full w-full bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-hidden font-sans">
+      {/* Desktop Admin Sidebar Navigation */}
+      <aside className="hidden md:flex w-64 bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 p-4 flex-col justify-between shrink-0">
         <div className="space-y-6">
           <div className="flex items-center gap-2.5 px-2">
             <div className="w-8 h-8 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
@@ -159,27 +159,102 @@ export const AdminView: React.FC = () => {
         </div>
       </aside>
 
+      {/* Mobile Sub-Navigation Bar for Admin */}
+      <div className="flex md:hidden items-center gap-1.5 px-3 py-2 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 overflow-x-auto no-scrollbar shrink-0">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'dashboard'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" />
+          <span>Tổng Quan</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('menu')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'menu'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <UtensilsCrossed className="w-3.5 h-3.5" />
+          <span>Thực Đơn</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('tables')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'tables'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <LayoutGrid className="w-3.5 h-3.5" />
+          <span>Sơ Đồ Bàn</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('promotions')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'promotions'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <Ticket className="w-3.5 h-3.5" />
+          <span>Khuyến Mãi ({promotions.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('hr')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'hr'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <Users className="w-3.5 h-3.5" />
+          <span>Nhân Sự ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'settings'
+              ? 'bg-purple-600 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <Settings className="w-3.5 h-3.5" />
+          <span>Cài Đặt</span>
+        </button>
+      </div>
+
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
         {/* Top Header */}
-        <header className="px-6 py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between shrink-0">
-          <div>
-            <h1 className="text-base font-extrabold text-stone-900 dark:text-white">
-              {activeTab === 'dashboard' && 'Executive Business Dashboard & Analytics'}
-              {activeTab === 'menu' && 'Quản Lý Thực Đơn, Món Ăn & Phân Trạm Chế Biến'}
-              {activeTab === 'tables' && 'Quản Lý Sơ Đồ Bàn Ăn & Phân Khu Vực (Zones & Tables)'}
-              {activeTab === 'promotions' && 'Quản Lý Khuyến Mãi, Mã Giảm Giá & Voucher'}
-              {activeTab === 'hr' && 'Quản Trị Nhân Sự & Phân Quyền Vai Trò (RBAC)'}
+        <header className="px-4 sm:px-6 py-2.5 sm:py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between shrink-0 gap-2">
+          <div className="min-w-0 pr-2">
+            <h1 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white truncate">
+              {activeTab === 'dashboard' && 'Tổng Quan Kinh Doanh & Phân Tích (Dashboard)'}
+              {activeTab === 'menu' && 'Quản Lý Thực Đơn & Phân Trạm KDS'}
+              {activeTab === 'tables' && 'Quản Lý Sơ Đồ Bàn Ăn & Phân Khu Vực'}
+              {activeTab === 'promotions' && 'Quản Lý Khuyến Mãi & Voucher'}
+              {activeTab === 'hr' && 'Quản Trị Nhân Sự & Phân Quyền (RBAC)'}
               {activeTab === 'settings' && 'Cấu Hình Thông Tin Thương Hiệu & Cửa Hàng'}
             </h1>
-            <p className="text-xs text-stone-400">
+            <p className="text-[11px] sm:text-xs text-stone-400 truncate hidden sm:block">
               Dữ liệu được tổng hợp thời gian thực từ các phân hệ FOH, KDS, Thu Ngân và ERP
             </p>
           </div>
 
           <button
             onClick={refreshData}
-            className="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors shrink-0"
             title="Làm mới dữ liệu"
           >
             <RefreshCw className="w-3.5 h-3.5" />
@@ -187,7 +262,7 @@ export const AdminView: React.FC = () => {
         </header>
 
         {/* Tab Content Body */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           {activeTab === 'dashboard' && (
             <DashboardTab orders={orders} materials={materials} />
           )}

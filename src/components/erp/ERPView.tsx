@@ -65,9 +65,9 @@ export const ERPView: React.FC = () => {
   const totalStockValue = materials.reduce((s, m) => s + m.current_stock * m.avg_cost, 0);
 
   return (
-    <div className="flex h-full w-full bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-hidden font-sans">
-      {/* Left Sidebar Navigation (Tabs) */}
-      <aside className="w-64 bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 p-4 flex flex-col justify-between shrink-0">
+    <div className="flex flex-col md:flex-row h-full w-full bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-hidden font-sans">
+      {/* Left Desktop Sidebar Navigation (Tabs) */}
+      <aside className="hidden md:flex w-64 bg-white dark:bg-stone-900 border-r border-stone-200 dark:border-stone-800 p-4 flex-col justify-between shrink-0">
         <div className="space-y-6">
           <div className="flex items-center gap-2.5 px-2">
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
@@ -185,12 +185,68 @@ export const ERPView: React.FC = () => {
         </div>
       </aside>
 
+      {/* Mobile Sub-Navigation Bar for ERP */}
+      <div className="flex md:hidden items-center gap-1.5 px-3 py-2 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 overflow-x-auto no-scrollbar shrink-0">
+        <button
+          onClick={() => setActiveTab('inventory')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'inventory'
+              ? 'bg-amber-500 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <Boxes className="w-3.5 h-3.5" />
+          <span>Tồn Kho</span>
+          {lowStockCount > 0 && (
+            <span className="px-1.5 py-0.2 rounded-md text-[10px] bg-rose-500 text-white">
+              {lowStockCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('recipes')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'recipes'
+              ? 'bg-amber-500 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5" />
+          <span>Định Mức (BOM)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('procurement')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'procurement'
+              ? 'bg-amber-500 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <Truck className="w-3.5 h-3.5" />
+          <span>Nhập Hàng (PO)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('audit')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold shrink-0 transition-all ${
+            activeTab === 'audit'
+              ? 'bg-amber-500 text-white shadow-xs'
+              : 'text-stone-600 dark:text-stone-400 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200'
+          }`}
+        >
+          <ClipboardCheck className="w-3.5 h-3.5" />
+          <span>Kiểm Kê Kho</span>
+        </button>
+      </div>
+
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden">
+      <main className="flex-1 flex flex-col h-full overflow-hidden w-full min-w-0">
         {/* Top Header Metrics */}
-        <header className="px-6 py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
-          <div className="flex items-center gap-3">
-            <h1 className="text-base font-extrabold text-stone-900 dark:text-white">
+        <header className="px-4 sm:px-6 py-2.5 sm:py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between gap-2 shrink-0">
+          <div className="flex items-center gap-3 min-w-0 pr-2">
+            <h1 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white truncate">
               {activeTab === 'inventory' && 'Quản Lý Danh Mục Tồn Kho & Cảnh Báo'}
               {activeTab === 'recipes' && 'Cấu Hình Định Mức Món Ăn (Bill of Materials)'}
               {activeTab === 'procurement' && 'Hồ Sơ Nhà Cung Cấp & Phiếu Nhập Kho'}
@@ -198,25 +254,25 @@ export const ERPView: React.FC = () => {
             </h1>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-xs">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-1.5 px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-xs">
               <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-stone-500">Giá trị kho:</span>
+              <span className="text-stone-500 hidden sm:inline">Giá trị kho:</span>
               <span className="font-extrabold text-stone-900 dark:text-white">
                 {formatCurrencyVND(totalStockValue)}
               </span>
             </div>
 
             {lowStockCount > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-pulse">
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold animate-pulse">
                 <AlertTriangle className="w-3.5 h-3.5" />
-                <span>{lowStockCount} nguyên liệu sắp hết</span>
+                <span>{lowStockCount} sắp hết</span>
               </div>
             )}
 
             <button
               onClick={refreshData}
-              className="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors shrink-0"
               title="Làm mới"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -225,7 +281,7 @@ export const ERPView: React.FC = () => {
         </header>
 
         {/* Tab View Body */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           {activeTab === 'inventory' && (
             <InventoryTab
               materials={materials}

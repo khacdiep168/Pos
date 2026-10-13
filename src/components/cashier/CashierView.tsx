@@ -100,27 +100,27 @@ export const CashierView: React.FC = () => {
   return (
     <div className="flex flex-col h-full w-full bg-stone-100 dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-hidden">
       {/* Top Shift Metrics Bar */}
-      <header className="px-6 py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+      <header className="px-3 sm:px-6 py-2.5 sm:py-3.5 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-1">
+          <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
             <CreditCard className="w-4 h-4" />
           </div>
-          <div>
-            <h1 className="text-base font-extrabold text-stone-900 dark:text-white leading-tight">
+          <div className="min-w-0">
+            <h1 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white leading-tight truncate">
               QUẦY THU NGÂN & ĐIỀU PHỐI BÀN
             </h1>
-            <p className="text-xs text-stone-400">
+            <p className="text-[11px] sm:text-xs text-stone-400 truncate hidden sm:block">
               Quản lý thanh toán, hóa đơn và doanh thu thời gian thực
             </p>
           </div>
         </div>
 
         {/* Shift Revenue Badges & Shift Manager Button */}
-        <div className="flex items-center gap-2.5 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
           {/* Shift Manager Toggle Button */}
           <button
             onClick={() => setIsShiftModalOpen(true)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border active:scale-95 ${
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all border active:scale-95 ${
               currentShift && currentShift.status === 'open'
                 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
                 : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
@@ -134,10 +134,10 @@ export const CashierView: React.FC = () => {
             </span>
           </button>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
-            <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-stone-500 dark:text-stone-400">Doanh thu ca:</span>
-            <span className="font-extrabold text-emerald-700 dark:text-emerald-300 text-sm">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span className="text-stone-500 dark:text-stone-400 hidden sm:inline">Doanh thu ca:</span>
+            <span className="font-extrabold text-emerald-700 dark:text-emerald-300 text-xs sm:text-sm">
               {formatCurrencyVND(shiftRevenue)}
             </span>
           </div>
@@ -152,7 +152,7 @@ export const CashierView: React.FC = () => {
 
           <button
             onClick={refreshData}
-            className="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors"
+            className="p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 hover:text-stone-900 dark:hover:text-white transition-colors shrink-0"
             title="Làm mới dữ liệu"
           >
             <RefreshCw className="w-3.5 h-3.5" />

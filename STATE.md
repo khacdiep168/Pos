@@ -229,14 +229,37 @@ POS/
 
 ---
 
-## 8. Các task tiếp theo cần làm (Phase 2 Roadmap)
+## 8. Full-System Mobile-First & Responsive Overhaul (Phase 1.8)
+1. **Top Module Navigation Bar ([src/app/page.tsx](file:///e:/Vibe%20Coding/POS/src/app/page.tsx))**:
+   - Tích hợp cuộn ngang `overflow-x-auto no-scrollbar` cho 5 nút phân hệ (Gọi Món, Bếp & Bar, Thu Ngân, Kho ERP, Quản Trị) kèm thuộc tính `shrink-0`.
+   - Ẩn các badge kỹ thuật (`M2 Live`, `M3 Live`,...) và rút gọn nhãn nút trên màn hình điện thoại nhỏ.
+   - Rút gọn nút `Giả Lập E2E` thành `⚡ E2E` và ẩn badge text `Real-time Online` trên Mobile để không chiếm diện tích hiển thị.
+
+2. **Trung Tâm Quản Trị ([AdminView.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AdminView.tsx))**:
+   - Chuyển đổi kiến trúc sang `flex flex-col md:flex-row`.
+   - Trên Desktop (`md:`): Sidebar 256px hiển thị cố định bên trái như bình thường.
+   - Trên Mobile (`< md`): Tự động ẩn Sidebar cố định và thay thế bằng **Mobile Sub-Navigation Bar** ngang có khả năng cuộn mượt mà với 6 tabs (Tổng Quan, Thực Đơn, Sơ Đồ Bàn, Khuyến Mãi, Nhân Sự, Cài Đặt).
+   - Khung nội dung chính (`main`) chiếm 100% chiều rộng màn hình, giải quyết triệt để lỗi bảng biểu và form cài đặt bị chèn ép co dúm thành dải hẹp.
+
+3. **Phân Hệ ERP Quản Trị Kho ([ERPView.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ERPView.tsx))**:
+   - Chuyển đổi kiến trúc sang `flex flex-col md:flex-row`.
+   - Trên Desktop (`md:`): Giữ nguyên Sidebar 256px bên trái.
+   - Trên Mobile (`< md`): Tự động thu gọn Sidebar thành thanh Tabs ngang cuộn mượt (Tồn Kho, Định Mức BOM, Nhập Hàng, Kiểm Kê Kho).
+   - Toàn bộ danh mục nguyên vật liệu, phiếu nhập hàng và kiểm kê kho mở rộng trọn vẹn 100% không gian màn hình điện thoại.
+
+4. **Quầy Thu Ngân & Điều Phối ([CashierView.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CashierView.tsx))**:
+   - Tối ưu hóa Header: Chuyển đổi padding, nhãn ca làm việc và tổng doanh thu hiển thị linh hoạt theo kích thước màn hình thiết bị.
+
+---
+
+## 9. Các task tiếp theo cần làm (Phase 2 Roadmap)
 1. Kết nối Backend API thật với Supabase Cloud Project (chạy file migration trong `DATABASE_MIGRATION.md`).
 2. Tích hợp Webhook đồng bộ biến động số dư ngân hàng tự động (Cass.vn / SePay / PayOS API) cho cổng VietQR.
 3. Đóng gói PWA (Progressive Web App) hỗ trợ cài đặt trên Tablet/Điện thoại và máy in Bluetooth/LAN.
 
 ---
 
-## 9. Luật vận hành (Agent Working Rules)
+## 10. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
