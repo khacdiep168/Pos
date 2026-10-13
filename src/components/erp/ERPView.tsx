@@ -7,6 +7,7 @@ import { realtimeEngine } from '@/services/realtimeEngine';
 import { InventoryTab } from './InventoryTab';
 import { RecipeBOMTab } from './RecipeBOMTab';
 import { ProcurementTab } from './ProcurementTab';
+import { AuditTab } from './AuditTab';
 import { formatCurrencyVND } from '@/lib/utils';
 import {
   Boxes,
@@ -17,10 +18,13 @@ import {
   RefreshCw,
   Sparkles,
   ShieldCheck,
+  ClipboardCheck,
 } from 'lucide-react';
 
 export const ERPView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'inventory' | 'recipes' | 'procurement'>('inventory');
+  const [activeTab, setActiveTab] = useState<
+    'inventory' | 'recipes' | 'procurement' | 'audit'
+  >('inventory');
 
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
   const [recipes, setRecipes] = useState<RecipeBOM[]>([]);
@@ -145,6 +149,27 @@ export const ERPView: React.FC = () => {
                 {purchaseOrders.length}
               </span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('audit')}
+              className={`w-full flex items-center justify-between p-3 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'audit'
+                  ? 'bg-amber-500 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'
+              }`}
+            >
+              <div className="flex items-center gap-2.5">
+                <ClipboardCheck className="w-4 h-4" />
+                <span>Kiểm Kê Kho</span>
+              </div>
+              <span
+                className={`text-[10px] ${
+                  activeTab === 'audit' ? 'text-white/80' : 'text-stone-400'
+                }`}
+              >
+                Cân bằng
+              </span>
+            </button>
           </nav>
         </div>
 
@@ -169,6 +194,7 @@ export const ERPView: React.FC = () => {
               {activeTab === 'inventory' && 'Quản Lý Danh Mục Tồn Kho & Cảnh Báo'}
               {activeTab === 'recipes' && 'Cấu Hình Định Mức Món Ăn (Bill of Materials)'}
               {activeTab === 'procurement' && 'Hồ Sơ Nhà Cung Cấp & Phiếu Nhập Kho'}
+              {activeTab === 'audit' && 'Kiểm Kê Kho Định Kỳ & Đối Soát Tồn Thực Tế'}
             </h1>
           </div>
 
@@ -220,6 +246,13 @@ export const ERPView: React.FC = () => {
             <ProcurementTab
               suppliers={suppliers}
               purchaseOrders={purchaseOrders}
+              materials={materials}
+              onRefresh={refreshData}
+            />
+          )}
+
+          {activeTab === 'audit' && (
+            <AuditTab
               materials={materials}
               onRefresh={refreshData}
             />

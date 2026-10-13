@@ -129,14 +129,38 @@ POS/
 
 ---
 
-## 4. Các task tiếp theo cần làm (Phase 2 Roadmap)
+## 4. Trạng Thái Hiện Tại: PHASE 1.5 (Advanced Ops & UX) - COMPLETED (13/10/2026)
+Đã hoàn thiện xuất sắc và đồng bộ Real-time 4 hạng mục chuyên sâu:
+
+1. **Sơ đồ Bàn & Khu vực (Zone/Table Management)**:
+   - Cập nhật data model `RestaurantTable` thêm `zone_id` và bảng `Zone` (Tầng 1, Tầng 2, Sân vườn, Phòng VIP).
+   - Component quản lý danh mục Khu vực & Bàn ăn: [ZoneTableTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/ZoneTableTab.tsx) tích hợp trong `/admin`.
+   - Bảng sơ đồ bàn [TableMap.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/TableMap.tsx) tại `/cashier` hỗ trợ lọc theo Zone, đếm số bàn có khách theo từng khu vực, giữ nguyên 4 màu trạng thái (Trống, Đang dùng, Chờ tính tiền, Đã đặt).
+
+2. **Nghiệp vụ Vận hành Thu ngân (Cashier & Ops)**:
+   - **Chuyển Bàn & Gộp Bàn (Move & Merge)**: [MoveMergeTableModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/MoveMergeTableModal.tsx) cho phép chuyển order sang bàn trống hoặc gộp chung hóa đơn vào bàn đang có khách, tự động tính lại tổng tiền/món và giải phóng bàn cũ real-time.
+   - **Quản lý Ca làm việc (Shift Management)**: [ShiftManagementModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/ShiftManagementModal.tsx) cho phép Mở ca (nhập tiền mặt ban đầu), theo dõi phân loại doanh thu trong ca (Tiền mặt, VietQR, Thẻ), và Kết ca với đối soát két tiền thực tế, in phiếu Z-Report.
+
+3. **Quản trị Kho nâng cao (Stock Reconciliation)**:
+   - Tab kiểm kê định kỳ: [AuditTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/AuditTab.tsx) tích hợp trong `/erp`.
+   - Cho phép thủ kho nhập số lượng thực tế đếm tay, hệ thống tự động so sánh với `current_stock` sổ sách để tính độ chênh lệch và giá trị chênh lệch.
+   - Khi xác nhận, tự động cân bằng lại kho và sinh lịch sử `InventoryTransaction` (loại `adjustment`, reference `audit`).
+
+4. **Trải nghiệm Khách hàng (Self-Ordering QR Web App)**:
+   - Route Mobile-First: [src/app/menu/[tableId]/page.tsx](file:///e:/Vibe%20Coding/POS/src/app/menu/%5BtableId%5D/page.tsx).
+   - Thực khách quét QR tại bàn để xem menu, lọc món, tùy biến modifier/topping, nhập ghi chú, và bấm **"Gửi Bếp"**.
+   - Bắn trực tiếp sự kiện `ORDER_CREATED` vào KDS của Bếp/Bar, bàn đổi trạng thái sang `occupied` trên màn hình Thu ngân, kèm tính năng theo dõi tiến độ món ăn real-time và nút gọi nhân viên phục vụ.
+
+---
+
+## 5. Các task tiếp theo cần làm (Phase 2 Roadmap)
 1. Kết nối Backend API thật với Supabase Cloud Project (chạy file migration trong `DATABASE_MIGRATION.md`).
 2. Tích hợp Webhook đồng bộ biến động số dư ngân hàng tự động (Cass.vn / SePay / PayOS API) cho cổng VietQR.
 3. Đóng gói PWA (Progressive Web App) hỗ trợ cài đặt trên Tablet/Điện thoại và máy in Bluetooth/LAN.
 
 ---
 
-## 5. Luật vận hành (Agent Working Rules)
+## 6. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.

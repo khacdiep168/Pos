@@ -1,5 +1,6 @@
 import {
   RestaurantTable,
+  Zone,
   Category,
   MenuItem,
   StoreSettings,
@@ -9,6 +10,8 @@ import {
   PurchaseOrder,
   RecipeBOM,
   Promotion,
+  WorkShift,
+  StockAuditReport,
 } from '@/types';
 
 export const initialStoreSettings: StoreSettings = {
@@ -22,14 +25,30 @@ export const initialStoreSettings: StoreSettings = {
   wifi_password: 'vibetaste_guest',
 };
 
+export const initialZones: Zone[] = [
+  { id: 'zone-1', name: 'Tầng 1 (Khu Trệt)', description: 'Không gian mở, gần quầy bar và bếp chính', sort_order: 1 },
+  { id: 'zone-2', name: 'Tầng 2 (Khu Lầu)', description: 'Không gian yên tĩnh, view cửa sổ lãng mạn', sort_order: 2 },
+  { id: 'zone-3', name: 'Sân Vườn (Garden)', description: 'Không gian thoáng đãng, cây xanh ngoài trời', sort_order: 3 },
+  { id: 'zone-4', name: 'Phòng VIP (Private)', description: 'Phòng tiệc riêng tư cách âm, sang trọng', sort_order: 4 },
+];
+
 export const initialTables: RestaurantTable[] = [
-  { id: 'tbl-1', table_number: 'Bàn 01', capacity: 4, status: 'available' },
-  { id: 'tbl-2', table_number: 'Bàn 02', capacity: 2, status: 'available' },
-  { id: 'tbl-3', table_number: 'Bàn 03', capacity: 4, status: 'occupied' },
-  { id: 'tbl-4', table_number: 'Bàn 04', capacity: 6, status: 'available' },
-  { id: 'tbl-5', table_number: 'Bàn 05', capacity: 8, status: 'billing' },
-  { id: 'tbl-6', table_number: 'Bàn VIP 1', capacity: 10, status: 'available' },
-  { id: 'tbl-7', table_number: 'Bàn VIP 2', capacity: 12, status: 'reserved' },
+  // Tầng 1
+  { id: 'tbl-1', table_number: 'Bàn 01', capacity: 4, status: 'available', zone_id: 'zone-1' },
+  { id: 'tbl-2', table_number: 'Bàn 02', capacity: 2, status: 'available', zone_id: 'zone-1' },
+  { id: 'tbl-3', table_number: 'Bàn 03', capacity: 4, status: 'occupied', zone_id: 'zone-1' },
+  { id: 'tbl-4', table_number: 'Bàn 04', capacity: 6, status: 'available', zone_id: 'zone-1' },
+  // Tầng 2
+  { id: 'tbl-5', table_number: 'Bàn 05', capacity: 8, status: 'billing', zone_id: 'zone-2' },
+  { id: 'tbl-6', table_number: 'Bàn 06', capacity: 4, status: 'available', zone_id: 'zone-2' },
+  { id: 'tbl-7', table_number: 'Bàn 07', capacity: 2, status: 'available', zone_id: 'zone-2' },
+  // Sân Vườn
+  { id: 'tbl-8', table_number: 'Bàn SV 1', capacity: 4, status: 'available', zone_id: 'zone-3' },
+  { id: 'tbl-9', table_number: 'Bàn SV 2', capacity: 6, status: 'available', zone_id: 'zone-3' },
+  { id: 'tbl-10', table_number: 'Bàn SV 3', capacity: 4, status: 'reserved', zone_id: 'zone-3' },
+  // Phòng VIP
+  { id: 'tbl-11', table_number: 'Bàn VIP 1', capacity: 10, status: 'available', zone_id: 'zone-4' },
+  { id: 'tbl-12', table_number: 'Bàn VIP 2', capacity: 12, status: 'reserved', zone_id: 'zone-4' },
 ];
 
 export const initialCategories: Category[] = [

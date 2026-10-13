@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { RestaurantTable, Order, TableStatus } from '@/types';
+import { RestaurantTable, Order, TableStatus, Zone, WorkShift } from '@/types';
 import { orderService } from '@/services/orderService';
 import { realtimeEngine } from '@/services/realtimeEngine';
 import { TableMap } from './TableMap';
 import { CheckoutPanel } from './CheckoutPanel';
+import { ShiftManagementModal } from './ShiftManagementModal';
 import { formatCurrencyVND } from '@/lib/utils';
 import {
   CreditCard,
@@ -15,17 +16,25 @@ import {
   Users,
   CheckCircle2,
   RefreshCw,
+  Clock,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 
 export const CashierView: React.FC = () => {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
+  const [currentShift, setCurrentShift] = useState<WorkShift | null>(null);
+  const [isShiftModalOpen, setIsShiftModalOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null);
 
   // Sync state from orderService
   const refreshData = useCallback(() => {
     setTables(orderService.getTables());
     setOrders(orderService.getOrders());
+    setZones(orderService.getZones());
+    setCurrentShift(orderService.getCurrentShift());
   }, []);
 
   useEffect(() => {
@@ -106,9 +115,26 @@ export const CashierView: React.FC = () => {
           </div>
         </div>
 
-        {/* Shift Revenue Badges */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
+        {/* Shift Revenue Badges & Shift Manager Button */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Shift Manager Toggle Button */}
+          <button
+            onClick={() => setIsShiftModalOpen(true)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border active:scale-95 ${
+              currentShift && currentShift.status === 'open'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5" />
+            <span>
+              {currentShift && currentShift.status === 'open'
+                ? `Ca: ${currentShift.cashier_name.split(' ').pop()} (Mở)`
+                : 'Chưa Mở Ca'}
+            </span>
+          </button>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs">
             <TrendingUp className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span className="text-stone-500 dark:text-stone-400">Doanh thu ca:</span>
             <span className="font-extrabold text-emerald-700 dark:text-emerald-300 text-sm">
@@ -141,9 +167,11 @@ export const CashierView: React.FC = () => {
           <TableMap
             tables={tables}
             orders={orders}
+            zones={zones}
             selectedTableId={selectedTable?.id || null}
             onSelectTable={handleSelectTable}
             onSetTableStatus={handleSetTableStatus}
+            onRefreshData={refreshData}
           />
         </div>
 
@@ -178,6 +206,13 @@ export const CashierView: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* Shift Management Modal */}
+      <ShiftManagementModal
+        isOpen={isShiftModalOpen}
+        onClose={() => setIsShiftModalOpen(false)}
+        onShiftUpdated={refreshData}
+      />
     </div>
   );
 };

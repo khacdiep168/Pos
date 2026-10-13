@@ -5,11 +5,19 @@ export type StationType = 'kitchen' | 'bar';
 
 export type TableStatus = 'available' | 'occupied' | 'billing' | 'reserved';
 
+export interface Zone {
+  id: string;
+  name: string; // Tầng 1, Tầng 2, Sân vườn, Phòng VIP...
+  description?: string;
+  sort_order: number;
+}
+
 export interface RestaurantTable {
   id: string;
   table_number: string;
   capacity: number;
   status: TableStatus;
+  zone_id?: string;
   current_order_id?: string;
 }
 
@@ -185,3 +193,45 @@ export interface Promotion {
   end_date?: string;
   is_active: boolean;
 }
+
+// Inventory Stock Reconciliation (Kiểm Kê Định Kỳ)
+export interface StockAuditItem {
+  raw_material_id: string;
+  raw_material_name: string;
+  recipe_unit: string;
+  system_stock: number;
+  actual_stock: number;
+  difference: number; // actual_stock - system_stock
+  unit_cost: number;
+  difference_value: number; // difference * unit_cost
+  note?: string;
+}
+
+export interface StockAuditReport {
+  id: string;
+  audit_date: string;
+  performed_by: string;
+  items: StockAuditItem[];
+  total_difference_value: number;
+  status: 'completed';
+  notes?: string;
+}
+
+// Cashier Shift Management (Quản Lý Ca Làm Việc)
+export interface WorkShift {
+  id: string;
+  cashier_id: string;
+  cashier_name: string;
+  start_time: string;
+  end_time?: string;
+  initial_cash: number; // Tiền mặt ban đầu
+  actual_cash_end?: number; // Tiền mặt đếm thực tế
+  total_cash_sales: number; // Doanh thu tiền mặt
+  total_qr_sales: number; // Doanh thu VietQR
+  total_card_sales: number; // Doanh thu quẹt thẻ
+  total_orders_count: number;
+  difference_cash?: number; // Chênh lệch thừa / thiếu
+  status: 'open' | 'closed';
+  notes?: string;
+}
+

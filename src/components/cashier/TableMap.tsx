@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { RestaurantTable, TableStatus, Order } from '@/types';
+import { RestaurantTable, TableStatus, Order, Zone } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
+import { MoveMergeTableModal } from './MoveMergeTableModal';
 import {
   Users,
   UtensilsCrossed,
@@ -11,29 +12,39 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  ArrowRightLeft,
+  MapPin,
+  Layers,
 } from 'lucide-react';
 
 interface TableMapProps {
   tables: RestaurantTable[];
   orders: Order[];
+  zones?: Zone[];
   selectedTableId: string | null;
   onSelectTable: (table: RestaurantTable) => void;
   onSetTableStatus?: (tableId: string, status: TableStatus) => void;
+  onRefreshData?: () => void;
 }
 
 export const TableMap: React.FC<TableMapProps> = ({
   tables,
   orders,
+  zones = [],
   selectedTableId,
   onSelectTable,
   onSetTableStatus,
+  onRefreshData,
 }) => {
   const [statusFilter, setStatusFilter] = useState<TableStatus | 'all'>('all');
+  const [selectedZoneId, setSelectedZoneId] = useState<string>('all');
+  const [moveMergeTable, setMoveMergeTable] = useState<RestaurantTable | null>(null);
 
-  // Filter tables
+  // Filter tables by status and zone
   const filteredTables = tables.filter((t) => {
-    if (statusFilter === 'all') return true;
-    return t.status === statusFilter;
+    if (statusFilter !== 'all' && t.status !== statusFilter) return false;
+    if (selectedZoneId !== 'all' && t.zone_id !== selectedZoneId) return false;
+    return true;
   });
 
   // Calculate table metrics
@@ -109,11 +120,58 @@ export const TableMap: React.FC<TableMapProps> = ({
         </div>
       </div>
 
+      {/* Zone Navigation Tabs */}
+      {zones.length > 0 && (
+        <div className="px-4 py-2 border-b border-stone-200 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-900/40 flex items-center gap-2 overflow-x-auto text-xs">
+          <span className="text-[11px] font-bold text-stone-400 shrink-0 flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5 text-amber-500" />
+            <span>Khu vực:</span>
+          </span>
+
+          <button
+            onClick={() => setSelectedZoneId('all')}
+            className={`px-3 py-1 rounded-lg font-bold shrink-0 transition-all ${
+              selectedZoneId === 'all'
+                ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 shadow-2xs'
+                : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200'
+            }`}
+          >
+            Tất cả khu vực
+          </button>
+
+          {zones.map((z) => {
+            const count = tables.filter((t) => t.zone_id === z.id).length;
+            const hasOccupied = tables.some((t) => t.zone_id === z.id && t.status !== 'available');
+            return (
+              <button
+                key={z.id}
+                onClick={() => setSelectedZoneId(z.id)}
+                className={`px-3 py-1 rounded-lg font-bold shrink-0 flex items-center gap-1.5 transition-all ${
+                  selectedZoneId === z.id
+                    ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 shadow-2xs'
+                    : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200'
+                }`}
+              >
+                <span>{z.name}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                  hasOccupied
+                    ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                    : 'bg-stone-200 dark:bg-stone-700 text-stone-500'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Grid of Tables */}
       <div className="flex-1 p-5 overflow-y-auto">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
           {filteredTables.map((table) => {
             const isSelected = selectedTableId === table.id;
+            const zone = zones.find((z) => z.id === table.zone_id);
 
             // Find active unpaid order for this table
             const activeOrder = orders.find(
@@ -143,7 +201,7 @@ export const TableMap: React.FC<TableMapProps> = ({
                 bg: 'bg-rose-50 dark:bg-rose-950/40',
                 border: 'border-rose-400 dark:border-rose-700',
                 badgeBg: 'bg-rose-600 text-white animate-pulse',
-                label: 'Chờ thanh toán',
+                label: 'Chờ tính tiền',
                 textColor: 'text-rose-700 dark:text-rose-300',
               },
               reserved: {
@@ -159,21 +217,25 @@ export const TableMap: React.FC<TableMapProps> = ({
               <div
                 key={table.id}
                 onClick={() => onSelectTable(table)}
-                className={`group relative rounded-2xl p-4 border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[145px] shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
+                className={`group relative rounded-2xl p-4 border-2 transition-all duration-200 cursor-pointer flex flex-col justify-between min-h-[155px] shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
                   statusConfig.bg
                 } ${statusConfig.border} ${
                   isSelected ? 'ring-3 ring-amber-500 border-amber-500 shadow-lg' : ''
                 }`}
               >
-                {/* Top Row: Table Name + Status Badge */}
+                {/* Top Row: Table Name + Zone & Status Badge */}
                 <div className="flex items-start justify-between gap-1.5">
                   <div>
                     <h3 className="text-base font-black text-stone-900 dark:text-white leading-tight">
                       {table.table_number}
                     </h3>
-                    <div className="flex items-center gap-1 text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
-                      <Users className="w-3 h-3" />
+                    <div className="flex items-center gap-1.5 text-[10px] text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
                       <span>{table.capacity} khách</span>
+                      {zone && (
+                        <span className="px-1.5 py-0.2 rounded bg-stone-200/70 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-semibold truncate max-w-[85px]">
+                          {zone.name}
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -205,10 +267,24 @@ export const TableMap: React.FC<TableMapProps> = ({
                 {/* Bottom Bar: Action prompt */}
                 <div className="pt-2 border-t border-stone-200/50 dark:border-stone-800/60 flex items-center justify-between text-[11px]">
                   {activeOrder ? (
-                    <span className="font-bold text-amber-600 dark:text-amber-400 group-hover:underline flex items-center gap-1">
-                      <Receipt className="w-3 h-3" />
-                      Tính tiền
-                    </span>
+                    <div className="flex items-center gap-1">
+                      <span className="font-bold text-amber-600 dark:text-amber-400 group-hover:underline flex items-center gap-1">
+                        <Receipt className="w-3 h-3" />
+                        Tính tiền
+                      </span>
+
+                      {/* Nút Chuyển/Gộp bàn */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setMoveMergeTable(table);
+                        }}
+                        className="p-1 rounded-lg bg-stone-200/80 dark:bg-stone-800 hover:bg-amber-500 hover:text-white text-stone-600 dark:text-stone-300 transition-colors ml-1"
+                        title="Chuyển hoặc Gộp bàn này"
+                      >
+                        <ArrowRightLeft className="w-3 h-3" />
+                      </button>
+                    </div>
                   ) : (
                     <span className="text-stone-400">Bàn trống</span>
                   )}
@@ -231,6 +307,21 @@ export const TableMap: React.FC<TableMapProps> = ({
           })}
         </div>
       </div>
+
+      {/* Move & Merge Table Modal */}
+      {moveMergeTable && (
+        <MoveMergeTableModal
+          isOpen={!!moveMergeTable}
+          onClose={() => setMoveMergeTable(null)}
+          sourceTable={moveMergeTable}
+          tables={tables}
+          zones={zones}
+          orders={orders}
+          onSuccess={() => {
+            if (onRefreshData) onRefreshData();
+          }}
+        />
+      )}
     </div>
   );
 };

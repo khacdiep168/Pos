@@ -11,6 +11,7 @@ import { MenuTab } from './MenuTab';
 import { PromotionsTab } from './PromotionsTab';
 import { HRTab } from './HRTab';
 import { StoreSettingsTab } from './StoreSettingsTab';
+import { ZoneTableTab } from './ZoneTableTab';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -20,12 +21,13 @@ import {
   ShieldCheck,
   RefreshCw,
   Sparkles,
+  LayoutGrid,
 } from 'lucide-react';
 
 export const AdminView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'promotions' | 'hr' | 'settings'>(
-    'dashboard'
-  );
+  const [activeTab, setActiveTab] = useState<
+    'dashboard' | 'menu' | 'tables' | 'promotions' | 'hr' | 'settings'
+  >('dashboard');
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [materials, setMaterials] = useState<RawMaterial[]>([]);
@@ -99,6 +101,18 @@ export const AdminView: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('tables')}
+              className={`w-full flex items-center gap-2.5 p-3 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'tables'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              <span>Sơ Đồ & Khu Vực</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('promotions')}
               className={`w-full flex items-center gap-2.5 p-3 rounded-xl text-xs font-bold transition-all ${
                 activeTab === 'promotions'
@@ -153,6 +167,7 @@ export const AdminView: React.FC = () => {
             <h1 className="text-base font-extrabold text-stone-900 dark:text-white">
               {activeTab === 'dashboard' && 'Executive Business Dashboard & Analytics'}
               {activeTab === 'menu' && 'Quản Lý Thực Đơn, Món Ăn & Phân Trạm Chế Biến'}
+              {activeTab === 'tables' && 'Quản Lý Sơ Đồ Bàn Ăn & Phân Khu Vực (Zones & Tables)'}
               {activeTab === 'promotions' && 'Quản Lý Khuyến Mãi, Mã Giảm Giá & Voucher'}
               {activeTab === 'hr' && 'Quản Trị Nhân Sự & Phân Quyền Vai Trò (RBAC)'}
               {activeTab === 'settings' && 'Cấu Hình Thông Tin Thương Hiệu & Cửa Hàng'}
@@ -178,6 +193,8 @@ export const AdminView: React.FC = () => {
           )}
 
           {activeTab === 'menu' && <MenuTab onRefresh={refreshData} />}
+
+          {activeTab === 'tables' && <ZoneTableTab />}
 
           {activeTab === 'promotions' && (
             <PromotionsTab promotions={promotions} onRefresh={refreshData} />

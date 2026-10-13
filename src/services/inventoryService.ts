@@ -5,6 +5,8 @@ import {
   PurchaseOrder,
   InventoryTransaction,
   Order,
+  StockAuditReport,
+  StockAuditItem,
 } from '@/types';
 import {
   initialRawMaterials,
@@ -19,6 +21,7 @@ const STORAGE_RECIPES = 'pos_recipes_bom';
 const STORAGE_SUPPLIERS = 'pos_suppliers';
 const STORAGE_PURCHASE_ORDERS = 'pos_purchase_orders';
 const STORAGE_TRANSACTIONS = 'pos_inventory_transactions';
+const STORAGE_STOCK_AUDITS = 'pos_stock_audits';
 
 class InventoryService {
   private rawMaterials: RawMaterial[] = [];
@@ -26,6 +29,7 @@ class InventoryService {
   private suppliers: Supplier[] = [];
   private purchaseOrders: PurchaseOrder[] = [];
   private transactions: InventoryTransaction[] = [];
+  private stockAudits: StockAuditReport[] = [];
   private isListening = false;
 
   constructor() {
@@ -50,6 +54,9 @@ class InventoryService {
 
         const savedTx = localStorage.getItem(STORAGE_TRANSACTIONS);
         this.transactions = savedTx ? JSON.parse(savedTx) : [];
+
+        const savedAudits = localStorage.getItem(STORAGE_STOCK_AUDITS);
+        this.stockAudits = savedAudits ? JSON.parse(savedAudits) : [];
       } catch {
         this.fallbackDefaults();
       }
@@ -64,6 +71,7 @@ class InventoryService {
     this.suppliers = [...initialSuppliers];
     this.purchaseOrders = [...initialPurchaseOrders];
     this.transactions = [];
+    this.stockAudits = [];
   }
 
   private save() {
@@ -73,6 +81,7 @@ class InventoryService {
       localStorage.setItem(STORAGE_SUPPLIERS, JSON.stringify(this.suppliers));
       localStorage.setItem(STORAGE_PURCHASE_ORDERS, JSON.stringify(this.purchaseOrders));
       localStorage.setItem(STORAGE_TRANSACTIONS, JSON.stringify(this.transactions));
+      localStorage.setItem(STORAGE_STOCK_AUDITS, JSON.stringify(this.stockAudits));
     }
   }
 
@@ -281,6 +290,82 @@ class InventoryService {
 
     realtimeEngine.emit('STOCK_ALERT', { type: 'PURCHASE_ORDER_RECEIVED', po: newPO });
     return newPO;
+  }
+
+  // ==================== STOCK AUDIT & RECONCILIATION ====================
+  public getStockAudits(): StockAuditReport[] {
+    return [...this.stockAudits];
+  }
+
+  public createStockAudit(
+    performedBy: string,
+    auditItemsInput: { raw_material_id: string; actual_stock: number; note?: string }[],
+    notes?: string
+  ): StockAuditReport {
+    const now = new Date().toISOString();
+    const auditId = `audit-${Date.now().toString().slice(-6)}`;
+    let totalDifferenceValue = 0;
+
+    const reportItems: StockAuditItem[] = auditItemsInput.map((input) => {
+      const material = this.rawMaterials.find((m) => m.id === input.raw_material_id);
+      const systemStock = material?.current_stock ?? 0;
+      const actualStock = input.actual_stock;
+      const difference = actualStock - systemStock;
+      const unitCost = material?.avg_cost ?? 0;
+      const diffValue = difference * unitCost;
+
+      totalDifferenceValue += diffValue;
+
+      if (material) {
+        // Cân bằng kho: cập nhật current_stock thành số lượng thực tế
+        material.current_stock = actualStock;
+
+        // Ghi log InventoryTransactions loại 'adjustment'
+        if (difference !== 0) {
+          const tx: InventoryTransaction = {
+            id: `tx-adj-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            raw_material_id: material.id,
+            raw_material_name: material.name,
+            type: 'adjustment',
+            quantity_changed: difference,
+            unit: material.recipe_unit,
+            reference_type: 'audit',
+            reference_id: auditId,
+            created_at: now,
+            created_by: `Kiểm kê kho (${performedBy}): ${difference > 0 ? '+' : ''}${difference} ${material.recipe_unit}`,
+          };
+          this.transactions.unshift(tx);
+        }
+      }
+
+      return {
+        raw_material_id: input.raw_material_id,
+        raw_material_name: material?.name || 'Nguyên liệu',
+        recipe_unit: material?.recipe_unit || 'đv',
+        system_stock: systemStock,
+        actual_stock: actualStock,
+        difference,
+        unit_cost: unitCost,
+        difference_value: diffValue,
+        note: input.note,
+      };
+    });
+
+    const report: StockAuditReport = {
+      id: auditId,
+      audit_date: now,
+      performed_by: performedBy,
+      items: reportItems,
+      total_difference_value: totalDifferenceValue,
+      status: 'completed',
+      notes,
+    };
+
+    this.stockAudits.unshift(report);
+    this.save();
+
+    realtimeEngine.emit('STOCK_ALERT', { type: 'STOCK_AUDIT_COMPLETED', audit: report });
+    return report;
   }
 }
 
