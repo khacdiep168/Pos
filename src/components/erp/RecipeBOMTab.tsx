@@ -19,6 +19,7 @@ import {
   DollarSign,
   Layers,
 } from 'lucide-react';
+import { SearchableSelect, SearchableOption } from '@/components/ui/SearchableSelect';
 
 interface RecipeBOMTabProps {
   materials: RawMaterial[];
@@ -55,6 +56,14 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
       setIsSaved(false);
     }
   }, [selectedItem, recipes]);
+
+  // Options for SearchableSelect
+  const materialOptions: SearchableOption[] = materials.map((m) => ({
+    value: m.id,
+    label: m.name,
+    subLabel: `${formatCurrencyVND(m.avg_cost)} / ${m.recipe_unit}`,
+    badge: m.recipe_unit,
+  }));
 
   // Calculate COGS and Gross Margin for selected item
   const cogs = draftBOM.reduce((sum, b) => {
@@ -252,7 +261,7 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                 Chưa có định mức BOM cho món này. Bấm "Thêm nguyên liệu" để cấu hình.
               </div>
             ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 pb-20">
                 {draftBOM.map((bom, idx) => {
                   const mat = materials.find((m) => m.id === bom.raw_material_id);
                   const lineCost = mat ? bom.quantity * mat.avg_cost : 0;
@@ -262,19 +271,16 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                       key={idx}
                       className="p-2.5 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700/60 flex items-center justify-between gap-3 text-xs"
                     >
-                      {/* Material Selector */}
-                      <div className="flex-1">
-                        <select
+                      {/* Material Selector with Instant Search */}
+                      <div className="flex-1 min-w-[200px]">
+                        <SearchableSelect
+                          options={materialOptions}
                           value={bom.raw_material_id}
-                          onChange={(e) => handleUpdateMaterial(idx, e.target.value)}
-                          className="w-full px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg font-bold text-xs text-stone-900 dark:text-white focus:outline-none"
-                        >
-                          {materials.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {m.name} ({m.recipe_unit})
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => handleUpdateMaterial(idx, val)}
+                          placeholder="-- Tìm hoặc chọn nguyên liệu --"
+                          searchPlaceholder="Gõ tên nguyên liệu (VD: Đường, Sữa, Bò...)"
+                          buttonClassName="px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-xs font-bold text-stone-900 dark:text-white"
+                        />
                       </div>
 
                       {/* Quantity Input */}

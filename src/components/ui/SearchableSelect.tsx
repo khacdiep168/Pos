@@ -143,7 +143,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   return (
     <div
       ref={containerRef}
-      className={`relative w-full ${className}`}
+      className={`relative w-full ${isOpen ? 'z-40' : 'z-0'} ${className}`}
       onKeyDown={handleKeyDown}
     >
       {/* Trigger Button */}

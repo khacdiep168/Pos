@@ -34,6 +34,10 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
   // Audit form values: map raw_material_id -> actual_stock
   const [actualCounts, setActualCounts] = useState<{ [id: string]: number }>({});
 
+  // Filter & Search states for the audit modal
+  const [auditSearchQuery, setAuditSearchQuery] = useState('');
+  const [auditFilterStatus, setAuditFilterStatus] = useState<'all' | 'diff' | 'match'>('all');
+
   const handleOpenNewAudit = () => {
     // Pre-fill actual counts with current system stock as starting point
     const initial: { [id: string]: number } = {};
@@ -43,6 +47,8 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
     setActualCounts(initial);
     setPerformedBy('Thủ Kho Lê Văn Hùng');
     setAuditNotes('');
+    setAuditSearchQuery('');
+    setAuditFilterStatus('all');
     setIsModalOpen(true);
   };
 
@@ -81,6 +87,25 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
     const actual = actualCounts[m.id] !== undefined ? actualCounts[m.id] : m.current_stock;
     return actual !== m.current_stock;
   }).length;
+
+  // Filtered materials inside the audit modal
+  const filteredAuditMaterials = materials.filter((m) => {
+    if (auditSearchQuery.trim()) {
+      const q = auditSearchQuery.toLowerCase().trim();
+      const matchName = m.name.toLowerCase().includes(q);
+      const matchUnit = m.recipe_unit.toLowerCase().includes(q);
+      const matchPurchaseUnit = m.purchase_unit.toLowerCase().includes(q);
+      if (!matchName && !matchUnit && !matchPurchaseUnit) return false;
+    }
+
+    const actual = actualCounts[m.id] !== undefined ? actualCounts[m.id] : m.current_stock;
+    const isDiff = actual !== m.current_stock;
+
+    if (auditFilterStatus === 'diff' && !isDiff) return false;
+    if (auditFilterStatus === 'match' && isDiff) return false;
+
+    return true;
+  });
 
   return (
     <div className="space-y-5">
@@ -305,6 +330,83 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
                 </div>
               </div>
 
+              {/* Thanh lọc & tìm kiếm từng sản phẩm trong đợt kiểm kê */}
+              <div className="space-y-2 pt-1 border-t border-stone-200/60 dark:border-stone-800">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                  {/* Ô tìm kiếm nhanh sản phẩm */}
+                  <div className="relative flex-1">
+                    <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={auditSearchQuery}
+                      onChange={(e) => setAuditSearchQuery(e.target.value)}
+                      placeholder="Tìm kiếm / lọc từng sản phẩm (gõ tên, đơn vị g, ml, kg...)..."
+                      className="w-full pl-8 pr-7 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-xs text-stone-900 dark:text-white placeholder:text-stone-400 focus:outline-hidden focus:ring-2 focus:ring-amber-500/30 font-medium"
+                    />
+                    {auditSearchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setAuditSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 p-0.5"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Pills lọc theo tình trạng lệch kho */}
+                  <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setAuditFilterStatus('all')}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                        auditFilterStatus === 'all'
+                          ? 'bg-stone-900 text-white dark:bg-white dark:text-stone-900 border-stone-900 dark:border-white shadow-2xs'
+                          : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:border-amber-400'
+                      }`}
+                    >
+                      Tất cả ({materials.length})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAuditFilterStatus('diff')}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                        auditFilterStatus === 'diff'
+                          ? 'bg-amber-500 text-white border-amber-500 shadow-2xs'
+                          : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/60 hover:bg-amber-100'
+                      }`}
+                    >
+                      Có chênh lệch ({changedItemsCount})
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setAuditFilterStatus('match')}
+                      className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
+                        auditFilterStatus === 'match'
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
+                          : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/60 hover:bg-emerald-100'
+                      }`}
+                    >
+                      Khớp sổ ({materials.length - changedItemsCount})
+                    </button>
+                  </div>
+                </div>
+
+                {/* Sub-bar hiển thị số lượng kết quả */}
+                <div className="flex items-center justify-between text-[11px] text-stone-500 font-medium px-1">
+                  <span>
+                    Hiển thị <strong className="text-stone-900 dark:text-white font-bold">{filteredAuditMaterials.length}</strong> / {materials.length} sản phẩm
+                  </span>
+                  {auditSearchQuery && (
+                    <span className="text-amber-600 dark:text-amber-400 font-medium">
+                      Đang tìm: &quot;{auditSearchQuery}&quot;
+                    </span>
+                  )}
+                </div>
+              </div>
+
               {/* Bảng nhập đếm tay */}
               <div className="border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
                 <table className="w-full text-left text-xs">
@@ -318,49 +420,72 @@ export const AuditTab: React.FC<AuditTabProps> = ({ materials, onRefresh }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100 dark:divide-stone-800 font-medium">
-                    {materials.map((m) => {
-                      const actual = actualCounts[m.id] !== undefined ? actualCounts[m.id] : m.current_stock;
-                      const diff = actual - m.current_stock;
-                      const diffVal = diff * m.avg_cost;
+                    {filteredAuditMaterials.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="p-8 text-center text-stone-400">
+                          <p className="font-bold text-xs text-stone-700 dark:text-stone-300">
+                            Không tìm thấy sản phẩm nào phù hợp!
+                          </p>
+                          <p className="text-[11px] mt-1 text-stone-500">
+                            Thử tìm kiếm với từ khóa khác hoặc bấm nút xóa bộ lọc bên dưới.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAuditSearchQuery('');
+                              setAuditFilterStatus('all');
+                            }}
+                            className="mt-3 px-3 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-bold transition-colors inline-block"
+                          >
+                            Xóa bộ lọc tìm kiếm
+                          </button>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAuditMaterials.map((m) => {
+                        const actual = actualCounts[m.id] !== undefined ? actualCounts[m.id] : m.current_stock;
+                        const diff = actual - m.current_stock;
+                        const diffVal = diff * m.avg_cost;
 
-                      return (
-                        <tr key={m.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/40">
-                          <td className="p-3">
-                            <div className="font-bold text-stone-900 dark:text-white">{m.name}</div>
-                            <span className="text-[10px] text-stone-400">Đơn vị: {m.recipe_unit}</span>
-                          </td>
+                        return (
+                          <tr key={m.id} className="hover:bg-stone-50 dark:hover:bg-stone-800/40">
+                            <td className="p-3">
+                              <div className="font-bold text-stone-900 dark:text-white">{m.name}</div>
+                              <span className="text-[10px] text-stone-400">Đơn vị: {m.recipe_unit}</span>
+                            </td>
 
-                          <td className="p-3 text-center font-mono text-stone-500">
-                            {m.current_stock.toLocaleString()} {m.recipe_unit}
-                          </td>
+                            <td className="p-3 text-center font-mono text-stone-500">
+                              {m.current_stock.toLocaleString()} {m.recipe_unit}
+                            </td>
 
-                          <td className="p-3 text-center">
-                            <div className="inline-flex items-center gap-1.5">
-                              <input
-                                type="number"
-                                min="0"
-                                value={actual}
-                                onChange={(e) => handleCountChange(m.id, parseFloat(e.target.value) || 0)}
-                                className="w-24 px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-center text-xs focus:ring-2 focus:ring-amber-500/30"
-                              />
-                              <span className="text-[11px] text-stone-400">{m.recipe_unit}</span>
-                            </div>
-                          </td>
+                            <td className="p-3 text-center">
+                              <div className="inline-flex items-center gap-1.5">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  value={actual}
+                                  onChange={(e) => handleCountChange(m.id, parseFloat(e.target.value) || 0)}
+                                  className="w-24 px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-center text-xs focus:ring-2 focus:ring-amber-500/30"
+                                />
+                                <span className="text-[11px] text-stone-400">{m.recipe_unit}</span>
+                              </div>
+                            </td>
 
-                          <td className="p-3 text-center font-mono font-bold">
-                            <span className={diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-500' : 'text-stone-400'}>
-                              {diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString()}
-                            </span>
-                          </td>
+                            <td className="p-3 text-center font-mono font-bold">
+                              <span className={diff < 0 ? 'text-rose-500' : diff > 0 ? 'text-emerald-500' : 'text-stone-400'}>
+                                {diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString()}
+                              </span>
+                            </td>
 
-                          <td className="p-3 text-right font-mono font-bold">
-                            <span className={diffVal < 0 ? 'text-rose-500' : diffVal > 0 ? 'text-emerald-500' : 'text-stone-400'}>
-                              {diffVal > 0 ? '+' : ''}{formatCurrencyVND(diffVal)}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <td className="p-3 text-right font-mono font-bold">
+                              <span className={diffVal < 0 ? 'text-rose-500' : diffVal > 0 ? 'text-emerald-500' : 'text-stone-400'}>
+                                {diffVal > 0 ? '+' : ''}{formatCurrencyVND(diffVal)}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>

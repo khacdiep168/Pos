@@ -186,11 +186,16 @@ POS/
    - Hỗ trợ gõ text lọc tức thì (không phân biệt hoa/thường, hỗ trợ tiếng Việt).
    - **Điều hướng bàn phím toàn diện**: Hỗ trợ phím mũi tên `↑` / `↓` để duyệt danh sách, phím `Enter` để chọn, phím `Esc` để đóng mà không cần dùng chuột.
    - Tích hợp vào:
+     - **Cấu hình Định mức BOM trong phân hệ Kho ERP ([RecipeBOMTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/RecipeBOMTab.tsx))**: Ô input tìm kiếm nhanh trên từng dòng nguyên liệu thành phần.
      - Form Thêm Định mức BOM món ăn ([AddMenuItemModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AddMenuItemModal.tsx)).
      - Form Sửa Định mức BOM món ăn ([EditMenuItemModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/EditMenuItemModal.tsx)).
      - Form Tạo Phiếu Nhập Kho PO ([ProcurementTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ProcurementTab.tsx)).
 
-3. **Tùy Chỉnh UX Nâng Cao**:
+3. **Tùy Chỉnh UX Nâng Cao & Kiểm Kê Kho Thông Minh**:
+   - **Lọc Từng Sản Phẩm trong Kiểm Kê Kho ([AuditTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/AuditTab.tsx))**:
+     - Bổ sung thanh tìm kiếm nhanh nguyên liệu theo tên, đơn vị tính ngay trên đầu bảng nhập đếm tay.
+     - Bộ lọc 1-chạm: *Tất cả*, *Có chênh lệch* (lệch số lượng so với sổ sách), *Khớp sổ* giúp thủ kho tập trung xử lý đúng sản phẩm cần cân bằng.
+     - Hiển thị số lượng sản phẩm được lọc và thông báo empty state trực quan khi không tìm thấy.
    - **Nút Xóa Nhanh Giỏ Hàng (Clear Cart)**:
      - Bổ sung nút nổi bật "Hủy đơn / Xóa toàn bộ" (kèm icon `Trash2`) ở cả Header giỏ hàng và thanh hành động dưới cùng của [CartSidebar.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/CartSidebar.tsx).
      - Reset giỏ hàng về 0 ngay lập tức với hộp thoại xác nhận khi khách đổi ý.
