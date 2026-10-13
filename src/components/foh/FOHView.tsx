@@ -33,13 +33,14 @@ import { formatCurrencyVND } from '@/lib/utils';
 
 export const FOHView: React.FC = () => {
   // Data Sources
-  const [categories] = useState<Category[]>(initialCategories);
+  const [categories, setCategories] = useState<Category[]>(() => menuService.getCategories());
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => menuService.getMenuItems());
   const [tables, setTables] = useState<RestaurantTable[]>(() => orderService.getTables());
   const [zones, setZones] = useState<Zone[]>(() => orderService.getZones());
 
   const refreshMenuItems = useCallback(() => {
     setMenuItems(menuService.getMenuItems());
+    setCategories(menuService.getCategories());
   }, []);
 
   const refreshTablesAndZones = useCallback(() => {
@@ -50,6 +51,11 @@ export const FOHView: React.FC = () => {
   useEffect(() => {
     refreshMenuItems();
     refreshTablesAndZones();
+
+    // Tự động kéo dữ liệu thực tế từ Supabase Cloud (đảm bảo điện thoại có ngay món mới tạo từ máy tính)
+    menuService.syncFromSupabase().then(() => {
+      refreshMenuItems();
+    });
 
     const unsubOrder = realtimeEngine.subscribe('ORDER_UPDATED', () => {
       refreshMenuItems();

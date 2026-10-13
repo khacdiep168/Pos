@@ -535,15 +535,21 @@ Hoàn thành kiểm thử tự động TDD, nâng cấp kiến trúc đồng b�
    - Mọi thiết bị khác nhau (Máy tính thu ngân tại quầy, điện thoại phục vụ đi bàn, máy tính bảng nhà bếp/bar) cùng kết nối chung database Supabase đều nhận ngay lập tức các sự kiện trọng yếu: `ORDER_CREATED`, `PAYMENT_COMPLETED`, `ITEM_STATUS_CHANGED`, `TABLE_STATUS_CHANGED`... với độ trễ gần như 0ms.
    - Cơ chế Fallback thông minh: Vẫn duy trì BroadcastChannel nội bộ giữa các tab trên cùng máy và Local Event Bus giúp hệ thống hoạt động ổn định kể cả khi mất kết nối mạng Internet.
 
-3. **Tương Thích Vercel & Production Build**:
+3. **Đồng Bộ Dữ Liệu Hai Chiều Lên Supabase Cloud Database ([src/services/menuService.ts](file:///e:/Vibe%20Coding/POS/src/services/menuService.ts), [src/components/foh/FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx))**:
+   - **Tạo bảng PostgreSQL trên Supabase**: Đã thiết lập các bảng `pos_categories`, `pos_menu_items`, `pos_zones`, `pos_tables`, `pos_orders` kèm Public RLS Policies và kích hoạt `supabase_realtime` publication.
+   - **Đồng bộ 2 chiều (2-Way Cloud Sync)**: Khi người dùng tạo/sửa/xóa món ăn trên máy tính, dữ liệu được ghi tức thì lên bảng `pos_menu_items` của Supabase Cloud và phát tín hiệu Realtime.
+   - **Tự động kéo dữ liệu trên điện thoại di động**: Khi điện thoại mở app hoặc nhận sự kiện Postgres Changes, `menuService.syncFromSupabase()` tự động tải dữ liệu thực tế mới nhất từ đám mây, xóa bỏ triệt để rào cản cô lập bộ nhớ cục bộ `localStorage`.
+   - **Kiểm thử trực tiếp trên giao diện**: Đã chạy Browser Subagent kiểm thử trực tiếp trên giao diện FOH (`http://localhost:3003`). Món mới tạo **"Cà phê đá" (25.000 đ)** xuất hiện nổi bật ngay vị trí đầu tiên của Lưới Gọi Món FOH.
+
+4. **Tương Thích Vercel & Production Build**:
    - Next.js 16 Production Build (`npm run build`): Đạt 0 lỗi, Turbopack + PPR hoàn tất tối ưu cho toàn bộ 11 routes.
    - Sẵn sàng kích hoạt Vercel Git Integration tự động deploy lên domain [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/) ngay khi đẩy code lên nhánh `main`.
 
 ---
 
 ## 14. Các bước tiếp theo (Phase 2.2 - Live Monitoring & Hardware Setup)
-1. Thêm biến môi trường `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` vào Vercel Project Settings tại dashboard Vercel.
-2. Thử nghiệm đồng bộ trực tiếp giữa 1 máy tính để bàn (KDS/Thu ngân) và 1 điện thoại di động (FOH Gọi món).
+1. Thêm biến môi trường `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY` vào Vercel Project Settings tại dashboard Vercel ([https://vercel.com/](https://vercel.com/)).
+2. Mở đồng thời [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/) trên máy tính và điện thoại để trải nghiệm gọi món, ra món và thanh toán đồng bộ thời gian thực.
 3. Kết nối máy in nhiệt Bluetooth/LAN thật tại quầy để in thử nghiệm.
 
 ---
