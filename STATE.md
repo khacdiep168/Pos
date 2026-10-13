@@ -5,7 +5,7 @@
 ---
 
 ## 1. Trạng thái hiện tại (Project Status)
-* **Trạng thái tổng thể**: Hoàn thành Module 1 (FOH) & Module 2 (KDS/BDS Real-time Kanban) - Chuyển sang Module 3 (Cashier Desk & Table Management)
+* **Trạng thái tổng thể**: Hoàn thành Module 1 (FOH), Module 2 (KDS/BDS) & Module 3 (Cashier Desk & Table Management) - Chuyển sang Module 4 (ERP & Recipe BOM Auto-Deduct)
 * **Thời gian cập nhật**: 2026-10-13
 
 ---
@@ -22,35 +22,42 @@
   - `CategoryNav`, `MenuCard`, `MenuGrid`, `ModifierModal`, `TableSelector`, `CartSidebar`, `FOHView`.
   - Phát sự kiện `ORDER_CREATED` và lưu trữ qua `orderService`.
 - [x] **Module 2: Kitchen & Bar Display System (KDS & BDS Real-Time Kanban Board)**:
-  - **Trang `/kds` & Tab KDS in-app**: Xây dựng màn hình ngang tối ưu cho Desktop / Tablet hiển thị trong bếp hoặc quầy pha chế.
-  - **Bóc tách trạm tự động (Station Splitting)**:
-    - Khi nhận order mới qua `ORDER_CREATED`, hệ thống tự động tách nhóm: món ăn trạm `kitchen` đổ về thẻ Bếp, đồ uống trạm `bar` đổ về thẻ Bar.
-  - **3 cột Kanban chuẩn quy trình**:
-    - "CHỜ XỬ LÝ (MỚI)" (`pending`): Đón nhận đơn mới, có nút "BẮT ĐẦU CHẾ BIẾN".
-    - "ĐANG CHẾ BIẾN" (`cooking`): Theo dõi thời gian chờ thực tế, nút "HOÀN TẤT & RA MÓN" hoặc nút hoàn tác.
-    - "HOÀN THÀNH & SẴN SÀNG" (`ready`): Món đã xong báo cho nhân viên chạy bàn nhận món.
-  - **Thẻ KDS Ticket Card**:
-    - Hiển thị số bàn to rõ ràng, mã đơn rút gọn.
-    - Bộ đếm thời gian thực (Elapsed timer theo phút) với cảnh báo màu: > 8 phút (vàng), > 15 phút (đỏ nhấp nháy khẩn cấp).
-    - Chi tiết món: Tên món, số lượng nổi bật `2x`, Topping/Độ ngọt/Độ đá và Ghi chú riêng của khách.
-    - Checkbox tương tác riêng từng món để đầu bếp/bartender gạch đầu dòng khi làm xong từng món.
-  - **Âm thanh thông báo chuông (Audio Alert)**:
-    - Bộ tạo âm thanh chuẩn Web Audio API (`src/lib/audioAlert.ts`) không phụ thuộc file mp3 bên ngoài, phát chuông đôi 2 âm sắc thanh thoát khi có order mới.
-    - Điều khiển bật/tắt chuông (Mute/Unmute) và nút "Thử chuông".
-  - **Đồng bộ sự kiện chéo (Cross-Sync)**:
-    - Emit sự kiện `ORDER_UPDATED`, `ITEM_STATUS_CHANGED`, `ORDER_STATUS_CHANGED` qua `pos_realtime_events` để màn hình FOH và Thu ngân nắm bắt trạng thái món tức thì.
-  - Biên dịch kiểm tra tĩnh (`npm run build`) hoàn tất 100% sinh thành công các route `/` và `/kds`.
+  - Trang `/kds` & Tab KDS in-app tối ưu màn hình ngang Desktop / Tablet.
+  - Bóc tách trạm Bếp (`kitchen`) và Bar (`bar`) tự động.
+  - Kanban 3 cột: "Chờ xử lý" -> "Đang làm" -> "Hoàn thành".
+  - Thẻ vé KDS với bộ đếm thời gian thực và cảnh báo khẩn cấp (>8m, >15m).
+  - Web Audio API âm thanh chuông đôi (Chime) khi có order mới.
+- [x] **Module 3: Phân hệ Thu ngân & Quản lý Bàn (Cashier & Table Management)**:
+  - **Trang `/cashier` & Tab Thu Ngân in-app**:
+    - Header thống kê doanh thu ca làm việc thời gian thực (`shiftRevenue`) và số lượng bill đã thanh toán.
+  - **Sơ đồ bàn trực quan ([`TableMap.tsx`](file:///e:/Vibe%20Coding/POS/src/components/cashier/TableMap.tsx))**:
+    - Hiển thị màu sắc trạng thái rõ ràng: Bàn trống (Xanh lá), Đang phục vụ (Vàng/Cam), Chờ tính tiền (Đỏ nhấp nháy), Đã đặt (Tím).
+    - Bộ lọc nhanh theo trạng thái bàn kèm số lượng thống kê.
+    - Hiển thị mã đơn, số lượng món và tổng tiền tạm tính trực tiếp trên thẻ bàn.
+    - Lắng nghe sự kiện `ORDER_CREATED`, `ORDER_UPDATED`, `TABLE_STATUS_CHANGED`, `PAYMENT_COMPLETED` để tự động chuyển màu bàn tức thì.
+  - **Cổng thanh toán đa kênh ([`CheckoutPanel.tsx`](file:///e:/Vibe%20Coding/POS/src/components/cashier/CheckoutPanel.tsx))**:
+    - Mở chi tiết hóa đơn khi thu ngân click vào bàn có khách: danh sách món, topping, số lượng, đơn giá, tạm tính, thuế VAT 8%.
+    - Bộ chiết khấu / giảm giá linh hoạt (0%, 5%, 10%, 15%).
+    - Đa phương thức thanh toán:
+      - **Tiền mặt (Cash)**: Ô nhập tiền khách đưa, tính tiền thối lại tự động, phím chọn nhanh mệnh giá (100k, 200k, 500k, 1tr, Đủ tiền).
+      - **Chuyển khoản VietQR ([`VietQRCode.tsx`](file:///e:/Vibe%20Coding/POS/src/components/cashier/VietQRCode.tsx))**: Tạo mã Dynamic QR theo chuẩn VietQR QuickLink (MBBank/0901234567) chứa chính xác số tiền và nội dung chuyển khoản tự động; hỗ trợ nút sao chép nhanh STK, số tiền, nội dung.
+      - **Thẻ POS / Ngân hàng**: Hướng dẫn quẹt thẻ chip Napas, Visa, Mastercard.
+  - **Mock ACID Transaction Payment Flow**:
+    - Bấm "Xác nhận Thanh toán": cập nhật trạng thái đơn thành `completed`, giải phóng bàn về `available` (`current_order_id: undefined`).
+    - Phát (emit) sự kiện `PAYMENT_COMPLETED` và `TABLE_STATUS_CHANGED` qua `pos_realtime_events`.
+  - **Hóa đơn in nhiệt 80mm ([`ReceiptModal.tsx`](file:///e:/Vibe%20Coding/POS/src/components/cashier/ReceiptModal.tsx))**:
+    - Giao diện chuẩn bill in nhiệt nhà hàng: Thông tin quán, số hóa đơn, giờ in, bàn, thu ngân, bảng món, chiết khấu, VAT, tổng tiền, tiền khách đưa/tiền thừa, barcode mô phỏng và hỗ trợ lệnh `window.print()`.
+  - Biên dịch kiểm tra tĩnh (`npm run build`) hoàn tất 100% sinh các routes `/`, `/kds`, `/cashier`.
 
 ---
 
 ## 3. Task đang làm hiện tại (WIP)
-* **WIP**: **Module 3: Phân hệ Thu ngân & Quản lý Bàn (Cashier & Table Management)**
-  - Thiết kế Sơ đồ bàn (Table Management Map) trực quan theo khu vực hoặc dạng lưới: Trạng thái Bàn trống (xanh), Đang phục vụ (vàng cam), Chờ tính tiền (đỏ), Đã đặt (tím).
-  - Màn hình Thanh toán (Checkout & Billing):
-    - Tổng hợp các món đã gọi của bàn (tổng tiền, giảm giá/khuyến mãi, thuế VAT 8%).
-    - Đa phương thức thanh toán: Tiền mặt, Chuyển khoản VietQR động (Dynamic QR có sẵn số tiền & nội dung đơn hàng), Ví điện tử, Thẻ POS.
-  - Giao diện Hóa đơn / In bill (Receipt view).
-  - Kích hoạt sự kiện `PAYMENT_COMPLETED` và giải phóng bàn ăn (`available`).
+* **WIP**: **Module 4: ERP & Recipe BOM Auto-Deduct (Quản trị Kho & Định mức nguyên vật liệu)**
+  - Quản lý danh mục nguyên vật liệu (`RawMaterials`): Đơn vị mua (`purchase_unit`: kg, lít), Đơn vị định mức (`recipe_unit`: gram, ml), Hệ số quy đổi (`conversion_factor`), Tồn kho hiện tại, Mức tồn kho an toàn, Giá vốn trung bình (`avg_cost`).
+  - Thiết lập Định mức món ăn (`Recipe BOM`): Gắn các nguyên vật liệu và số lượng cần thiết cho từng món trong thực đơn (VD: Bò Wagyu tiêu đen -> 200g Thịt bò Wagyu, 15g Hạt tiêu đen...).
+  - ACID Trigger trừ kho tự động (Auto-deduct): Ngay khi sự kiện `PAYMENT_COMPLETED` kích hoạt, tự động quét định mức BOM của toàn bộ món trong đơn hàng và ghi nhận giao dịch xuất kho (`InventoryTransactions: type = 'out'`).
+  - Bảng cảnh báo nguyên vật liệu chạm ngưỡng tồn kho tối thiểu (Low Stock Alert).
+  - Quản lý phiếu nhập kho (`PurchaseOrders`) và nhà cung cấp (`Suppliers`), tự động tính lại Moving Average Cost.
 
 ---
 
@@ -58,12 +65,13 @@
 
 ### 4.1. Kiến trúc & Công nghệ (Tech Stack)
 * **Next.js 16.4.0 + Turbopack + React 19 + TypeScript + Tailwind CSS v4**.
-* **Audio Alerts**: Pure Web Audio API synthesized chime (`src/lib/audioAlert.ts`), không phát sinh lỗi 404 mạng.
-* **Order & Ticket Routing**:
-  - `Order` được bóc tách theo Station (`kitchen` vs `bar`) thành các `KDSTicket` độc lập.
-  - Sự kiện `ORDER_CREATED` kích hoạt chuông và đẩy vé vào cột "Chờ xử lý".
-  - Chuyển trạng thái vé kích hoạt `ORDER_UPDATED` và `ITEM_STATUS_CHANGED`.
-* **Kênh Real-time**: `pos_realtime_events` (BroadcastChannel) đảm bảo đa màn hình (FOH - KDS - Cashier) trên các tab hoặc thiết bị khác nhau tự động đồng bộ 100%.
+* **Omnichannel Payment & VietQR**: Sinh Dynamic VietQR qua API chuẩn `https://img.vietqr.io/image/...` hỗ trợ quét bởi 40+ app ngân hàng và ví điện tử Việt Nam.
+* **Thermal Receipt Format**: CSS `@media print` tối ưu cho máy in nhiệt khổ K80 (80mm).
+* **Cross-Tab Real-time Synchronizer**:
+  - `pos_realtime_events` kết nối 3 phân hệ cốt lõi:
+    - Tab 1: FOH (`/`) chọn bàn và gửi món -> Bàn chuyển sang vàng cam.
+    - Tab 2: KDS (`/kds`) kêu chuông bíp và nhảy thẻ vào Kanban.
+    - Tab 3: Thu ngân (`/cashier`) thấy bàn có khách, mở tính tiền, thanh toán xong -> bàn đổi lại màu xanh trống trên cả 3 màn hình.
 
 ### 4.2. Cấu trúc thư mục hiện tại
 ```
@@ -71,11 +79,11 @@ POS/
 ├── .agents/                    # Bộ quy chuẩn Superpowers & Skills
 ├── public/                     # Tài nguyên tĩnh
 ├── src/
-│   ├── app/                    # Next.js App Router (page.tsx, kds/page.tsx, layout.tsx, globals.css)
+│   ├── app/                    # Next.js App Router (page.tsx, kds/page.tsx, cashier/page.tsx, layout.tsx, globals.css)
 │   ├── components/
 │   │   ├── admin/              # Module 5: Settings, HR/RBAC, Promotions
-│   │   ├── cashier/            # Module 3: WIP (Table map, billing, VietQR, invoice)
-│   │   ├── erp/                # Module 4: Raw materials, BOM recipe
+│   │   ├── cashier/            # Module 3: COMPLETED (TableMap, CheckoutPanel, VietQRCode, ReceiptModal, CashierView)
+│   │   ├── erp/                # Module 4: WIP (Raw materials, BOM recipe, auto-deduct)
 │   │   ├── foh/                # Module 1: COMPLETED (CategoryNav, MenuCard, MenuGrid, ModifierModal, TableSelector, CartSidebar, FOHView)
 │   │   ├── kds/                # Module 2: COMPLETED (KDSTicketCard, KDSKanbanBoard, KDSView)
 │   │   └── ui/                 # Atomic UI components
@@ -92,9 +100,8 @@ POS/
 ---
 
 ## 5. Các task tiếp theo cần làm (Backlog / Next Steps)
-1. **Module 3 (WIP)**: Cashier Desk, Table Map & Omnichannel Checkout (VietQR động).
-2. **Module 4**: ERP & Recipe BOM Auto-Deduct (Định mức nguyên liệu, trừ tồn kho tự động sau thanh toán ACID).
-3. **Module 5**: Admin Dashboard, Thống kê doanh thu & Phân quyền RBAC.
+1. **Module 4 (WIP)**: ERP & Recipe BOM Auto-Deduct (Định mức nguyên liệu, trừ tồn kho tự động sau thanh toán ACID).
+2. **Module 5**: Admin Dashboard, Thống kê doanh thu & Phân quyền RBAC.
 
 ---
 

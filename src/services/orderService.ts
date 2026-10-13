@@ -1,4 +1,4 @@
-import { Order, OrderItem, RestaurantTable } from '@/types';
+import { Order, OrderItem, RestaurantTable, PaymentMethod } from '@/types';
 import { initialTables } from '@/database/mockData';
 import { realtimeEngine } from './realtimeEngine';
 
@@ -156,6 +156,65 @@ class OrderService {
     this.save();
     realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
     return order;
+  }
+
+  public completePayment(
+    orderId: string,
+    paymentMethod: PaymentMethod,
+    discountAmount: number = 0
+  ): { order: Order; table: RestaurantTable } | null {
+    const order = this.orders.find((o) => o.id === orderId);
+    if (!order) return null;
+
+    order.payment_status = 'paid';
+    order.payment_method = paymentMethod;
+    order.discount_amount = discountAmount;
+    order.total_amount = Math.max(0, order.subtotal + order.tax_amount - discountAmount);
+    order.order_status = 'completed';
+    order.updated_at = new Date().toISOString();
+
+    // Free the table
+    const tableIndex = this.tables.findIndex((t) => t.id === order.table_id);
+    let table: RestaurantTable;
+    if (tableIndex !== -1) {
+      this.tables[tableIndex].status = 'available';
+      this.tables[tableIndex].current_order_id = undefined;
+      table = this.tables[tableIndex];
+    } else {
+      table = {
+        id: order.table_id,
+        table_number: order.table_number,
+        capacity: 4,
+        status: 'available',
+      };
+    }
+
+    this.save();
+
+    // Emit Real-time Events
+    realtimeEngine.emit('PAYMENT_COMPLETED', { order, table });
+    realtimeEngine.emit('TABLE_STATUS_CHANGED', table);
+    realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
+    realtimeEngine.emit('ORDER_UPDATED', order);
+
+    return { order, table };
+  }
+
+  public updateTableStatus(tableId: string, status: RestaurantTable['status']): RestaurantTable | null {
+    const table = this.tables.find((t) => t.id === tableId);
+    if (!table) return null;
+    table.status = status;
+    this.save();
+    realtimeEngine.emit('TABLE_STATUS_CHANGED', table);
+    return table;
+  }
+
+  public getOrderByTableId(tableId: string): Order | null {
+    return (
+      this.orders.find(
+        (o) => o.table_id === tableId && o.payment_status === 'unpaid' && o.order_status !== 'cancelled'
+      ) || null
+    );
   }
 }
 

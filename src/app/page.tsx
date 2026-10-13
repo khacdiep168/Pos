@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { FOHView } from '@/components/foh/FOHView';
 import { KDSView } from '@/components/kds/KDSView';
+import { CashierView } from '@/components/cashier/CashierView';
 import { Utensils, ChefHat, CreditCard, ExternalLink } from 'lucide-react';
 
 export default function Home() {
@@ -61,7 +62,7 @@ export default function Home() {
             >
               <CreditCard className="w-3.5 h-3.5" />
               <span>Thu Ngân</span>
-              <span className="text-[10px] px-1 bg-stone-800 text-stone-400 rounded">M3</span>
+              <span className="text-[10px] px-1 bg-stone-800 text-emerald-400 rounded">M3 Live</span>
             </button>
           </div>
         </div>
@@ -80,23 +81,7 @@ export default function Home() {
 
         {activeTab === 'kds' && <KDSView />}
 
-        {activeTab === 'cashier' && (
-          <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-stone-900 text-stone-200">
-            <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mb-4">
-              <CreditCard className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">Module 3: Thu Ngân & Sơ Đồ Bàn</h2>
-            <p className="text-sm text-stone-400 max-w-md mb-6">
-              Sơ đồ bàn trực quan, thanh toán hóa đơn đa kênh (VietQR động, tiền mặt) và trừ tồn kho tự động.
-            </p>
-            <button
-              onClick={() => setActiveTab('foh')}
-              className="px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-colors"
-            >
-              Quay lại Menu Gọi Món (FOH)
-            </button>
-          </div>
-        )}
+        {activeTab === 'cashier' && <CashierView />}
       </div>
     </div>
   );
