@@ -23,10 +23,23 @@ export const AddRawMaterialModal: React.FC<AddRawMaterialModalProps> = ({
   const [purchaseUnit, setPurchaseUnit] = useState(STANDARD_UNIT_PRESETS[0].purchase_unit);
   const [recipeUnit, setRecipeUnit] = useState(STANDARD_UNIT_PRESETS[0].recipe_unit);
   const [conversionFactor, setConversionFactor] = useState(STANDARD_UNIT_PRESETS[0].default_conversion.toString());
-  const [avgCost, setAvgCost] = useState('35'); // Giá vốn mỗi recipe_unit
+  const [purchasePrice, setPurchasePrice] = useState('130000'); // Giá mua vào cho 1 Đơn vị mua
+  const [avgCost, setAvgCost] = useState('130'); // Giá vốn mỗi recipe_unit (auto calculated)
   const [currentStock, setCurrentStock] = useState('0');
   const [minStockLevel, setMinStockLevel] = useState('500');
   const [error, setError] = useState('');
+
+  // Tự động quy đổi Giá vốn ước tính (avgCost) = Giá mua vào / Hệ số quy đổi
+  React.useEffect(() => {
+    const pPrice = parseFloat(purchasePrice);
+    const conv = parseFloat(conversionFactor);
+    if (!isNaN(pPrice) && !isNaN(conv) && conv > 0) {
+      const calculated = Math.round((pPrice / conv) * 100) / 100;
+      setAvgCost(calculated.toString());
+    } else {
+      setAvgCost('0');
+    }
+  }, [purchasePrice, conversionFactor]);
 
   const handlePresetChange = (idx: number) => {
     setSelectedPresetIndex(idx);
@@ -207,34 +220,79 @@ export const AddRawMaterialModal: React.FC<AddRawMaterialModalProps> = ({
             </div>
           </div>
 
-          {/* Giá vốn & Tồn tối thiểu */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Giá mua vào theo Đơn vị mua */}
+          <div className="p-3.5 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-750 space-y-2">
             <div>
               <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                Giá vốn ước tính (VNĐ/{recipeUnit}) *
+                Giá mua vào (theo 1 {purchaseUnit}) (VNĐ) *
               </label>
-              <input
-                type="number"
-                value={avgCost}
-                onChange={(e) => setAvgCost(e.target.value)}
-                placeholder="VD: 40"
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-mono font-bold focus:outline-hidden"
-                required
-              />
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(e.target.value)}
+                  placeholder="VD: 130000"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-white text-xs font-mono font-bold focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                  required
+                />
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-stone-400">
+                  VNĐ / {purchaseUnit}
+                </span>
+              </div>
+
+              {/* Dynamic Helper Text nổi bật màu đỏ theo mockup */}
+              {parseFloat(purchasePrice) > 0 && parseFloat(conversionFactor) > 0 && (
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 mt-1.5 flex items-center gap-1.5 animate-fade-in">
+                  <span>⚡ 1 {purchaseUnit} = {Number(purchasePrice).toLocaleString()} VNĐ thì giá vốn ước tính tự động quy đổi: {Number(avgCost).toLocaleString()} VNĐ/{recipeUnit}</span>
+                </p>
+              )}
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                Tồn kho an toàn tối thiểu ({recipeUnit}) *
-              </label>
-              <input
-                type="number"
-                value={minStockLevel}
-                onChange={(e) => setMinStockLevel(e.target.value)}
-                placeholder="VD: 500"
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-mono font-bold focus:outline-hidden"
-                required
-              />
+            {/* Giá vốn ước tính (Tự động điền & Khóa sửa Disable / Read-only) */}
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1 flex items-center justify-between">
+                  <span>Giá vốn ước tính ({recipeUnit}) *</span>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.2 rounded-full">
+                    Khóa sửa
+                  </span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={avgCost}
+                    disabled
+                    readOnly
+                    placeholder="Tự động tính"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 text-xs font-mono font-bold cursor-not-allowed select-none opacity-90"
+                    required
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-stone-400">
+                    VNĐ/{recipeUnit}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
+                  Tồn an toàn tối thiểu ({recipeUnit}) *
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={minStockLevel}
+                    onChange={(e) => setMinStockLevel(e.target.value)}
+                    placeholder="VD: 500"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-white text-xs font-mono font-bold focus:outline-hidden"
+                    required
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-stone-400">
+                    {recipeUnit}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 

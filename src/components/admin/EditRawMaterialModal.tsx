@@ -36,6 +36,7 @@ export const EditRawMaterialModal: React.FC<EditRawMaterialModalProps> = ({
   const [supplierId, setSupplierId] = useState('');
   const [selectedPresetId, setSelectedPresetId] = useState('kg-g');
   const [customConversionFactor, setCustomConversionFactor] = useState(1000);
+  const [purchasePrice, setPurchasePrice] = useState<number>(0);
   const [minStockLevel, setMinStockLevel] = useState(500);
   const [avgCost, setAvgCost] = useState(0);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -55,6 +56,10 @@ export const EditRawMaterialModal: React.FC<EditRawMaterialModalProps> = ({
       setAvgCost(material.avg_cost);
       setCustomConversionFactor(material.conversion_factor);
 
+      // Tính giá mua ban đầu theo conversion factor
+      const initialPurchase = Math.round(material.avg_cost * material.conversion_factor);
+      setPurchasePrice(initialPurchase > 0 ? initialPurchase : 0);
+
       const matchedPreset = getPresetByUnits(material.purchase_unit, material.recipe_unit);
       if (matchedPreset) {
         setSelectedPresetId(matchedPreset.id);
@@ -63,6 +68,16 @@ export const EditRawMaterialModal: React.FC<EditRawMaterialModalProps> = ({
       }
     }
   }, [material, isOpen]);
+
+  // Tự động quy đổi Giá vốn cơ sở (avgCost) = Giá mua vào / Hệ số quy đổi
+  useEffect(() => {
+    if (customConversionFactor > 0 && purchasePrice > 0) {
+      const calculated = Math.round((purchasePrice / customConversionFactor) * 100) / 100;
+      setAvgCost(calculated);
+    } else if (purchasePrice === 0) {
+      setAvgCost(0);
+    }
+  }, [purchasePrice, customConversionFactor]);
 
   if (!isOpen || !material) return null;
 
@@ -248,46 +263,82 @@ export const EditRawMaterialModal: React.FC<EditRawMaterialModalProps> = ({
             </div>
           </div>
 
-          {/* Mức tồn an toàn & Giá vốn cơ sở */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Giá mua vào theo Đơn vị mua & Quy đổi tự động */}
+          <div className="p-3.5 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-750 space-y-2.5">
             <div>
               <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
-                Mức tồn an toàn ({currentPreset.recipeUnit}):
+                Giá mua vào (theo 1 {currentPreset.purchaseUnit}) (VNĐ) *:
               </label>
               <div className="relative">
                 <input
                   type="number"
                   min="0"
-                  value={minStockLevel}
-                  onChange={(e) => setMinStockLevel(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-stone-900 dark:text-white"
+                  step="1000"
+                  value={purchasePrice}
+                  onChange={(e) => setPurchasePrice(parseFloat(e.target.value) || 0)}
+                  placeholder="VD: 130000"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-stone-900 dark:text-white text-xs focus:ring-2 focus:ring-amber-500 focus:outline-hidden"
+                  required
                 />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] text-stone-400 font-medium">
-                  {currentPreset.recipeUnit}
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-stone-400">
+                  VNĐ / {currentPreset.purchaseUnit}
                 </span>
               </div>
-              <p className="text-[10px] text-stone-400 mt-1">Hệ thống báo đỏ khi tồn kho dưới mức này.</p>
+
+              {/* Dynamic Helper Text nổi bật màu đỏ theo mockup */}
+              {purchasePrice > 0 && customConversionFactor > 0 && (
+                <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 mt-1.5 flex items-center gap-1.5 animate-fade-in">
+                  <span>⚡ 1 {currentPreset.purchaseUnit} = {purchasePrice.toLocaleString()} VNĐ thì giá vốn ước tính tự động quy đổi: {avgCost.toLocaleString()} VNĐ/{currentPreset.recipeUnit}</span>
+                </p>
+              )}
             </div>
 
-            <div>
-              <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
-                Giá vốn cơ sở (VND / {currentPreset.recipeUnit}):
-              </label>
-              <div className="relative">
-                <input
-                  type="number"
-                  min="0"
-                  value={avgCost}
-                  onChange={(e) => setAvgCost(parseFloat(e.target.value) || 0)}
-                  className="w-full px-3.5 py-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-stone-900 dark:text-white"
-                />
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] text-stone-400 font-medium">
-                  đ / {currentPreset.recipeUnit}
-                </span>
+            {/* Giá vốn cơ sở (Khóa sửa) & Mức tồn an toàn */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1 flex items-center justify-between">
+                  <span>Giá vốn cơ sở ({currentPreset.recipeUnit}) *</span>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.2 rounded-full">
+                    Khóa sửa
+                  </span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={avgCost}
+                    disabled
+                    readOnly
+                    className="w-full px-3.5 py-2.5 bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-stone-700 dark:text-stone-300 cursor-not-allowed select-none opacity-90"
+                    required
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] text-stone-400 font-medium">
+                    đ / {currentPreset.recipeUnit}
+                  </span>
+                </div>
+                <p className="text-[10px] text-stone-400 mt-1">
+                  Tự động tính: Giá mua vào ÷ Hệ số quy đổi
+                </p>
               </div>
-              <p className="text-[10px] text-stone-400 mt-1">
-                Tương đương: {formatCurrencyVND(avgCost * customConversionFactor)} / {currentPreset.purchaseUnit}
-              </p>
+
+              <div>
+                <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                  Mức tồn an toàn ({currentPreset.recipeUnit}) *:
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    value={minStockLevel}
+                    onChange={(e) => setMinStockLevel(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3.5 py-2.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-stone-900 dark:text-white"
+                    required
+                  />
+                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[11px] text-stone-400 font-medium">
+                    {currentPreset.recipeUnit}
+                  </span>
+                </div>
+                <p className="text-[10px] text-stone-400 mt-1">Hệ thống báo đỏ khi tồn kho dưới mức này.</p>
+              </div>
             </div>
           </div>
 

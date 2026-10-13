@@ -153,7 +153,24 @@ POS/
 
 ---
 
-## 5. Các task tiếp theo cần làm (Phase 2 Roadmap)
+## 5. Nâng Cấp UX/UI: Tự Động Quy Đổi Giá Mua Vào Sang Giá Vốn Kho (COMPLETED - 13/10/2026)
+Đã hoàn thành và kiểm thử thành công trên cả 2 Modal tạo mới và chỉnh sửa nguyên vật liệu:
+1. **Modal Thêm Mới Nguyên Vật Liệu ([AddRawMaterialModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AddRawMaterialModal.tsx))**:
+   - Thêm ô nhập **"Giá mua vào (theo 1 [Đơn vị mua]) (VNĐ)"** ngay phía trên ô "Giá vốn ước tính".
+   - Tích hợp hook `useEffect` lắng nghe thay đổi của Giá mua vào và Hệ số quy đổi (`conversion_factor`).
+   - Công thức tự động quy đổi: `Giá vốn ước tính (Đơn vị định mức BOM) = Giá mua vào / Hệ số quy đổi`.
+   - Xử lý chặt chẽ ngoại lệ chia cho 0 hoặc giá trị rỗng/NaN, tự động gán về 0 nếu chưa hợp lệ.
+   - Thêm dòng Dynamic Helper Text màu đỏ nổi bật (`text-rose-600 dark:text-rose-400`): `"⚡ 1 [Đơn vị mua] = [Số tiền] VNĐ thì giá vốn ước tính tự động quy đổi: [Giá vốn] VNĐ/[Đơn vị định mức]"`.
+   - Chuyển trường **"Giá vốn ước tính"** sang trạng thái **Disabled (Read-only)** kèm badge "Khóa sửa" để tránh người dùng sửa nhầm, đảm bảo tính chuẩn xác toán học.
+
+2. **Modal Chỉnh Sửa Nguyên Vật Liệu ([EditRawMaterialModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/EditRawMaterialModal.tsx))**:
+   - Tự động tính toán và điền sẵn giá mua vào ban đầu (`material.avg_cost * material.conversion_factor`).
+   - Cho phép thủ kho/quản lý cập nhật giá mua vào mới, hệ số quy đổi mới, hệ thống tự động tính lại giá vốn cơ sở tương ứng.
+   - Hiển thị Dynamic Helper Text cảnh báo màu đỏ tương ứng và khóa ô giá vốn cơ sở dạng read-only.
+
+---
+
+## 6. Các task tiếp theo cần làm (Phase 2 Roadmap)
 1. Kết nối Backend API thật với Supabase Cloud Project (chạy file migration trong `DATABASE_MIGRATION.md`).
 2. Tích hợp Webhook đồng bộ biến động số dư ngân hàng tự động (Cass.vn / SePay / PayOS API) cho cổng VietQR.
 3. Đóng gói PWA (Progressive Web App) hỗ trợ cài đặt trên Tablet/Điện thoại và máy in Bluetooth/LAN.
