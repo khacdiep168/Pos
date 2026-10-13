@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { FOHView } from '@/components/foh/FOHView';
-import { Utensils, ChefHat, CreditCard, Boxes, Settings, MonitorPlay } from 'lucide-react';
+import { KDSView } from '@/components/kds/KDSView';
+import { Utensils, ChefHat, CreditCard, ExternalLink } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'foh' | 'kds' | 'cashier' | 'erp' | 'admin'>('foh');
@@ -47,7 +48,7 @@ export default function Home() {
             >
               <ChefHat className="w-3.5 h-3.5" />
               <span>Bếp & Bar (KDS)</span>
-              <span className="text-[10px] px-1 bg-stone-800 text-amber-400 rounded">M2 WIP</span>
+              <span className="text-[10px] px-1 bg-stone-800 text-emerald-400 rounded">M2 Live</span>
             </button>
 
             <button
@@ -77,27 +78,7 @@ export default function Home() {
       <div className="flex-1 overflow-hidden relative">
         {activeTab === 'foh' && <FOHView />}
 
-        {activeTab === 'kds' && (
-          <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-stone-900 text-stone-200">
-            <div className="w-16 h-16 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-500 mb-4">
-              <ChefHat className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">Module 2: Màn Hình Bếp & Bar (KDS/BDS)</h2>
-            <p className="text-sm text-stone-400 max-w-md mb-6">
-              Sẵn sàng triển khai trong task tiếp theo! Module này sẽ lắng nghe sự kiện{' '}
-              <code className="text-amber-400 bg-stone-800 px-1.5 py-0.5 rounded font-mono text-xs">
-                ORDER_CREATED
-              </code>{' '}
-              từ FOH qua BroadcastChannel để tự động nhảy order mới không cần tải lại trang.
-            </p>
-            <button
-              onClick={() => setActiveTab('foh')}
-              className="px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold hover:bg-amber-600 transition-colors"
-            >
-              Quay lại Menu Gọi Món (FOH)
-            </button>
-          </div>
-        )}
+        {activeTab === 'kds' && <KDSView />}
 
         {activeTab === 'cashier' && (
           <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-stone-900 text-stone-200">

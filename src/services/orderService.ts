@@ -99,6 +99,40 @@ class OrderService {
 
     this.save();
     realtimeEngine.emit('ITEM_STATUS_CHANGED', { orderId, item });
+    realtimeEngine.emit('ORDER_UPDATED', order);
+    return order;
+  }
+
+  public updateStationItemsStatus(
+    orderId: string,
+    station: 'kitchen' | 'bar',
+    newStatus: OrderItem['item_status']
+  ): Order | null {
+    const order = this.orders.find((o) => o.id === orderId);
+    if (!order) return null;
+
+    order.items
+      .filter((i) => i.station === station)
+      .forEach((item) => {
+        item.item_status = newStatus;
+        item.updated_at = new Date().toISOString();
+      });
+
+    const hasCooking = order.items.some((i) => i.item_status === 'cooking');
+    const allReady = order.items.every(
+      (i) => i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled'
+    );
+
+    if (allReady) {
+      order.order_status = 'ready';
+    } else if (hasCooking) {
+      order.order_status = 'cooking';
+    }
+
+    order.updated_at = new Date().toISOString();
+    this.save();
+    realtimeEngine.emit('ORDER_UPDATED', order);
+    realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
     return order;
   }
 

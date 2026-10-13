@@ -5,6 +5,7 @@ type EventCallback<T = any> = (payload: T) => void;
 
 export type RealtimeEventType =
   | 'ORDER_CREATED'
+  | 'ORDER_UPDATED'
   | 'ORDER_STATUS_CHANGED'
   | 'ITEM_STATUS_CHANGED'
   | 'TABLE_STATUS_CHANGED'
