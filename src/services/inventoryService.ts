@@ -105,6 +105,15 @@ class InventoryService {
     return newMaterial;
   }
 
+  public updateRawMaterial(id: string, updates: Partial<RawMaterial>): RawMaterial | null {
+    const idx = this.rawMaterials.findIndex((m) => m.id === id);
+    if (idx === -1) return null;
+    this.rawMaterials[idx] = { ...this.rawMaterials[idx], ...updates };
+    this.save();
+    realtimeEngine.emit('STOCK_ALERT', { type: 'MATERIAL_UPDATED', material: this.rawMaterials[idx] });
+    return this.rawMaterials[idx];
+  }
+
   public getRecipes(): RecipeBOM[] {
     return [...this.recipes];
   }

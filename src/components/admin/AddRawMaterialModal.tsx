@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { RawMaterial } from '@/types';
 import { inventoryService } from '@/services/inventoryService';
-import { X, Plus, Boxes, Sparkles } from 'lucide-react';
+import { STANDARD_UNIT_PRESETS, UnitPairPreset } from '@/lib/unitPresets';
+import { X, Plus, Boxes, Sparkles, Scale } from 'lucide-react';
 
 interface AddRawMaterialModalProps {
   isOpen: boolean;
@@ -18,13 +19,24 @@ export const AddRawMaterialModal: React.FC<AddRawMaterialModalProps> = ({
 }) => {
   const [name, setName] = useState('');
   const [category, setCategory] = useState('Đồ uống / Pha chế');
-  const [purchaseUnit, setPurchaseUnit] = useState('hộp');
-  const [recipeUnit, setRecipeUnit] = useState('ml');
-  const [conversionFactor, setConversionFactor] = useState('1000');
+  const [selectedPresetIndex, setSelectedPresetIndex] = useState(0);
+  const [purchaseUnit, setPurchaseUnit] = useState(STANDARD_UNIT_PRESETS[0].purchase_unit);
+  const [recipeUnit, setRecipeUnit] = useState(STANDARD_UNIT_PRESETS[0].recipe_unit);
+  const [conversionFactor, setConversionFactor] = useState(STANDARD_UNIT_PRESETS[0].default_conversion.toString());
   const [avgCost, setAvgCost] = useState('35'); // Giá vốn mỗi recipe_unit
   const [currentStock, setCurrentStock] = useState('0');
   const [minStockLevel, setMinStockLevel] = useState('500');
   const [error, setError] = useState('');
+
+  const handlePresetChange = (idx: number) => {
+    setSelectedPresetIndex(idx);
+    const p = STANDARD_UNIT_PRESETS[idx];
+    if (p) {
+      setPurchaseUnit(p.purchase_unit);
+      setRecipeUnit(p.recipe_unit);
+      setConversionFactor(p.default_conversion.toString());
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -132,53 +144,67 @@ export const AddRawMaterialModal: React.FC<AddRawMaterialModalProps> = ({
             </select>
           </div>
 
-          {/* Đơn vị mua & Đơn vị định mức */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* Quy chuẩn Đơn vị tính (Dropdown Chuẩn Hóa) */}
+          <div className="space-y-3 p-3.5 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-750">
             <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                Đơn vị mua (Purchase Unit) *
+              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                  <Scale className="w-3.5 h-3.5" />
+                  Quy chuẩn Đơn vị tính (Chuẩn hóa) *
+                </span>
+                <span className="text-[10px] text-stone-400 font-normal">
+                  Chọn cặp đơn vị tương ứng
+                </span>
               </label>
-              <input
-                type="text"
-                value={purchaseUnit}
-                onChange={(e) => setPurchaseUnit(e.target.value)}
-                placeholder="VD: kg, hộp, thùng, bao"
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-medium focus:outline-hidden"
-                required
-              />
+              <select
+                value={selectedPresetIndex}
+                onChange={(e) => handlePresetChange(parseInt(e.target.value, 10))}
+                className="w-full px-3 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-white text-xs font-semibold focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+              >
+                {STANDARD_UNIT_PRESETS.map((p, idx) => (
+                  <option key={idx} value={idx}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-stone-400 mt-1 italic">
+                {STANDARD_UNIT_PRESETS[selectedPresetIndex]?.description}
+              </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                Đơn vị định mức (Recipe Unit) *
-              </label>
-              <input
-                type="text"
-                value={recipeUnit}
-                onChange={(e) => setRecipeUnit(e.target.value)}
-                placeholder="VD: g, ml, shot, lát"
-                className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-medium focus:outline-hidden"
-                required
-              />
-            </div>
-          </div>
+            {/* Chi tiết đơn vị & Hệ số quy đổi */}
+            <div className="grid grid-cols-3 gap-2.5 pt-2 border-t border-stone-200 dark:border-stone-700">
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                  Đơn vị Mua:
+                </label>
+                <div className="px-3 py-2 rounded-lg bg-stone-200/60 dark:bg-stone-800 text-stone-800 dark:text-stone-200 text-xs font-mono font-bold uppercase text-center border border-stone-300 dark:border-stone-700">
+                  {purchaseUnit}
+                </div>
+              </div>
 
-          {/* Hệ số quy đổi */}
-          <div>
-            <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-              Hệ số quy đổi (1 {purchaseUnit || 'đơn vị mua'} = ? {recipeUnit || 'định mức'}) *
-            </label>
-            <input
-              type="number"
-              value={conversionFactor}
-              onChange={(e) => setConversionFactor(e.target.value)}
-              placeholder="VD: 1000"
-              className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-mono font-bold focus:outline-hidden"
-              required
-            />
-            <p className="text-[10px] text-stone-400 mt-1">
-              Ví dụ: Mua theo 1 kg ➔ Định mức trừ 1000g; Mua 1 chai ➔ Định mức 750ml.
-            </p>
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                  Định Mức (BOM):
+                </label>
+                <div className="px-3 py-2 rounded-lg bg-stone-200/60 dark:bg-stone-800 text-stone-800 dark:text-stone-200 text-xs font-mono font-bold uppercase text-center border border-stone-300 dark:border-stone-700">
+                  {recipeUnit}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-stone-500 mb-1">
+                  1 {purchaseUnit} = ? {recipeUnit}:
+                </label>
+                <input
+                  type="number"
+                  value={conversionFactor}
+                  onChange={(e) => setConversionFactor(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-white text-xs font-mono font-bold text-center focus:outline-hidden"
+                  required
+                />
+              </div>
+            </div>
           </div>
 
           {/* Giá vốn & Tồn tối thiểu */}

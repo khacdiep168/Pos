@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { RawMaterial, InventoryTransaction } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
 import { AddRawMaterialModal } from '@/components/admin/AddRawMaterialModal';
+import { EditRawMaterialModal } from '@/components/admin/EditRawMaterialModal';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   Boxes,
   ShieldAlert,
   Plus,
+  Pencil,
 } from 'lucide-react';
 
 interface InventoryTabProps {
@@ -31,6 +33,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
   const [filterMode, setFilterMode] = useState<'all' | 'low_stock' | 'safe'>('all');
   const [showHistory, setShowHistory] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<RawMaterial | null>(null);
 
   // Filter materials
   const filteredMaterials = materials.filter((m) => {
@@ -127,6 +130,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                   <th className="p-3.5 text-right">Giá Vốn TB (Recipe Unit)</th>
                   <th className="p-3.5 text-right">Tổng Giá Trị</th>
                   <th className="p-3.5 text-center">Trạng Thái</th>
+                  <th className="p-3.5 text-center">Thao Tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100 dark:divide-stone-800/70 font-medium">
@@ -190,6 +194,17 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                             Đủ dùng
                           </span>
                         )}
+                      </td>
+
+                      <td className="p-3.5 text-center">
+                        <button
+                          onClick={() => setEditingMaterial(m)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-amber-500/10 hover:bg-amber-500 text-amber-600 dark:text-amber-400 hover:text-white transition-all active:scale-95 shadow-2xs border border-amber-500/20"
+                          title="Sửa thông tin nguyên vật liệu"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                          <span>Sửa</span>
+                        </button>
                       </td>
                     </tr>
                   );
@@ -275,6 +290,17 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onMaterialAdded={onRefresh}
+      />
+
+      {/* Edit Raw Material Modal */}
+      <EditRawMaterialModal
+        material={editingMaterial}
+        isOpen={!!editingMaterial}
+        onClose={() => setEditingMaterial(null)}
+        onMaterialUpdated={() => {
+          setEditingMaterial(null);
+          onRefresh();
+        }}
       />
     </div>
   );

@@ -5,6 +5,7 @@ import { MenuItem, Category } from '@/types';
 import { menuService } from '@/services/menuService';
 import { formatCurrencyVND } from '@/lib/utils';
 import { AddMenuItemModal } from './AddMenuItemModal';
+import { EditMenuItemModal } from './EditMenuItemModal';
 import {
   UtensilsCrossed,
   Plus,
@@ -14,6 +15,7 @@ import {
   Flame,
   Wine,
   Search,
+  Pencil,
 } from 'lucide-react';
 
 interface MenuTabProps {
@@ -26,6 +28,7 @@ export const MenuTab: React.FC<MenuTabProps> = ({ onRefresh }) => {
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
 
   const refreshList = () => {
     setMenuItems(menuService.getMenuItems());
@@ -209,7 +212,14 @@ export const MenuTab: React.FC<MenuTabProps> = ({ onRefresh }) => {
                           )}
                         </button>
                       </td>
-                      <td className="p-3.5 text-right">
+                      <td className="p-3.5 text-right whitespace-nowrap">
+                        <button
+                          onClick={() => setEditingItem(item)}
+                          className="p-1.5 rounded-lg text-stone-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors mr-1"
+                          title="Sửa thông tin món & định mức BOM"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleDeleteItem(item.id)}
                           className="p-1.5 rounded-lg text-stone-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
@@ -233,6 +243,15 @@ export const MenuTab: React.FC<MenuTabProps> = ({ onRefresh }) => {
         onClose={() => setIsAddModalOpen(false)}
         categories={categories}
         onItemAdded={refreshList}
+      />
+
+      {/* Edit Item Modal */}
+      <EditMenuItemModal
+        isOpen={Boolean(editingItem)}
+        onClose={() => setEditingItem(null)}
+        item={editingItem}
+        categories={categories}
+        onItemUpdated={refreshList}
       />
     </div>
   );

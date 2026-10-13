@@ -36,17 +36,54 @@ export const ProcurementTab: React.FC<ProcurementTabProps> = ({
   const [isAddMaterialModalOpen, setIsAddMaterialModalOpen] = useState(false);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>(suppliers[0]?.id || '');
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>(materials[0]?.id || '');
-  const [purchaseQty, setPurchaseQty] = useState<number>(10);
-  const [purchaseUnitPrice, setPurchaseUnitPrice] = useState<number>(500000);
+  const [purchaseQty, setPurchaseQty] = useState<number>(2);
+  const [purchaseUnitPrice, setPurchaseUnitPrice] = useState<number>(115000);
+  const [totalPOAmount, setTotalPOAmount] = useState<number>(230000);
 
   const selectedMaterial = materials.find((m) => m.id === selectedMaterialId);
-  const totalPOAmount = purchaseQty * purchaseUnitPrice;
+
+  // Sync unit price when material changes
+  React.useEffect(() => {
+    if (selectedMaterial) {
+      const defaultUnitPrice = selectedMaterial.avg_cost > 0 
+        ? selectedMaterial.avg_cost * selectedMaterial.conversion_factor 
+        : 115000;
+      setPurchaseUnitPrice(defaultUnitPrice);
+      setTotalPOAmount(purchaseQty * defaultUnitPrice);
+    }
+  }, [selectedMaterialId]);
+
+  // Handle changes with 2-way sync
+  const handleQtyChange = (qty: number) => {
+    setPurchaseQty(qty);
+    setTotalPOAmount(Math.round(qty * purchaseUnitPrice));
+  };
+
+  const handleUnitPriceChange = (price: number) => {
+    setPurchaseUnitPrice(price);
+    setTotalPOAmount(Math.round(purchaseQty * price));
+  };
+
+  const handleTotalAmountChange = (total: number) => {
+    setTotalPOAmount(total);
+    if (purchaseQty > 0) {
+      setPurchaseUnitPrice(Math.round(total / purchaseQty));
+    }
+  };
+
+  const conversionFactor = selectedMaterial?.conversion_factor || 1000;
+  // Unit cost formula: (Total / Qty) / Conversion Factor = Unit Price / Conversion Factor
+  const calculatedUnitCost = purchaseQty > 0 && conversionFactor > 0
+    ? Math.round((totalPOAmount / purchaseQty) / conversionFactor)
+    : 0;
 
   const handleQuickMaterialAdded = (newMat: RawMaterial) => {
     onRefresh();
     setSelectedMaterialId(newMat.id);
     if (newMat.avg_cost > 0 && newMat.conversion_factor > 0) {
-      setPurchaseUnitPrice(newMat.avg_cost * newMat.conversion_factor);
+      const unitP = newMat.avg_cost * newMat.conversion_factor;
+      setPurchaseUnitPrice(unitP);
+      setTotalPOAmount(purchaseQty * unitP);
     }
   };
 
@@ -238,43 +275,95 @@ export const ProcurementTab: React.FC<ProcurementTabProps> = ({
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div>
                   <label className="font-bold text-stone-600 dark:text-stone-400 block mb-1">
                     Số lượng nhập ({selectedMaterial?.purchase_unit || 'đơn vị'}):
                   </label>
                   <input
                     type="number"
+                    min="0.1"
+                    step="any"
                     value={purchaseQty}
-                    onChange={(e) => setPurchaseQty(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold"
+                    onChange={(e) => handleQtyChange(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-xs"
                   />
                 </div>
 
                 <div>
                   <label className="font-bold text-stone-600 dark:text-stone-400 block mb-1">
-                    Đơn giá mua (VND/{selectedMaterial?.purchase_unit || 'đơn vị'}):
+                    Đơn giá mua (VND/{selectedMaterial?.purchase_unit || 'đv'}):
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    step="1000"
                     value={purchaseUnitPrice}
-                    onChange={(e) => setPurchaseUnitPrice(parseFloat(e.target.value) || 0)}
-                    className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold"
+                    onChange={(e) => handleUnitPriceChange(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-xs"
                   />
+                </div>
+
+                <div>
+                  <label className="font-bold text-stone-600 dark:text-stone-400 block mb-1">
+                    Tổng tiền mua (VND):
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={totalPOAmount}
+                    onChange={(e) => handleTotalAmountChange(parseFloat(e.target.value) || 0)}
+                    className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold text-xs text-amber-600 dark:text-amber-400"
+                  />
+                </div>
+              </div>
+
+              {/* Box Thuật toán Tự động quy đổi Giá vốn (Unit Cost Conversion) */}
+              <div className="p-3 bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                    <span>Thuật toán Quy đổi Giá vốn (Unit Cost Conversion)</span>
+                  </div>
+                  <span className="text-[10px] bg-amber-500/20 text-amber-800 dark:text-amber-200 px-2 py-0.5 rounded-full font-bold">
+                    Tự động lưu avg_cost
+                  </span>
+                </div>
+
+                <div className="text-[11px] font-mono bg-white dark:bg-stone-900/90 p-2.5 rounded-xl border border-amber-500/20 space-y-1">
+                  <div className="text-stone-400 text-[10px]">
+                    Công thức: (Tổng tiền ÷ Số lượng mua) ÷ Hệ số quy đổi
+                  </div>
+                  <div className="font-bold text-stone-900 dark:text-stone-100 flex items-center justify-between flex-wrap gap-1">
+                    <span>
+                      ({formatCurrencyVND(totalPOAmount)} ÷ {purchaseQty} {selectedMaterial?.purchase_unit}) ÷ {conversionFactor.toLocaleString()}
+                    </span>
+                    <span className="text-emerald-600 dark:text-emerald-400 font-black text-xs">
+                      = {formatCurrencyVND(calculatedUnitCost)} / {selectedMaterial?.recipe_unit}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] text-stone-600 dark:text-stone-400">
+                  <span>Giá vốn định mức hiện tại trong kho:</span>
+                  <span className="font-mono font-bold text-stone-800 dark:text-stone-200">
+                    {formatCurrencyVND(selectedMaterial?.avg_cost || 0)} / {selectedMaterial?.recipe_unit}
+                  </span>
                 </div>
               </div>
 
               <div className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700 space-y-1">
                 <div className="flex justify-between text-stone-500">
-                  <span>Quy đổi tồn kho:</span>
+                  <span>Quy đổi tăng tồn kho:</span>
                   <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                    +{(purchaseQty * (selectedMaterial?.conversion_factor || 1000)).toLocaleString()}{' '}
+                    +{(purchaseQty * conversionFactor).toLocaleString()}{' '}
                     {selectedMaterial?.recipe_unit}
                   </span>
                 </div>
-                <div className="flex justify-between text-base font-extrabold text-stone-900 dark:text-white pt-1 border-t border-stone-200 dark:border-stone-700">
-                  <span>Tổng tiền thanh toán:</span>
-                  <span className="text-amber-600 dark:text-amber-400">
+                <div className="flex justify-between text-sm font-extrabold text-stone-900 dark:text-white pt-1 border-t border-stone-200 dark:border-stone-700">
+                  <span>Tổng tiền thanh toán hóa đơn:</span>
+                  <span className="text-amber-600 dark:text-amber-400 font-mono text-base">
                     {formatCurrencyVND(totalPOAmount)}
                   </span>
                 </div>

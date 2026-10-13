@@ -84,6 +84,22 @@
     - Cấu hình Supabase Realtime Publication (`supabase_realtime`).
     - Row Level Security (RLS) policies bảo mật đa vai trò.
 
+### Nâng Cấp Quản Trị Dữ Liệu & Auto-Calculation (COMPLETED - 13/10/2026):
+1. **Chỉnh sửa Món Ăn (Edit Menu Item)**:
+   - Tích hợp nút "Sửa" (`Pencil`) trên từng dòng món ăn trong [MenuTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/MenuTab.tsx).
+   - Modal [EditMenuItemModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/EditMenuItemModal.tsx) cho phép chỉnh sửa: Tên món, Giá bán, Danh mục, Trạm làm việc (Bếp/Bar), Mô tả, Upload đè ảnh mới (FileReader Base64 preview) và **chỉnh sửa trực tiếp thành phần định mức nguyên liệu (BOM)** kèm tính tự động Giá vốn COGS & Biên lợi nhuận (Gross Margin %).
+2. **Chỉnh sửa Nguyên Vật Liệu (Edit Raw Material)**:
+   - Tích hợp nút "Sửa" (`Pencil`) trên từng dòng nguyên liệu tại bảng Tồn kho [InventoryTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/InventoryTab.tsx).
+   - Modal [EditRawMaterialModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/EditRawMaterialModal.tsx) cho phép cập nhật: Tên nguyên liệu, Phân loại danh mục, Nhà cung cấp, Cặp đơn vị chuẩn hóa, Hệ số quy đổi, Mức tồn an toàn và Giá vốn cơ sở.
+3. **Chuẩn Hóa Đơn Vị Tính (Dropdown Selection)**:
+   - Xóa bỏ nhập text tự do cho `purchase_unit` và `recipe_unit`.
+   - Cung cấp module [unitPresets.ts](file:///e:/Vibe%20Coding/POS/src/lib/unitPresets.ts) với 9 cặp quy chuẩn hệ thống: (Kg - Gram), (Lít - ml), (Chai - ml), (Thùng - Lon), (Hộp - Cái/Miếng), (Bao - Kg), (Gói - Gram), (Quả - Lát), (Cái - Cái).
+   - Tự động điền hệ số quy đổi mặc định và khóa đơn vị mua / định mức theo preset đã chọn.
+4. **Thuật Toán Tự Động Quy Đổi Giá Vốn (Unit Cost Conversion)**:
+   - Triển khai công thức: `avg_cost (đơn vị định mức) = (Tổng tiền / Số lượng mua) / Hệ số quy đổi`.
+   - Ví dụ: Mua 2 Kg thịt ba rọi với tổng tiền 230.000 VND => `(230.000 / 2 kg) / 1000 = 115 VND / 1 gram`.
+   - [ProcurementTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ProcurementTab.tsx) cho phép nhập 2 chiều linh hoạt (nhập Tổng tiền hoặc Đơn giá mua), hiển thị box giải thích thuật toán trực quan và lưu giá trị `avg_cost` chuẩn xác vào hệ thống kho.
+
 ---
 
 ## 3. Cấu trúc thư mục hiện tại
