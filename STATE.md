@@ -54,6 +54,17 @@
     - **Nhân Sự & Phân Quyền (`HRTab.tsx`)**: Quản lý tài khoản, gán quyền RBAC (Admin, Manager, Cashier, Chef, Barista, Waiter), Khóa/Mở tài khoản.
     - **Cấu hình Cửa hàng (`StoreSettingsTab.tsx`)**: Tên thương hiệu, VAT, Thông tin tài khoản ngân hàng VietQR, Wifi in trên bill.
 
+- [x] **Quản Lý Thực Đơn & Thêm Món Mới Động (Dynamic Menu Catalog & Management)**:
+  - Dịch vụ `menuService.ts` quản lý toàn bộ món ăn lưu trữ localStorage & đồng bộ realtime qua event bus.
+  - Modal `AddMenuItemModal.tsx`: cho phép nhập tên món, danh mục, trạm chế biến (Bếp/Bar), giá bán, mô tả, dán link ảnh hoặc chọn nhanh từ thư viện ảnh ẩm thực Unsplash có sẵn.
+  - Tích hợp nút **"+ Thêm Món Mới"** trực tiếp trên Header của FOH (`FOHView.tsx`) và tạo Tab **"Quản Lý Thực Đơn" (`MenuTab.tsx`)** chuyên biệt trong Trung tâm Quản trị Admin (`/admin`), đồng bộ tức thì sang ERP Định mức (`RecipeBOMTab.tsx`).
+
+- [x] **Hệ Thống Áp Dụng Khuyến Mãi & Voucher Đa Kênh (Omnichannel Promotions)**:
+  - Dịch vụ `promotionService.ts`: xác thực điều kiện giá trị đơn tối thiểu (`min_order_value`), kiểm tra trạng thái kích hoạt, tính toán giảm theo % hoặc số tiền cố định.
+  - Tích hợp hộp nhập mã & danh sách Voucher 1 chạm tại **Giỏ hàng FOH (`CartSidebar.tsx`)**: khách/waiter có thể nhập mã voucher (như `OPEN10`, `VIP50K`) hoặc bấm chọn nhanh các ưu đãi đang có, tự động trừ tiền chiết khấu và lưu vào đơn hàng.
+  - Tích hợp tại **Màn hình Thu Ngân (`CheckoutPanel.tsx`)**: thu ngân có thể áp dụng voucher của quán, nhập mã ưu đãi khách mang đến hoặc chiết khấu % thủ công.
+  - Hóa đơn in nhiệt K80 (`ReceiptModal.tsx`) tự động in dòng chiết khấu ưu đãi rõ ràng.
+
 - [x] **Kiểm thử Liên thông End-to-End (E2E Simulation Flow) & UI Runner**:
   - Dịch vụ kịch bản tự động `src/services/e2eSimulation.ts`: Giả lập khép kín 5 bước: Khách gọi món -> KDS nhận vé & reo chuông -> Bếp/Bar hoàn tất ra món -> Thu ngân quét VietQR tính tiền -> ERP trừ bột cafe & thịt bò -> Dashboard nảy số doanh thu.
   - UI Component `src/components/ui/E2ESimulationModal.tsx`: Nút "⚡ Giả Lập E2E" trên thanh điều hướng chính, thanh tiến trình mô phỏng 0-100%, timeline từng bước trực quan, nút mở nhanh 4 tab độc lập (`/`, `/kds`, `/cashier`, `/admin`).

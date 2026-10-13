@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { MenuItem, RawMaterial, RecipeBOM } from '@/types';
-import { initialMenuItems } from '@/database/mockData';
+import { menuService } from '@/services/menuService';
+import { realtimeEngine } from '@/services/realtimeEngine';
 import { formatCurrencyVND } from '@/lib/utils';
 import { inventoryService } from '@/services/inventoryService';
 import {
@@ -30,8 +31,15 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
   recipes,
   onRefresh,
 }) => {
-  const [menuItems] = useState<MenuItem[]>(initialMenuItems);
-  const [selectedItem, setSelectedItem] = useState<MenuItem>(menuItems[0]);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => menuService.getMenuItems());
+  const [selectedItem, setSelectedItem] = useState<MenuItem>(() => menuService.getMenuItems()[0] || null);
+
+  React.useEffect(() => {
+    const unsub = realtimeEngine.subscribe('ORDER_UPDATED', () => {
+      setMenuItems(menuService.getMenuItems());
+    });
+    return () => unsub();
+  }, []);
 
   // Local draft of current item's BOM for editing
   const [draftBOM, setDraftBOM] = useState<{ raw_material_id: string; quantity: number }[]>([]);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Category,
   MenuItem,
@@ -9,19 +9,34 @@ import {
   MenuItemModifier,
   StationType,
 } from '@/types';
-import { initialCategories, initialMenuItems, initialTables } from '@/database/mockData';
+import { initialCategories, initialTables } from '@/database/mockData';
+import { menuService } from '@/services/menuService';
+import { realtimeEngine } from '@/services/realtimeEngine';
 import { CategoryNav } from './CategoryNav';
 import { MenuGrid } from './MenuGrid';
 import { ModifierModal } from './ModifierModal';
 import { CartSidebar } from './CartSidebar';
-import { ShoppingBag, ChevronRight, Sparkles } from 'lucide-react';
+import { AddMenuItemModal } from './AddMenuItemModal';
+import { ShoppingBag, ChevronRight, Sparkles, Plus } from 'lucide-react';
 import { formatCurrencyVND } from '@/lib/utils';
 
 export const FOHView: React.FC = () => {
   // Data Sources
   const [categories] = useState<Category[]>(initialCategories);
-  const [menuItems] = useState<MenuItem[]>(initialMenuItems);
+  const [menuItems, setMenuItems] = useState<MenuItem[]>(() => menuService.getMenuItems());
   const [tables] = useState<RestaurantTable[]>(initialTables);
+
+  const refreshMenuItems = useCallback(() => {
+    setMenuItems(menuService.getMenuItems());
+  }, []);
+
+  useEffect(() => {
+    refreshMenuItems();
+    const unsub = realtimeEngine.subscribe('ORDER_UPDATED', () => {
+      refreshMenuItems();
+    });
+    return () => unsub();
+  }, [refreshMenuItems]);
 
   // Filters State
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -31,6 +46,7 @@ export const FOHView: React.FC = () => {
   // Modal State
   const [activeItemForModal, setActiveItemForModal] = useState<MenuItem | null>(null);
   const [isModifierModalOpen, setIsModifierModalOpen] = useState(false);
+  const [isAddMenuModalOpen, setIsAddMenuModalOpen] = useState(false);
 
   // Cart State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -159,11 +175,22 @@ export const FOHView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Add New Menu Item button */}
+            <button
+              onClick={() => setIsAddMenuModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
+              title="Thêm món ăn / thức uống mới vào thực đơn"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Thêm Món Mới</span>
+              <span className="sm:hidden">Thêm Món</span>
+            </button>
+
             {/* Table indicator (mobile and desktop) */}
             {selectedTable && (
               <button
                 onClick={() => setIsMobileCartOpen(true)}
-                className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold active:scale-95 transition-transform"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-xs font-bold active:scale-95 transition-transform"
                 title="Bấm để xem giỏ hàng / đổi bàn"
               >
                 <span className="hidden xs:inline">Bàn:</span>
@@ -266,6 +293,14 @@ export const FOHView: React.FC = () => {
         isOpen={isModifierModalOpen}
         onClose={() => setIsModifierModalOpen(false)}
         onAddToCart={handleAddToCart}
+      />
+
+      {/* Add New Menu Item Modal */}
+      <AddMenuItemModal
+        isOpen={isAddMenuModalOpen}
+        onClose={() => setIsAddMenuModalOpen(false)}
+        categories={categories}
+        onItemAdded={() => refreshMenuItems()}
       />
     </div>
   );

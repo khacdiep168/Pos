@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Order, RestaurantTable, PaymentMethod } from '@/types';
+import { Order, RestaurantTable, PaymentMethod, Promotion } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
 import { VietQRCode } from './VietQRCode';
 import { ReceiptModal } from './ReceiptModal';
 import { orderService } from '@/services/orderService';
+import { promotionService } from '@/services/promotionService';
 import {
   Banknote,
   QrCode,
@@ -17,6 +18,8 @@ import {
   X,
   Sparkles,
   Percent,
+  Tag,
+  Ticket,
 } from 'lucide-react';
 
 interface CheckoutPanelProps {
@@ -34,6 +37,10 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
 }) => {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('cash');
   const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [selectedPromo, setSelectedPromo] = useState<Promotion | null>(null);
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [promoError, setPromoError] = useState('');
+  const [showPromoPicker, setShowPromoPicker] = useState(false);
   const [cashGiven, setCashGiven] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -65,17 +72,52 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
   // Price calculations
   const subtotal = order.subtotal;
   const taxAmount = order.tax_amount;
-  const discountAmount = Math.round((subtotal * discountPercent) / 100);
+
+  // Calculate discount from selectedPromo, discountPercent, or existing order discount
+  let discountAmount = 0;
+  if (selectedPromo) {
+    if (selectedPromo.discount_type === 'percent') {
+      discountAmount = Math.round(subtotal * (selectedPromo.discount_value / 100));
+    } else {
+      discountAmount = Math.min(selectedPromo.discount_value, subtotal);
+    }
+  } else if (discountPercent > 0) {
+    discountAmount = Math.round((subtotal * discountPercent) / 100);
+  } else if (order.discount_amount && order.discount_amount > 0) {
+    discountAmount = order.discount_amount;
+  }
+
   const finalTotal = Math.max(0, subtotal + taxAmount - discountAmount);
 
   // Cash change due calculation
   const numericCashGiven = parseFloat(cashGiven.replace(/\D/g, '')) || 0;
   const changeDue = Math.max(0, numericCashGiven - finalTotal);
 
-  // Auto set exact cash amount on mount
+  // Auto set exact cash amount on mount or price change
   useEffect(() => {
     setCashGiven(finalTotal.toString());
   }, [finalTotal]);
+
+  const activePromos = promotionService.getActivePromotions();
+
+  const handleApplyPromoCode = (code: string) => {
+    const res = promotionService.applyPromotion(code, subtotal);
+    if (res.success && res.promo) {
+      setSelectedPromo(res.promo);
+      setDiscountPercent(0);
+      setPromoError('');
+      setPromoCodeInput('');
+      setShowPromoPicker(false);
+    } else {
+      setPromoError(res.message);
+    }
+  };
+
+  const handleRemoveDiscount = () => {
+    setSelectedPromo(null);
+    setDiscountPercent(0);
+    setPromoError('');
+  };
 
   // Execute Mock ACID Payment Transaction
   const handleConfirmPayment = () => {
@@ -161,26 +203,134 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
         </div>
 
         {/* Discount & Promotion Selector */}
-        <div className="flex items-center justify-between p-2.5 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-stone-200 dark:border-stone-800 text-xs">
-          <span className="font-semibold text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
-            <Percent className="w-3.5 h-3.5 text-amber-500" />
-            Chiết khấu / Ưu đãi:
-          </span>
-          <div className="flex items-center gap-1">
-            {[0, 5, 10, 15].map((pct) => (
-              <button
-                key={pct}
-                onClick={() => setDiscountPercent(pct)}
-                className={`px-2 py-1 rounded-lg text-xs font-bold transition-all ${
-                  discountPercent === pct
-                    ? 'bg-amber-500 text-white shadow-2xs'
-                    : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:border-amber-400'
-                }`}
-              >
-                {pct === 0 ? '0%' : `${pct}%`}
-              </button>
-            ))}
+        <div className="p-3 bg-stone-50 dark:bg-stone-800/40 rounded-xl border border-stone-200 dark:border-stone-800 space-y-2.5 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-stone-700 dark:text-stone-300 flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+              <Tag className="w-3.5 h-3.5" />
+              Khuyến mãi & Chiết khấu:
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setShowPromoPicker(!showPromoPicker)}
+              className="text-[11px] font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+            >
+              <Ticket className="w-3 h-3" />
+              {showPromoPicker ? 'Đóng' : 'Chọn Voucher'}
+            </button>
           </div>
+
+          {/* Active Promo or Discount Display */}
+          {selectedPromo ? (
+            <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700">
+              <div className="flex items-center gap-2">
+                <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white font-mono font-bold text-[10px]">
+                  {selectedPromo.promo_code}
+                </span>
+                <span className="text-emerald-800 dark:text-emerald-300 font-semibold truncate max-w-[150px]">
+                  {selectedPromo.name}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="font-extrabold text-emerald-600 dark:text-emerald-400">
+                  -{formatCurrencyVND(discountAmount)}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleRemoveDiscount}
+                  className="p-1 rounded text-stone-400 hover:text-rose-500"
+                  title="Gỡ bỏ mã"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {/* Quick % buttons */}
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-stone-500">Giảm % trực tiếp:</span>
+                <div className="flex items-center gap-1">
+                  {[0, 5, 10, 15].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => {
+                        setDiscountPercent(pct);
+                        setSelectedPromo(null);
+                        setPromoError('');
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all ${
+                        discountPercent === pct && !selectedPromo
+                          ? 'bg-amber-500 text-white shadow-2xs'
+                          : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-stone-700 hover:border-amber-400'
+                      }`}
+                    >
+                      {pct === 0 ? '0%' : `${pct}%`}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Promo input field */}
+              <div className="flex gap-1.5 pt-1">
+                <input
+                  type="text"
+                  value={promoCodeInput}
+                  onChange={(e) => {
+                    setPromoCodeInput(e.target.value.toUpperCase());
+                    setPromoError('');
+                  }}
+                  placeholder="Nhập mã voucher (VD: OPEN10)"
+                  className="flex-1 px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-xs uppercase font-mono font-bold placeholder:font-normal focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleApplyPromoCode(promoCodeInput)}
+                  className="px-3 py-1.5 rounded-lg bg-stone-900 dark:bg-stone-700 hover:bg-stone-800 text-white text-xs font-bold transition-colors"
+                >
+                  Áp dụng
+                </button>
+              </div>
+            </div>
+          )}
+
+          {promoError && (
+            <p className="text-[11px] text-rose-600 dark:text-rose-400 font-medium">{promoError}</p>
+          )}
+
+          {/* Voucher list dropdown */}
+          {showPromoPicker && (
+            <div className="pt-2 border-t border-stone-200 dark:border-stone-700/60 space-y-1.5 max-h-36 overflow-y-auto">
+              <p className="text-[10px] text-stone-400 font-medium">Danh sách voucher của quán:</p>
+              {activePromos.map((promo) => (
+                <div
+                  key={promo.id}
+                  onClick={() => handleApplyPromoCode(promo.promo_code)}
+                  className="p-1.5 rounded-lg border border-dashed border-stone-200 dark:border-stone-700 hover:border-amber-500 hover:bg-amber-500/10 cursor-pointer flex items-center justify-between text-xs transition-all"
+                >
+                  <div>
+                    <div className="font-bold text-stone-800 dark:text-stone-200 flex items-center gap-1.5">
+                      <span className="px-1 py-0.5 rounded bg-amber-500 text-white text-[9px] font-mono">
+                        {promo.promo_code}
+                      </span>
+                      <span className="text-[11px]">{promo.name}</span>
+                    </div>
+                    {promo.min_order_value && (
+                      <div className="text-[10px] text-stone-400">
+                        Đơn từ {formatCurrencyVND(promo.min_order_value)}
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-amber-600 dark:text-amber-400 font-bold text-xs">
+                    {promo.discount_type === 'percent'
+                      ? `-${promo.discount_value}%`
+                      : `-${formatCurrencyVND(promo.discount_value)}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Bill Summary Calculations */}
@@ -193,8 +343,10 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
           </div>
 
           {discountAmount > 0 && (
-            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
-              <span>Giảm giá ({discountPercent}%)</span>
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+              <span>
+                Giảm giá {selectedPromo ? `(${selectedPromo.promo_code})` : discountPercent > 0 ? `(${discountPercent}%)` : ''}
+              </span>
               <span>-{formatCurrencyVND(discountAmount)}</span>
             </div>
           )}

@@ -7,11 +7,13 @@ import { inventoryService } from '@/services/inventoryService';
 import { adminService } from '@/services/adminService';
 import { realtimeEngine } from '@/services/realtimeEngine';
 import { DashboardTab } from './DashboardTab';
+import { MenuTab } from './MenuTab';
 import { PromotionsTab } from './PromotionsTab';
 import { HRTab } from './HRTab';
 import { StoreSettingsTab } from './StoreSettingsTab';
 import {
   LayoutDashboard,
+  UtensilsCrossed,
   Ticket,
   Users,
   Settings,
@@ -21,7 +23,7 @@ import {
 } from 'lucide-react';
 
 export const AdminView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'promotions' | 'hr' | 'settings'>(
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'promotions' | 'hr' | 'settings'>(
     'dashboard'
   );
 
@@ -85,6 +87,18 @@ export const AdminView: React.FC = () => {
             </button>
 
             <button
+              onClick={() => setActiveTab('menu')}
+              className={`w-full flex items-center gap-2.5 p-3 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'menu'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'
+              }`}
+            >
+              <UtensilsCrossed className="w-4 h-4" />
+              <span>Quản Lý Thực Đơn</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('promotions')}
               className={`w-full flex items-center gap-2.5 p-3 rounded-xl text-xs font-bold transition-all ${
                 activeTab === 'promotions'
@@ -138,6 +152,7 @@ export const AdminView: React.FC = () => {
           <div>
             <h1 className="text-base font-extrabold text-stone-900 dark:text-white">
               {activeTab === 'dashboard' && 'Executive Business Dashboard & Analytics'}
+              {activeTab === 'menu' && 'Quản Lý Thực Đơn, Món Ăn & Phân Trạm Chế Biến'}
               {activeTab === 'promotions' && 'Quản Lý Khuyến Mãi, Mã Giảm Giá & Voucher'}
               {activeTab === 'hr' && 'Quản Trị Nhân Sự & Phân Quyền Vai Trò (RBAC)'}
               {activeTab === 'settings' && 'Cấu Hình Thông Tin Thương Hiệu & Cửa Hàng'}
@@ -161,6 +176,8 @@ export const AdminView: React.FC = () => {
           {activeTab === 'dashboard' && (
             <DashboardTab orders={orders} materials={materials} />
           )}
+
+          {activeTab === 'menu' && <MenuTab onRefresh={refreshData} />}
 
           {activeTab === 'promotions' && (
             <PromotionsTab promotions={promotions} onRefresh={refreshData} />
