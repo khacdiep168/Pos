@@ -163,12 +163,17 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 
         {items.length > 0 && (
           <button
-            onClick={onClearCart}
-            className="text-xs text-stone-400 hover:text-red-500 flex items-center gap-1 transition-colors p-1"
-            title="Xóa tất cả"
+            onClick={() => {
+              if (window.confirm('Xác nhận xóa toàn bộ món trong giỏ hàng?')) {
+                onClearCart();
+              }
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 hover:text-rose-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
+            title="Hủy đơn / Xóa toàn bộ giỏ hàng"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Xóa hết</span>
+            <span className="hidden xs:inline">Hủy đơn / Xóa toàn bộ</span>
+            <span className="xs:hidden">Xóa hết</span>
           </button>
         )}
       </div>
@@ -179,6 +184,9 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
           tables={tables}
           selectedTableId={selectedTable?.id || null}
           onSelectTable={onSelectTable}
+          onTableStatusChange={(tableId, newStatus) => {
+            orderService.updateTableStatus(tableId, newStatus);
+          }}
         />
       </div>
 
@@ -436,24 +444,40 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             </div>
           </div>
 
-          <button
-            onClick={handleSendOrder}
-            disabled={isSubmitting || !selectedTable}
-            className={`w-full py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-bold text-sm text-white transition-all shadow-md ${
-              !selectedTable
-                ? 'bg-stone-400 dark:bg-stone-700 cursor-not-allowed opacity-75'
-                : 'bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] shadow-emerald-600/20'
-            }`}
-          >
-            {isSubmitting ? (
-              <span className="animate-pulse">Đang định tuyến đơn...</span>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                <span>GỬI ORDER XUỐNG BẾP / BAR</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Bạn có chắc muốn hủy đơn và xóa toàn bộ món trong giỏ hàng?')) {
+                  onClearCart();
+                }
+              }}
+              className="py-3.5 px-3 rounded-xl border border-stone-200 dark:border-stone-700 hover:border-rose-300 dark:hover:border-rose-800 bg-stone-50 dark:bg-stone-800 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-stone-500 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs active:scale-95 cursor-pointer"
+              title="Hủy đơn & Xóa sạch giỏ"
+            >
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Hủy đơn</span>
+            </button>
+
+            <button
+              onClick={handleSendOrder}
+              disabled={isSubmitting || !selectedTable}
+              className={`flex-1 py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all shadow-md ${
+                !selectedTable
+                  ? 'bg-stone-400 dark:bg-stone-700 cursor-not-allowed opacity-75'
+                  : 'bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] shadow-emerald-600/20'
+              }`}
+            >
+              {isSubmitting ? (
+                <span className="animate-pulse">Đang định tuyến đơn...</span>
+              ) : (
+                <>
+                  <Send className="w-4 h-4" />
+                  <span>GỬI ORDER XUỐNG BẾP / BAR</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
 

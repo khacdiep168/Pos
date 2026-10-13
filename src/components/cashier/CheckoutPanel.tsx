@@ -149,7 +149,9 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
           </div>
           <div>
             <h3 className="text-sm font-extrabold flex items-center gap-2">
-              <span>THANH TOÁN: {table.table_number}</span>
+              <span>
+                THANH TOÁN: {table.zone_id ? `${orderService.getZones().find((z) => z.id === table.zone_id)?.name || ''} - ` : ''}{table.table_number}
+              </span>
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-stone-800 text-amber-400">
                 #{order.id.slice(-6)}
               </span>

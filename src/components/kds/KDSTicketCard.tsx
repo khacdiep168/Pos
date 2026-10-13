@@ -18,6 +18,7 @@ export interface KDSTicket {
   id: string; // e.g. `${orderId}_${station}`
   orderId: string;
   tableNumber: string;
+  zoneName?: string;
   station: StationType;
   createdAt: string;
   items: OrderItem[];
@@ -86,10 +87,17 @@ export const KDSTicketCard: React.FC<KDSTicketCardProps> = ({
             <span>{isKitchen ? 'BẾP' : 'QUẦY BAR'}</span>
           </span>
 
-          {/* Table Number */}
-          <span className="text-base font-black text-white tracking-wide">
-            {ticket.tableNumber}
-          </span>
+          {/* Table Number & Zone Badge */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {ticket.zoneName && (
+              <span className="px-1.5 py-0.5 rounded bg-stone-800/90 text-amber-400 border border-amber-500/30 text-[11px] font-bold tracking-tight">
+                {ticket.zoneName}
+              </span>
+            )}
+            <span className="text-base font-black text-white tracking-wide">
+              {ticket.tableNumber}
+            </span>
+          </div>
         </div>
 
         {/* Elapsed Timer & Order Ref */}

@@ -18,6 +18,7 @@ import {
   X,
   Sparkles,
 } from 'lucide-react';
+import { SearchableSelect, SearchableOption } from '@/components/ui/SearchableSelect';
 
 interface ProcurementTabProps {
   suppliers: Supplier[];
@@ -262,17 +263,18 @@ export const ProcurementTab: React.FC<ProcurementTabProps> = ({
                     <span>+ Thêm nhanh nguyên liệu mới</span>
                   </button>
                 </div>
-                <select
+                <SearchableSelect
+                  options={materials.map((m) => ({
+                    value: m.id,
+                    label: m.name,
+                    subLabel: `Đơn vị mua: ${m.purchase_unit} • Quy đổi: 1 ${m.purchase_unit} = ${m.conversion_factor.toLocaleString()} ${m.recipe_unit}`,
+                    badge: m.purchase_unit,
+                  }))}
                   value={selectedMaterialId}
-                  onChange={(e) => setSelectedMaterialId(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-bold text-xs"
-                >
-                  {materials.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} (Đơn vị mua: {m.purchase_unit})
-                    </option>
-                  ))}
-                </select>
+                  onChange={(val) => setSelectedMaterialId(val)}
+                  placeholder="-- Tìm hoặc chọn nguyên vật liệu --"
+                  searchPlaceholder="Gõ tên nguyên liệu cần nhập kho..."
+                />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

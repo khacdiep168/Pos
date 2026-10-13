@@ -17,6 +17,15 @@ export const KDSView: React.FC = () => {
   const breakOrderIntoTickets = useCallback((order: Order): KDSTicket[] => {
     const stationTickets: KDSTicket[] = [];
 
+    // Lookup table and its zone
+    const allTables = orderService.getTables();
+    const allZones = orderService.getZones();
+    const table = allTables.find(
+      (t) => t.id === order.table_id || t.table_number === order.table_number
+    );
+    const zone = table?.zone_id ? allZones.find((z) => z.id === table.zone_id) : undefined;
+    const zoneName = zone?.name;
+
     const kitchenItems = order.items.filter((i) => i.station === 'kitchen');
     const barItems = order.items.filter((i) => i.station === 'bar');
 
@@ -32,6 +41,7 @@ export const KDSView: React.FC = () => {
         id: `${order.id}_kitchen`,
         orderId: order.id,
         tableNumber: order.table_number,
+        zoneName,
         station: 'kitchen',
         createdAt: order.created_at,
         items: kitchenItems,
@@ -51,6 +61,7 @@ export const KDSView: React.FC = () => {
         id: `${order.id}_bar`,
         orderId: order.id,
         tableNumber: order.table_number,
+        zoneName,
         station: 'bar',
         createdAt: order.created_at,
         items: barItems,

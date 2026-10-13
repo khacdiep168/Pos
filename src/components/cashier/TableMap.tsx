@@ -286,7 +286,35 @@ export const TableMap: React.FC<TableMapProps> = ({
                       </button>
                     </div>
                   ) : (
-                    <span className="text-stone-400">Bàn trống</span>
+                    <span className="text-stone-400">
+                      {table.status === 'reserved' ? 'Bàn đã đặt trước' : 'Bàn trống'}
+                    </span>
+                  )}
+
+                  {table.status === 'available' && onSetTableStatus && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSetTableStatus(table.id, 'reserved');
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 text-[10px] font-bold hover:bg-purple-600 hover:text-white transition-colors shadow-2xs"
+                      title="Đặt bàn trước (Reservation)"
+                    >
+                      Đặt bàn
+                    </button>
+                  )}
+
+                  {table.status === 'reserved' && onSetTableStatus && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSetTableStatus(table.id, 'available');
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300 text-[10px] font-bold hover:bg-stone-300 transition-colors"
+                      title="Hủy đặt chỗ bàn này"
+                    >
+                      Hủy đặt
+                    </button>
                   )}
 
                   {table.status === 'occupied' && onSetTableStatus && (

@@ -15,6 +15,7 @@ import {
   Plus,
   Percent,
 } from 'lucide-react';
+import { SearchableSelect, SearchableOption } from '@/components/ui/SearchableSelect';
 
 interface EditMenuItemModalProps {
   isOpen: boolean;
@@ -401,19 +402,20 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                 <div className="sm:col-span-7">
                   <label className="block text-[11px] font-bold text-stone-500 mb-1">
-                    Thêm nguyên vật liệu
+                    Thêm nguyên vật liệu (Tìm nhanh)
                   </label>
-                  <select
+                  <SearchableSelect
+                    options={rawMaterials.map((m) => ({
+                      value: m.id,
+                      label: m.name,
+                      subLabel: `${formatCurrencyVND(m.avg_cost)} / ${m.recipe_unit}`,
+                      badge: m.recipe_unit,
+                    }))}
                     value={selectedMaterialId}
-                    onChange={(e) => setSelectedMaterialId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-xs font-medium text-stone-900 dark:text-white focus:outline-hidden"
-                  >
-                    {rawMaterials.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name} ({formatCurrencyVND(m.avg_cost)}/{m.recipe_unit})
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setSelectedMaterialId(val)}
+                    placeholder="-- Tìm hoặc chọn nguyên liệu --"
+                    searchPlaceholder="Gõ tên nguyên liệu (VD: Thịt, Sữa, Cà phê...)"
+                  />
                 </div>
 
                 <div className="sm:col-span-3">

@@ -9,8 +9,9 @@ import {
   MenuItemModifier,
   StationType,
 } from '@/types';
-import { initialCategories, initialTables } from '@/database/mockData';
+import { initialCategories } from '@/database/mockData';
 import { menuService } from '@/services/menuService';
+import { orderService } from '@/services/orderService';
 import { realtimeEngine } from '@/services/realtimeEngine';
 import { CategoryNav } from './CategoryNav';
 import { MenuGrid } from './MenuGrid';
@@ -23,19 +24,33 @@ export const FOHView: React.FC = () => {
   // Data Sources
   const [categories] = useState<Category[]>(initialCategories);
   const [menuItems, setMenuItems] = useState<MenuItem[]>(() => menuService.getMenuItems());
-  const [tables] = useState<RestaurantTable[]>(initialTables);
+  const [tables, setTables] = useState<RestaurantTable[]>(() => orderService.getTables());
 
   const refreshMenuItems = useCallback(() => {
     setMenuItems(menuService.getMenuItems());
   }, []);
 
+  const refreshTables = useCallback(() => {
+    setTables(orderService.getTables());
+  }, []);
+
   useEffect(() => {
     refreshMenuItems();
-    const unsub = realtimeEngine.subscribe('ORDER_UPDATED', () => {
+    refreshTables();
+
+    const unsubOrder = realtimeEngine.subscribe('ORDER_UPDATED', () => {
       refreshMenuItems();
     });
-    return () => unsub();
-  }, [refreshMenuItems]);
+
+    const unsubTable = realtimeEngine.subscribe('TABLE_STATUS_CHANGED', () => {
+      refreshTables();
+    });
+
+    return () => {
+      unsubOrder();
+      unsubTable();
+    };
+  }, [refreshMenuItems, refreshTables]);
 
   // Filters State
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
@@ -48,7 +63,10 @@ export const FOHView: React.FC = () => {
 
   // Cart State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(tables[0] || null);
+  const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(() => {
+    const all = orderService.getTables();
+    return all.find((t) => t.status === 'available' || t.status === 'reserved') || null;
+  });
   const [isMobileCartOpen, setIsMobileCartOpen] = useState(false);
 
   // Filtered Menu Items

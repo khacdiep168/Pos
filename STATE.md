@@ -170,7 +170,37 @@ POS/
 
 ---
 
-## 6. Các task tiếp theo cần làm (Phase 2 Roadmap)
+## 6. Gói Nâng Cấp UX/UI Thực Chiến (Phase 1.6 - UX Refinement) - COMPLETED (13/10/2026)
+Đã hoàn thành và kiểm thử thành công 3 hạng mục tối ưu hóa thao tác người dùng:
+
+1. **Luồng Chọn Bàn 2 Bước & Đặt Bàn Trước (Reservation) tại FOH ([TableSelector.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/TableSelector.tsx), [FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx))**:
+   - **Trình tự bắt buộc 2 bước**:
+     - **Bước 1**: Chọn Khu vực (Zone) trước (Tầng 1, Tầng 2, Sân vườn, Phòng VIP). Hiển thị badge số bàn nhận khả dụng.
+     - **Bước 2**: Tự động lọc và **chỉ hiển thị các bàn có trạng thái Trống (`available`) hoặc Đã đặt (`reserved`)**. Ẩn hoàn toàn các bàn đang phục vụ (`occupied`) hoặc đang thanh toán (`billing`).
+   - **Tính năng Đặt bàn trước (Reservation)**:
+     - Nút 1-chạm "Đặt bàn" chuyển trạng thái sang `reserved` và "Hủy đặt" trả về `available` ngay trên thẻ bàn tại FOH và Cashier [TableMap.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/TableMap.tsx).
+     - Khi bàn ở trạng thái `reserved`, nhân viên bấm chọn bàn và mở order bình thường khi khách đến; khi gửi đơn, hệ thống tự động chuyển bàn sang `occupied`.
+
+2. **Tìm Kiếm Nhanh (Searchable Combobox) với Keyboard Navigation ([SearchableSelect.tsx](file:///e:/Vibe%20Coding/POS/src/components/ui/SearchableSelect.tsx))**:
+   - Xây dựng component `SearchableSelect` thay thế toàn bộ các thẻ `<select>` tĩnh.
+   - Hỗ trợ gõ text lọc tức thì (không phân biệt hoa/thường, hỗ trợ tiếng Việt).
+   - **Điều hướng bàn phím toàn diện**: Hỗ trợ phím mũi tên `↑` / `↓` để duyệt danh sách, phím `Enter` để chọn, phím `Esc` để đóng mà không cần dùng chuột.
+   - Tích hợp vào:
+     - Form Thêm Định mức BOM món ăn ([AddMenuItemModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AddMenuItemModal.tsx)).
+     - Form Sửa Định mức BOM món ăn ([EditMenuItemModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/EditMenuItemModal.tsx)).
+     - Form Tạo Phiếu Nhập Kho PO ([ProcurementTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/ProcurementTab.tsx)).
+
+3. **Tùy Chỉnh UX Nâng Cao**:
+   - **Nút Xóa Nhanh Giỏ Hàng (Clear Cart)**:
+     - Bổ sung nút nổi bật "Hủy đơn / Xóa toàn bộ" (kèm icon `Trash2`) ở cả Header giỏ hàng và thanh hành động dưới cùng của [CartSidebar.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/CartSidebar.tsx).
+     - Reset giỏ hàng về 0 ngay lập tức với hộp thoại xác nhận khi khách đổi ý.
+   - **Hiển Thị Badge Khu Vực Cạnh Số Bàn**:
+     - Bổ sung `zoneName` trên thẻ vé KDS Bếp/Bar ([KDSTicketCard.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSTicketCard.tsx), [KDSView.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSView.tsx)) định dạng `[Tên Khu Vực] - Bàn Số` (VD: `Tầng 2 - Bàn 05`).
+     - Đồng bộ hiển thị Tên Khu Vực trong tiêu đề thanh toán ([CheckoutPanel.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CheckoutPanel.tsx)) và Hóa đơn in nhiệt K80 ([ReceiptModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/ReceiptModal.tsx)).
+
+---
+
+## 7. Các task tiếp theo cần làm (Phase 2 Roadmap)
 1. Kết nối Backend API thật với Supabase Cloud Project (chạy file migration trong `DATABASE_MIGRATION.md`).
 2. Tích hợp Webhook đồng bộ biến động số dư ngân hàng tự động (Cass.vn / SePay / PayOS API) cho cổng VietQR.
 3. Đóng gói PWA (Progressive Web App) hỗ trợ cài đặt trên Tablet/Điện thoại và máy in Bluetooth/LAN.

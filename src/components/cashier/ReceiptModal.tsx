@@ -4,6 +4,7 @@ import React from 'react';
 import { Order, PaymentMethod } from '@/types';
 import { formatCurrencyVND, formatDateTime } from '@/lib/utils';
 import { initialStoreSettings } from '@/database/mockData';
+import { orderService } from '@/services/orderService';
 import { Printer, X, CheckCircle2 } from 'lucide-react';
 
 interface ReceiptModalProps {
@@ -22,6 +23,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   changeDue,
 }) => {
   if (!isOpen || !order) return null;
+
+  // Lookup Zone info
+  const table = orderService
+    .getTables()
+    .find((t) => t.id === order.table_id || t.table_number === order.table_number);
+  const zone = table?.zone_id
+    ? orderService.getZones().find((z) => z.id === table.zone_id)
+    : undefined;
 
   const handlePrint = () => {
     window.print();
@@ -84,7 +93,9 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
             <div className="flex justify-between">
               <span>BÀN:</span>
-              <span className="font-bold text-xs uppercase">{order.table_number}</span>
+              <span className="font-bold text-xs uppercase">
+                {zone ? `${zone.name} - ` : ''}{order.table_number}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>NGÀY GIỜ:</span>
