@@ -484,14 +484,49 @@ Hệ thống hoàn thiện 3 trụ cột vận hành thực tế tại quán: B�
 
 ---
 
-## 12. Các task tiếp theo cần làm (Phase 2 Roadmap)
-1. Kết nối Backend API thật với Supabase Cloud Project (chạy file migration trong `DATABASE_MIGRATION.md`).
-2. Tích hợp Webhook đồng bộ biến động số dư ngân hàng tự động (Cass.vn / SePay / PayOS API) cho cổng VietQR.
-3. Đóng gói PWA (Progressive Web App) hỗ trợ cài đặt trên Tablet/Điện thoại và máy in Bluetooth/LAN.
+## 12. Phase 2: Cloud Backend, VietQR Webhook & PWA Packaging - HOÀN TẤT
+Thực thi toàn bộ các task nền tảng kết nối đám mây, tự động hóa thanh toán ngân hàng và đóng gói ứng dụng di động:
+
+1. **Kết Nối Backend Supabase Cloud ([src/lib/supabaseClient.ts](file:///e:/Vibe%20Coding/POS/src/lib/supabaseClient.ts), [.env.example](file:///e:/Vibe%20Coding/POS/.env.example))**:
+   - Cài đặt thư viện chính thức `@supabase/supabase-js`.
+   - Xây dựng Supabase Client Singleton an toàn, hỗ trợ chế độ Offline Fallback mượt mà khi chưa có kết nối Internet.
+   - Hàm `checkSupabaseConnection()` hỗ trợ kiểm tra sức khỏe kết nối đám mây thời gian thực.
+   - Cung cấp file mẫu [.env.example](file:///e:/Vibe%20Coding/POS/.env.example) hướng dẫn cấu hình chi tiết `NEXT_PUBLIC_SUPABASE_URL` và `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
+
+2. **Webhook Tự Động Gạch Nợ Chuyển Khoản Ngân Hàng VietQR ([src/app/api/webhook/payment/route.ts](file:///e:/Vibe%20Coding/POS/src/app/api/webhook/payment/route.ts))**:
+   - Endpoint: `POST /api/webhook/payment`.
+   - Hỗ trợ đa cổng thanh toán phổ biến tại Việt Nam: **SePay (sepay.vn)**, **PayOS (payos.vn)**, **Cass.vn** và VietQR.
+   - Thuật toán bóc tách mã đơn tự động từ nội dung chuyển khoản (`ORD-xxxx`, `DH-xxxx`, `BAN-xx`).
+   - Kiểm tra số tiền chuyển khớp, bảo mật qua Header Token / API Secret.
+   - Endpoint sẵn sàng tích hợp nhận biến động số dư tài khoản ngân hàng thật (MBBank, Vietcombank, Techcombank, ACB...).
+
+3. **Đóng Gói PWA (Progressive Web App) & Máy In Nhiệt Bluetooth / LAN**:
+   - **PWA Manifest ([public/manifest.json](file:///e:/Vibe%20Coding/POS/public/manifest.json))**:
+     - Cấu hình chạy ứng dụng toàn màn hình độc lập (`display: standalone`).
+     - Tương thích xoay màn hình tự do trên cả điện thoại đứng và tablet/máy POS ngang.
+     - Icon thương hiệu vector độ nét cao [public/icon.svg](file:///e:/Vibe%20Coding/POS/public/icon.svg).
+     - Phím tắt truy cập nhanh: Gọi món (FOH), Bếp & Bar (KDS), Thu Ngân.
+   - **Service Worker ([public/sw.js](file:///e:/Vibe%20Coding/POS/public/sw.js))**: Đăng ký trong `src/app/layout.tsx` cho phép cài đặt app trực tiếp từ trình duyệt Android / iOS / Windows ("Thêm vào màn hình chính").
+   - **Mô-đun Quản Lý Máy In Nhiệt ([src/lib/thermalPrinter.ts](file:///e:/Vibe%20Coding/POS/src/lib/thermalPrinter.ts))**:
+     - Hỗ trợ Web Bluetooth API kết nối máy in nhiệt mini Bluetooth (Xprinter, Zywell, HPRT...) không cần cài driver.
+     - Hỗ trợ Web Serial (USB) và định dạng lệnh in ESC/POS chuẩn (in đậm, cắt giấy tự động GS V, căn lề).
+     - Fallback lệnh in chuẩn trình duyệt `window.print()`.
+
+4. **Đồng Bộ Mã Nguồn Lên GitHub**:
+   - Repository chính thức: [https://github.com/khacdiep168/Pos](https://github.com/khacdiep168/Pos).
+   - Nhánh chính: `main`.
+   - Đã commit và push 100% mã nguồn, tài liệu thiết kế và kiểm thử thành công.
 
 ---
 
-## 13. Luật vận hành (Agent Working Rules)
+## 13. Kế hoạch tiếp theo (Phase 2.1 - Production Go-Live)
+1. Cấu hình Supabase project credentials trong file `.env.local` và chạy migration schema trên dashboard Supabase.
+2. Đăng ký webhook URL trên SePay / PayOS để test quét mã VietQR thật từ app ngân hàng.
+3. Test in thực tế với máy in hóa đơn K80 LAN hoặc Bluetooth.
+
+---
+
+## 14. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.

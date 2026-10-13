@@ -1,0 +1,40 @@
+{
+  "name": "Vibe Taste POS - Hệ Thống Bán Hàng & Quản Trị Quán",
+  "short_name": "VIBE POS",
+  "description": "Hệ thống POS bán hàng, gọi món FOH, màn hình bếp KDS, thu ngân và quản trị kho ERP",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0c0a09",
+  "theme_color": "#f97316",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Gọi Món (FOH)",
+      "url": "/",
+      "description": "Menu gọi món cho nhân viên phục vụ"
+    },
+    {
+      "name": "Bếp & Bar (KDS)",
+      "url": "/kds",
+      "description": "Màn hình điều phối chế biến bếp và quầy bar"
+    },
+    {
+      "name": "Quầy Thu Ngân",
+      "url": "/cashier",
+      "description": "Thanh toán hóa đơn và quản lý sơ đồ bàn"
+    }
+  ]
+}
