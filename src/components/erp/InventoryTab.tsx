@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { RawMaterial, InventoryTransaction } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
+import { AddRawMaterialModal } from '@/components/admin/AddRawMaterialModal';
 import {
   AlertTriangle,
   CheckCircle2,
@@ -12,6 +13,7 @@ import {
   History,
   Boxes,
   ShieldAlert,
+  Plus,
 } from 'lucide-react';
 
 interface InventoryTabProps {
@@ -28,6 +30,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'low_stock' | 'safe'>('all');
   const [showHistory, setShowHistory] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   // Filter materials
   const filteredMaterials = materials.filter((m) => {
@@ -98,6 +101,15 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
           >
             <History className="w-3.5 h-3.5" />
             <span>Lịch sử trừ kho</span>
+          </button>
+
+          {/* Add Raw Material Button */}
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-600 text-white shadow-xs active:scale-95 transition-all"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Thêm Nguyên Liệu</span>
           </button>
         </div>
       </div>
@@ -257,6 +269,13 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
           )}
         </div>
       )}
+
+      {/* Add Raw Material Modal */}
+      <AddRawMaterialModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onMaterialAdded={onRefresh}
+      />
     </div>
   );
 };

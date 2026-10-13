@@ -93,7 +93,8 @@ export interface Order {
 export interface RawMaterial {
   id: string;
   name: string;
-  supplier_id: string;
+  supplier_id?: string;
+  category?: string;
   purchase_unit: string; // kg, lít, hộp
   recipe_unit: string; // gram, ml, cái
   conversion_factor: number; // 1 purchase_unit = X recipe_units

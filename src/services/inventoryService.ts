@@ -92,6 +92,19 @@ class InventoryService {
     return [...this.rawMaterials];
   }
 
+  public addRawMaterial(material: Omit<RawMaterial, 'id'>): RawMaterial {
+    const newMaterial: RawMaterial = {
+      ...material,
+      id: `raw-${Date.now().toString().slice(-6)}`,
+      current_stock: material.current_stock ?? 0,
+      avg_cost: material.avg_cost ?? 0,
+    };
+    this.rawMaterials.unshift(newMaterial);
+    this.save();
+    realtimeEngine.emit('STOCK_ALERT', { type: 'MATERIAL_ADDED', material: newMaterial });
+    return newMaterial;
+  }
+
   public getRecipes(): RecipeBOM[] {
     return [...this.recipes];
   }

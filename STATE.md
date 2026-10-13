@@ -54,10 +54,17 @@
     - **Nhân Sự & Phân Quyền (`HRTab.tsx`)**: Quản lý tài khoản, gán quyền RBAC (Admin, Manager, Cashier, Chef, Barista, Waiter), Khóa/Mở tài khoản.
     - **Cấu hình Cửa hàng (`StoreSettingsTab.tsx`)**: Tên thương hiệu, VAT, Thông tin tài khoản ngân hàng VietQR, Wifi in trên bill.
 
-- [x] **Quản Lý Thực Đơn & Thêm Món Mới Động (Dynamic Menu Catalog & Management)**:
-  - Dịch vụ `menuService.ts` quản lý toàn bộ món ăn lưu trữ localStorage & đồng bộ realtime qua event bus.
-  - Modal `AddMenuItemModal.tsx`: cho phép nhập tên món, danh mục, trạm chế biến (Bếp/Bar), giá bán, mô tả, dán link ảnh hoặc chọn nhanh từ thư viện ảnh ẩm thực Unsplash có sẵn.
-  - Tích hợp nút **"+ Thêm Món Mới"** trực tiếp trên Header của FOH (`FOHView.tsx`) và tạo Tab **"Quản Lý Thực Đơn" (`MenuTab.tsx`)** chuyên biệt trong Trung tâm Quản trị Admin (`/admin`), đồng bộ tức thì sang ERP Định mức (`RecipeBOMTab.tsx`).
+- [x] **Quy Hoạch Quản Trị Dữ Liệu & Thực Đơn Tập Trung (Admin-Only Data Management)**:
+  - **Tách biệt vai trò**: Đã xóa bỏ hoàn toàn các nút/modal "Thêm món mới" khỏi giao diện FOH (`/`). Giao diện FOH giữ đúng chức năng thuần túy cho Waiter & Khách gọi món.
+  - **Quản lý thực đơn tại `/admin` (`MenuTab.tsx`)**: Bảng quản lý toàn bộ món ăn (đang bán/tạm ngưng, đổi giá, xóa món, lọc danh mục).
+  - **Nâng cấp `AddMenuItemModal.tsx` tại `/admin`**:
+    - **Tải ảnh từ thiết bị cục bộ**: Tích hợp `<input type="file" accept="image/*" />` với chuyển đổi Base64 và khung xem trước (Preview) ảnh mượt mà, hiển thị tên file.
+    - **Cấu hình Định mức BOM ngay lúc tạo món**: Cho phép chọn nguyên liệu từ kho, nhập định mức tiêu hao, tự động tính giá vốn ước tính (COGS) và Tỷ suất lợi nhuận gộp Gross Margin %; tự động lưu vào `inventoryService.saveRecipeBOM()`.
+
+- [x] **Quản Lý & Thêm Nhanh Nguyên Vật Liệu (Raw Material Management & Quick Add UX)**:
+  - **Modal `AddRawMaterialModal.tsx`**: Khai báo đầy đủ tên, nhóm nguyên liệu, đơn vị mua (`purchase_unit`), đơn vị định mức (`recipe_unit`), hệ số quy đổi (`conversion_factor`), giá vốn trung bình và mức tồn kho an toàn tối thiểu.
+  - **UX Thêm Nhanh Tại Phiếu Nhập Kho (`ProcurementTab.tsx`)**: Tích hợp nút **"+ Thêm nhanh nguyên liệu mới"** trực tiếp tại ô chọn nguyên liệu của form tạo Purchase Order, tự động chọn nguyên liệu mới vào đơn nhập hàng mà không cần thoát ra ngoài.
+  - **Nút "+ Thêm Nguyên Liệu" tại Quản lý Tồn kho (`InventoryTab.tsx`)**: Hỗ trợ quản lý kho chủ động khai báo nguyên liệu mới mọi lúc.
 
 - [x] **Hệ Thống Áp Dụng Khuyến Mãi & Voucher Đa Kênh (Omnichannel Promotions)**:
   - Dịch vụ `promotionService.ts`: xác thực điều kiện giá trị đơn tối thiểu (`min_order_value`), kiểm tra trạng thái kích hoạt, tính toán giảm theo % hoặc số tiền cố định.

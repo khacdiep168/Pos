@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { MenuItem, Category } from '@/types';
 import { menuService } from '@/services/menuService';
 import { formatCurrencyVND } from '@/lib/utils';
-import { AddMenuItemModal } from '../foh/AddMenuItemModal';
+import { AddMenuItemModal } from './AddMenuItemModal';
 import {
   UtensilsCrossed,
   Plus,

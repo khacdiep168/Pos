@@ -16,8 +16,7 @@ import { CategoryNav } from './CategoryNav';
 import { MenuGrid } from './MenuGrid';
 import { ModifierModal } from './ModifierModal';
 import { CartSidebar } from './CartSidebar';
-import { AddMenuItemModal } from './AddMenuItemModal';
-import { ShoppingBag, ChevronRight, Sparkles, Plus } from 'lucide-react';
+import { ShoppingBag, ChevronRight, Sparkles } from 'lucide-react';
 import { formatCurrencyVND } from '@/lib/utils';
 
 export const FOHView: React.FC = () => {
@@ -46,7 +45,6 @@ export const FOHView: React.FC = () => {
   // Modal State
   const [activeItemForModal, setActiveItemForModal] = useState<MenuItem | null>(null);
   const [isModifierModalOpen, setIsModifierModalOpen] = useState(false);
-  const [isAddMenuModalOpen, setIsAddMenuModalOpen] = useState(false);
 
   // Cart State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -175,17 +173,6 @@ export const FOHView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Add New Menu Item button */}
-            <button
-              onClick={() => setIsAddMenuModalOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-              title="Thêm món ăn / thức uống mới vào thực đơn"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Thêm Món Mới</span>
-              <span className="sm:hidden">Thêm Món</span>
-            </button>
-
             {/* Table indicator (mobile and desktop) */}
             {selectedTable && (
               <button
@@ -293,14 +280,6 @@ export const FOHView: React.FC = () => {
         isOpen={isModifierModalOpen}
         onClose={() => setIsModifierModalOpen(false)}
         onAddToCart={handleAddToCart}
-      />
-
-      {/* Add New Menu Item Modal */}
-      <AddMenuItemModal
-        isOpen={isAddMenuModalOpen}
-        onClose={() => setIsAddMenuModalOpen(false)}
-        categories={categories}
-        onItemAdded={() => refreshMenuItems()}
       />
     </div>
   );

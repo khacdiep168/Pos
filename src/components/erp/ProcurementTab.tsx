@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Supplier, PurchaseOrder, RawMaterial } from '@/types';
 import { formatCurrencyVND, formatDateTime } from '@/lib/utils';
 import { inventoryService } from '@/services/inventoryService';
+import { AddRawMaterialModal } from '@/components/admin/AddRawMaterialModal';
 import {
   Truck,
   Plus,
@@ -15,6 +16,7 @@ import {
   DollarSign,
   Boxes,
   X,
+  Sparkles,
 } from 'lucide-react';
 
 interface ProcurementTabProps {
@@ -31,6 +33,7 @@ export const ProcurementTab: React.FC<ProcurementTabProps> = ({
   onRefresh,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddMaterialModalOpen, setIsAddMaterialModalOpen] = useState(false);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>(suppliers[0]?.id || '');
   const [selectedMaterialId, setSelectedMaterialId] = useState<string>(materials[0]?.id || '');
   const [purchaseQty, setPurchaseQty] = useState<number>(10);
@@ -38,6 +41,14 @@ export const ProcurementTab: React.FC<ProcurementTabProps> = ({
 
   const selectedMaterial = materials.find((m) => m.id === selectedMaterialId);
   const totalPOAmount = purchaseQty * purchaseUnitPrice;
+
+  const handleQuickMaterialAdded = (newMat: RawMaterial) => {
+    onRefresh();
+    setSelectedMaterialId(newMat.id);
+    if (newMat.avg_cost > 0 && newMat.conversion_factor > 0) {
+      setPurchaseUnitPrice(newMat.avg_cost * newMat.conversion_factor);
+    }
+  };
 
   const handleCreatePO = () => {
     if (!selectedSupplierId || !selectedMaterialId || purchaseQty <= 0) {
@@ -201,13 +212,23 @@ export const ProcurementTab: React.FC<ProcurementTabProps> = ({
               </div>
 
               <div>
-                <label className="font-bold text-stone-600 dark:text-stone-400 block mb-1">
-                  Nguyên vật liệu nhập:
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-bold text-stone-600 dark:text-stone-400 block text-xs">
+                    Nguyên vật liệu nhập:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddMaterialModalOpen(true)}
+                    className="text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 font-bold text-[11px] flex items-center gap-1 hover:underline active:scale-95 transition-all"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>+ Thêm nhanh nguyên liệu mới</span>
+                  </button>
+                </div>
                 <select
                   value={selectedMaterialId}
                   onChange={(e) => setSelectedMaterialId(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-bold"
+                  className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-bold text-xs"
                 >
                   {materials.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -277,6 +298,13 @@ export const ProcurementTab: React.FC<ProcurementTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* Quick Add Raw Material Modal */}
+      <AddRawMaterialModal
+        isOpen={isAddMaterialModalOpen}
+        onClose={() => setIsAddMaterialModalOpen(false)}
+        onMaterialAdded={handleQuickMaterialAdded}
+      />
     </div>
   );
 };
