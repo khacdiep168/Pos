@@ -172,3 +172,15 @@ export interface StoreSettings {
   tax_rate: number; // e.g. 0.08 for 8%
   wifi_password?: string;
 }
+
+export interface Promotion {
+  id: string;
+  name: string;
+  promo_code: string;
+  discount_type: 'percent' | 'fixed_amount';
+  discount_value: number;
+  min_order_value: number;
+  start_date?: string;
+  end_date?: string;
+  is_active: boolean;
+}

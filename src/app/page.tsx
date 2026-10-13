@@ -5,7 +5,8 @@ import { FOHView } from '@/components/foh/FOHView';
 import { KDSView } from '@/components/kds/KDSView';
 import { CashierView } from '@/components/cashier/CashierView';
 import { ERPView } from '@/components/erp/ERPView';
-import { Utensils, ChefHat, CreditCard, Boxes, ExternalLink } from 'lucide-react';
+import { AdminView } from '@/components/admin/AdminView';
+import { Utensils, ChefHat, CreditCard, Boxes, Shield, ExternalLink } from 'lucide-react';
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<'foh' | 'kds' | 'cashier' | 'erp' | 'admin'>('foh');
@@ -78,6 +79,19 @@ export default function Home() {
               <span>Kho (ERP)</span>
               <span className="text-[10px] px-1 bg-stone-800 text-emerald-400 rounded">M4 Live</span>
             </button>
+
+            <button
+              onClick={() => setActiveTab('admin')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === 'admin'
+                  ? 'bg-purple-600 text-white shadow-xs'
+                  : 'text-stone-400 hover:text-white hover:bg-stone-800'
+              }`}
+            >
+              <Shield className="w-3.5 h-3.5" />
+              <span>Quản Trị</span>
+              <span className="text-[10px] px-1 bg-stone-800 text-emerald-400 rounded">M5 Live</span>
+            </button>
           </div>
         </div>
 
@@ -98,6 +112,8 @@ export default function Home() {
         {activeTab === 'cashier' && <CashierView />}
 
         {activeTab === 'erp' && <ERPView />}
+
+        {activeTab === 'admin' && <AdminView />}
       </div>
     </div>
   );

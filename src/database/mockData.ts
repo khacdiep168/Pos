@@ -8,6 +8,7 @@ import {
   Supplier,
   PurchaseOrder,
   RecipeBOM,
+  Promotion,
 } from '@/types';
 
 export const initialStoreSettings: StoreSettings = {
@@ -285,4 +286,34 @@ export const initialUsers: UserAccount[] = [
   { id: 'usr-kitchen', full_name: 'Lê Bếp Trưởng', username: 'chef', role: 'kitchen', is_active: true },
   { id: 'usr-bar', full_name: 'Phạm Bartender', username: 'bar', role: 'bar', is_active: true },
   { id: 'usr-waiter', full_name: 'Hoàng Phục Vụ', username: 'waiter', role: 'waiter', is_active: true },
+];
+
+export const initialPromotions: Promotion[] = [
+  {
+    id: 'promo-1',
+    name: 'Khuyến mãi Khai Trương Giảm 10%',
+    promo_code: 'OPEN10',
+    discount_type: 'percent',
+    discount_value: 10,
+    min_order_value: 200000,
+    is_active: true,
+  },
+  {
+    id: 'promo-2',
+    name: 'Giảm 50.000đ Cho Hóa Đơn Lớn',
+    promo_code: 'VIP50K',
+    discount_type: 'fixed_amount',
+    discount_value: 50000,
+    min_order_value: 500000,
+    is_active: true,
+  },
+  {
+    id: 'promo-3',
+    name: 'Happy Hour Giảm 15% Đồ Uống',
+    promo_code: 'HAPPY15',
+    discount_type: 'percent',
+    discount_value: 15,
+    min_order_value: 150000,
+    is_active: false,
+  },
 ];
