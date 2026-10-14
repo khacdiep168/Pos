@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { SearchableSelect, SearchableOption } from '@/components/ui/SearchableSelect';
 
+import { SmartPricingSimulator } from './SmartPricingSimulator';
+
 interface RecipeBOMTabProps {
   materials: RawMaterial[];
   recipes: RecipeBOM[];
@@ -43,8 +45,8 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     return () => unsub();
   }, []);
 
-  // Local draft of current item's BOM for editing
-  const [draftBOM, setDraftBOM] = useState<{ raw_material_id: string; quantity: number }[]>([]);
+  // Local draft of current item's BOM for editing (with is_packaging flag)
+  const [draftBOM, setDraftBOM] = useState<{ raw_material_id: string; quantity: number; is_packaging?: boolean }[]>([]);
   const [isSaved, setIsSaved] = useState(false);
   const [isMobileBOMModalOpen, setIsMobileBOMModalOpen] = useState(false);
 
@@ -53,7 +55,11 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     if (selectedItem) {
       const itemBoms = recipes
         .filter((r) => r.menu_item_id === selectedItem.id)
-        .map((r) => ({ raw_material_id: r.raw_material_id, quantity: r.quantity }));
+        .map((r) => ({
+          raw_material_id: r.raw_material_id,
+          quantity: r.quantity,
+          is_packaging: r.is_packaging,
+        }));
       setDraftBOM(itemBoms);
       setIsSaved(false);
     }
@@ -67,14 +73,22 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     badge: m.recipe_unit,
   }));
 
-  // Calculate COGS and Gross Margin for selected item
-  const cogs = draftBOM.reduce((sum, b) => {
+  // Separate Core Cost (vốn cốt pha chế) vs Packaging Cost (vốn bao bì mang về)
+  const coreCost = draftBOM.reduce((sum, b) => {
+    if (b.is_packaging) return sum;
     const mat = materials.find((m) => m.id === b.raw_material_id);
     return sum + (mat ? b.quantity * mat.avg_cost : 0);
   }, 0);
 
+  const packagingCost = draftBOM.reduce((sum, b) => {
+    if (!b.is_packaging) return sum;
+    const mat = materials.find((m) => m.id === b.raw_material_id);
+    return sum + (mat ? b.quantity * mat.avg_cost : 0);
+  }, 0);
+
+  const cogs = coreCost + packagingCost;
   const grossProfit = selectedItem ? selectedItem.price - cogs : 0;
-  const profitMargin = selectedItem ? Math.round((grossProfit / selectedItem.price) * 100) : 0;
+  const profitMargin = selectedItem && selectedItem.price > 0 ? Math.round((grossProfit / selectedItem.price) * 100) : 0;
 
   // Handle adding an ingredient
   const handleAddIngredient = () => {
@@ -82,7 +96,7 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     const availableMat = materials.find((m) => !usedIds.has(m.id)) || materials[0];
 
     if (availableMat) {
-      setDraftBOM([...draftBOM, { raw_material_id: availableMat.id, quantity: 50 }]);
+      setDraftBOM([...draftBOM, { raw_material_id: availableMat.id, quantity: 50, is_packaging: false }]);
       setIsSaved(false);
     }
   };
@@ -103,6 +117,14 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     setIsSaved(false);
   };
 
+  // Handle toggling packaging flag
+  const handleTogglePackaging = (index: number) => {
+    const updated = [...draftBOM];
+    updated[index].is_packaging = !updated[index].is_packaging;
+    setDraftBOM(updated);
+    setIsSaved(false);
+  };
+
   // Handle removing ingredient
   const handleRemoveIngredient = (index: number) => {
     setDraftBOM(draftBOM.filter((_, idx) => idx !== index));
@@ -116,6 +138,41 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     onRefresh();
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
+  };
+
+  // 1-Click apply suggested prices from SmartPricingSimulator
+  const handleApplyPrices = (prices: {
+    dineInPrice: number;
+    takeawayPrice: number;
+    deliveryPrice: number;
+    packagingCost: number;
+    appCommissionRate: number;
+  }) => {
+    if (!selectedItem) return;
+    const updated = menuService.updateMenuItem(selectedItem.id, {
+      price: prices.dineInPrice,
+      takeaway_price: prices.takeawayPrice,
+      delivery_price: prices.deliveryPrice,
+      packaging_cost: prices.packagingCost,
+      app_commission_rate: prices.appCommissionRate,
+    });
+    if (updated) {
+      setSelectedItem(updated);
+      setMenuItems(menuService.getMenuItems());
+    }
+  };
+
+  const handleApplySinglePrice = (channel: 'dine_in' | 'takeaway' | 'delivery', price: number) => {
+    if (!selectedItem) return;
+    const payload: Partial<MenuItem> = {};
+    if (channel === 'dine_in') payload.price = price;
+    if (channel === 'takeaway') payload.takeaway_price = price;
+    if (channel === 'delivery') payload.delivery_price = price;
+    const updated = menuService.updateMenuItem(selectedItem.id, payload);
+    if (updated) {
+      setSelectedItem(updated);
+      setMenuItems(menuService.getMenuItems());
+    }
   };
 
   return (
@@ -304,25 +361,32 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
           </div>
 
           {/* Financial & COGS Analytics Cards */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200/80 dark:border-stone-700/60 text-xs">
-              <span className="text-stone-500 text-[11px] block">Giá vốn (COGS):</span>
-              <span className="text-sm font-black text-stone-900 dark:text-white mt-0.5 block">
+          <div className="grid grid-cols-4 gap-2.5">
+            <div className="p-2.5 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200/80 dark:border-stone-700/60 text-xs">
+              <span className="text-stone-500 text-[10px] block font-medium">Vốn cốt (Core):</span>
+              <span className="text-xs font-black text-stone-900 dark:text-white mt-0.5 block">
+                {formatCurrencyVND(coreCost)}
+              </span>
+            </div>
+
+            <div className="p-2.5 bg-orange-50/60 dark:bg-orange-950/20 rounded-xl border border-orange-200/60 dark:border-orange-900/40 text-xs">
+              <span className="text-orange-600 dark:text-orange-400 text-[10px] block font-medium">Bao bì (Ly/Túi):</span>
+              <span className="text-xs font-black text-orange-700 dark:text-orange-300 mt-0.5 block">
+                {formatCurrencyVND(packagingCost)}
+              </span>
+            </div>
+
+            <div className="p-2.5 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200/80 dark:border-stone-700/60 text-xs">
+              <span className="text-stone-500 text-[10px] block font-medium">Tổng vốn COGS:</span>
+              <span className="text-xs font-black text-stone-900 dark:text-white mt-0.5 block">
                 {formatCurrencyVND(cogs)}
               </span>
             </div>
 
-            <div className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200/80 dark:border-stone-700/60 text-xs">
-              <span className="text-stone-500 text-[11px] block">Lợi nhuận gộp:</span>
-              <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block">
-                {formatCurrencyVND(grossProfit)}
-              </span>
-            </div>
-
-            <div className="p-3 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200/80 dark:border-stone-700/60 text-xs">
-              <span className="text-stone-500 text-[11px] block">Biên LN gộp:</span>
+            <div className="p-2.5 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40 text-xs">
+              <span className="text-emerald-600 dark:text-emerald-400 text-[10px] block font-medium">Biên LN Gộp:</span>
               <span
-                className={`text-sm font-black mt-0.5 block ${
+                className={`text-xs font-black mt-0.5 block ${
                   profitMargin >= 60
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : profitMargin >= 40
@@ -330,7 +394,7 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                     : 'text-rose-600 dark:text-rose-400'
                 }`}
               >
-                {profitMargin}%
+                {profitMargin}% ({formatCurrencyVND(grossProfit)})
               </span>
             </div>
           </div>
@@ -340,7 +404,7 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
             <div className="flex items-center justify-between text-xs font-bold text-stone-700 dark:text-stone-300">
               <span className="flex items-center gap-1.5">
                 <Layers className="w-3.5 h-3.5 text-amber-500" />
-                Định mức thành phần (BOM):
+                Định mức thành phần & Bao bì (BOM):
               </span>
               <button
                 type="button"
@@ -357,7 +421,7 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                 Chưa có định mức BOM cho món này. Bấm "Thêm nguyên liệu" để cấu hình.
               </div>
             ) : (
-              <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1 pb-20">
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                 {draftBOM.map((bom, idx) => {
                   const mat = materials.find((m) => m.id === bom.raw_material_id);
                   const lineCost = mat ? bom.quantity * mat.avg_cost : 0;
@@ -365,42 +429,61 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                   return (
                     <div
                       key={idx}
-                      className="p-2.5 bg-stone-50 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-700/60 flex items-center justify-between gap-3 text-xs"
+                      className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 text-xs transition-colors ${
+                        bom.is_packaging
+                          ? 'bg-orange-50/50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/60'
+                          : 'bg-stone-50 dark:bg-stone-800/60 border-stone-200 dark:border-stone-700/60'
+                      }`}
                     >
                       {/* Material Selector with Instant Search */}
-                      <div className="flex-1 min-w-[200px]">
+                      <div className="flex-1 min-w-[170px]">
                         <SearchableSelect
                           options={materialOptions}
                           value={bom.raw_material_id}
                           onChange={(val) => handleUpdateMaterial(idx, val)}
-                          placeholder="-- Tìm hoặc chọn nguyên liệu --"
-                          searchPlaceholder="Gõ tên nguyên liệu (VD: Đường, Sữa, Bò...)"
-                          buttonClassName="px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-xs font-bold text-stone-900 dark:text-white"
+                          placeholder="-- Chọn nguyên liệu --"
+                          searchPlaceholder="Tìm kiếm..."
+                          buttonClassName="px-2 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-xs font-bold text-stone-900 dark:text-white"
                         />
                       </div>
 
+                      {/* Packaging toggle button */}
+                      <button
+                        type="button"
+                        onClick={() => handleTogglePackaging(idx)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all shrink-0 cursor-pointer ${
+                          bom.is_packaging
+                            ? 'bg-orange-500 text-white shadow-2xs'
+                            : 'bg-stone-200 dark:bg-stone-800 text-stone-500 hover:text-stone-700 dark:hover:text-stone-300'
+                        }`}
+                        title="Bấm để chuyển đổi giữa Cốt món vs Bao bì mang về"
+                      >
+                        <span>🛍️</span>
+                        <span className="hidden sm:inline">{bom.is_packaging ? 'Bao bì' : 'Cốt món'}</span>
+                      </button>
+
                       {/* Quantity Input */}
-                      <div className="flex items-center gap-1.5 w-32 shrink-0">
+                      <div className="flex items-center gap-1 w-28 shrink-0">
                         <input
                           type="number"
                           value={bom.quantity}
                           onChange={(e) => handleUpdateQuantity(idx, parseFloat(e.target.value) || 0)}
-                          className="w-20 px-2 py-1.5 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg font-mono font-bold text-xs"
+                          className="w-16 px-1.5 py-1 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg font-mono font-bold text-xs"
                         />
-                        <span className="text-stone-400 font-medium">
+                        <span className="text-[11px] text-stone-400 font-medium">
                           {mat?.recipe_unit || 'g'}
                         </span>
                       </div>
 
                       {/* Line Cost Preview */}
-                      <div className="text-right w-24 shrink-0 font-bold text-stone-800 dark:text-stone-200">
+                      <div className="text-right w-20 shrink-0 font-bold text-stone-800 dark:text-stone-200 text-xs">
                         {formatCurrencyVND(lineCost)}
                       </div>
 
                       {/* Delete button */}
                       <button
                         onClick={() => handleRemoveIngredient(idx)}
-                        className="p-1.5 text-stone-400 hover:text-rose-500 transition-colors"
+                        className="p-1 text-stone-400 hover:text-rose-500 transition-colors"
                         title="Xóa nguyên liệu"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -410,6 +493,19 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                 })}
               </div>
             )}
+          </div>
+
+          {/* Smart Pricing Simulator Multi-Channel Matrix */}
+          <div className="pt-2">
+            <SmartPricingSimulator
+              coreBomCost={coreCost}
+              packagingCost={packagingCost}
+              currentDineInPrice={selectedItem.price}
+              currentTakeawayPrice={selectedItem.takeaway_price || selectedItem.price}
+              currentDeliveryPrice={selectedItem.delivery_price || selectedItem.price}
+              onApplyPrices={handleApplyPrices}
+              onApplySinglePrice={handleApplySinglePrice}
+            />
           </div>
         </div>
 
@@ -555,21 +651,34 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                           </button>
                         </div>
 
-                        <div className="flex items-center justify-between text-xs pt-1 border-t border-stone-200/60 dark:border-stone-700/60">
+                        <div className="flex items-center justify-between text-xs pt-1 border-t border-stone-200/60 dark:border-stone-700/60 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePackaging(idx)}
+                            className={`px-2 py-1 rounded-lg text-[10px] font-bold flex items-center gap-1 transition-all shrink-0 ${
+                              bom.is_packaging
+                                ? 'bg-orange-500 text-white shadow-2xs'
+                                : 'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300'
+                            }`}
+                          >
+                            <span>🛍️</span>
+                            <span>{bom.is_packaging ? 'Bao bì' : 'Cốt món'}</span>
+                          </button>
+
                           <div className="flex items-center gap-1.5">
                             <span className="text-stone-400 text-[11px]">Định mức:</span>
                             <input
                               type="number"
                               value={bom.quantity}
                               onChange={(e) => handleUpdateQuantity(idx, parseFloat(e.target.value) || 0)}
-                              className="w-20 px-2 py-1 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg font-mono font-bold"
+                              className="w-16 px-1.5 py-1 text-center bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-lg font-mono font-bold text-xs"
                             />
                             <span className="text-stone-400 font-medium">
                               {mat?.recipe_unit || 'g'}
                             </span>
                           </div>
 
-                          <div className="font-bold text-stone-800 dark:text-stone-200 font-mono">
+                          <div className="font-bold text-stone-800 dark:text-stone-200 font-mono text-xs">
                             {formatCurrencyVND(lineCost)}
                           </div>
                         </div>
@@ -578,6 +687,20 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
                   })}
                 </div>
               )}
+
+              {/* Mobile Smart Pricing Simulator */}
+              <div className="pt-2">
+                <SmartPricingSimulator
+                  coreBomCost={coreCost}
+                  packagingCost={packagingCost}
+                  currentDineInPrice={selectedItem.price}
+                  currentTakeawayPrice={selectedItem.takeaway_price || selectedItem.price}
+                  currentDeliveryPrice={selectedItem.delivery_price || selectedItem.price}
+                  onApplyPrices={handleApplyPrices}
+                  onApplySinglePrice={handleApplySinglePrice}
+                  compact={true}
+                />
+              </div>
             </div>
 
             {/* Bottom Sheet Actions */}

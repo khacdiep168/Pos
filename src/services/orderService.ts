@@ -404,7 +404,7 @@ class OrderService {
     const today = new Date().toISOString().split('T')[0];
     const todayTakeaways = this.orders.filter(
       (o) =>
-        (o.table_id === 'takeaway' || o.table_id?.startsWith('takeaway')) &&
+        (o.table_id === 'takeaway' || o.table_id?.startsWith('takeaway') || o.order_channel === 'takeaway') &&
         o.created_at?.startsWith(today)
     );
     const count = todayTakeaways.length + 1;
@@ -412,6 +412,45 @@ class OrderService {
     const tableId = `takeaway-${Date.now().toString().slice(-4)}-${count}`;
     const tableNumber = `Mang Về #${formattedNum}`;
     return { tableId, tableNumber };
+  }
+
+  public generateNextDeliveryLabel(platform: 'grabfood' | 'shopeefood' | 'befood'): {
+    tableId: string;
+    tableNumber: string;
+    platformName: string;
+  } {
+    const today = new Date().toISOString().split('T')[0];
+    const todayDeliveries = this.orders.filter(
+      (o) =>
+        (o.table_id?.startsWith('delivery') || o.order_channel === 'delivery') &&
+        o.created_at?.startsWith(today)
+    );
+    const count = todayDeliveries.length + 1;
+    const formattedNum = count.toString().padStart(2, '0');
+    const platformLabel = platform === 'grabfood' ? 'GrabFood' : platform === 'shopeefood' ? 'ShopeeFood' : 'BeFood';
+    const tableId = `delivery-${platform}-${Date.now().toString().slice(-4)}-${count}`;
+    const tableNumber = `${platformLabel} #${formattedNum}`;
+    return { tableId, tableNumber, platformName: platformLabel };
+  }
+
+  public getActiveTakeawayAndDeliveryOrders(): Order[] {
+    return this.orders.filter(
+      (o) =>
+        (o.order_channel === 'takeaway' ||
+          o.order_channel === 'delivery' ||
+          o.table_id === 'takeaway' ||
+          o.table_id?.startsWith('takeaway') ||
+          o.table_id?.startsWith('delivery') ||
+          (o.table_number && (
+            o.table_number.toLowerCase().includes('mang về') ||
+            o.table_number.toLowerCase().includes('giao') ||
+            o.table_number.toLowerCase().includes('grab') ||
+            o.table_number.toLowerCase().includes('shopee') ||
+            o.table_number.toLowerCase().includes('be')
+          ))) &&
+        o.order_status !== 'completed' &&
+        o.order_status !== 'cancelled'
+    );
   }
 
   public appendItemsToOrder(orderId: string, newItems: OrderItem[]): Order | null {
@@ -478,9 +517,14 @@ class OrderService {
   public createOrder(newOrder: Order): Order {
     this.orders.unshift(newOrder);
 
-    // Update physical table status to occupied (ignore takeaway)
-    const isTakeaway = newOrder.table_id === 'takeaway' || newOrder.table_id?.startsWith('takeaway');
-    if (newOrder.table_id && !isTakeaway) {
+    // Update physical table status to occupied (ignore takeaway & delivery)
+    const isVirtual =
+      newOrder.order_channel === 'takeaway' ||
+      newOrder.order_channel === 'delivery' ||
+      newOrder.table_id === 'takeaway' ||
+      newOrder.table_id?.startsWith('takeaway') ||
+      newOrder.table_id?.startsWith('delivery');
+    if (newOrder.table_id && !isVirtual) {
       const tableIndex = this.tables.findIndex((t) => t.id === newOrder.table_id);
       if (tableIndex !== -1) {
         this.tables[tableIndex].status = 'occupied';

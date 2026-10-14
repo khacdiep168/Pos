@@ -40,7 +40,14 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
   const [zones, setZones] = useState<Zone[]>(() => orderService.getZones());
   const [orders, setOrders] = useState<Order[]>(() => orderService.getOrders());
 
-  // Dual Tabs: Mở Đơn Mới vs Đang Phục Vụ
+  // Channel Mode: 'dine_in' | 'takeaway' | 'delivery'
+  const [selectedChannel, setSelectedChannel] = useState<'dine_in' | 'takeaway' | 'delivery'>(() => {
+    if (selectedTableId?.startsWith('delivery')) return 'delivery';
+    if (selectedTableId?.startsWith('takeaway')) return 'takeaway';
+    return 'dine_in';
+  });
+
+  // Dual Tabs for Dine-in: Mở Đơn Mới vs Đang Phục Vụ
   const [activeTab, setActiveTab] = useState<'new_order' | 'serving'>('new_order');
 
   // Listen to zone/table/order updates
@@ -59,12 +66,21 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
   }, []);
 
   const selectedTable = tables.find((t) => t.id === selectedTableId) || (
-    selectedTableId?.startsWith('takeaway')
+    selectedTableId?.startsWith('delivery')
+      ? {
+          id: selectedTableId,
+          table_number: orders.find((o) => o.table_id === selectedTableId)?.table_number || 'Đơn App Giao Hàng',
+          capacity: 1,
+          status: 'occupied' as TableStatus,
+          order_channel: 'delivery' as const,
+        }
+      : selectedTableId?.startsWith('takeaway')
       ? {
           id: selectedTableId,
           table_number: orders.find((o) => o.table_id === selectedTableId)?.table_number || 'Mang Về',
           capacity: 1,
           status: 'occupied' as TableStatus,
+          order_channel: 'takeaway' as const,
         }
       : null
   );
@@ -86,7 +102,14 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
     if (selectedTable?.zone_id && selectedTable.zone_id !== selectedZoneId) {
       setSelectedZoneId(selectedTable.zone_id);
     }
-  }, [selectedTable?.zone_id]);
+    if (selectedTableId?.startsWith('delivery')) {
+      setSelectedChannel('delivery');
+    } else if (selectedTableId?.startsWith('takeaway')) {
+      setSelectedChannel('takeaway');
+    } else if (selectedTableId) {
+      setSelectedChannel('dine_in');
+    }
+  }, [selectedTable?.zone_id, selectedTableId]);
 
   // Handle setting table to reserved or available
   const handleToggleReservation = (e: React.MouseEvent, table: RestaurantTable) => {
@@ -124,6 +147,25 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
     });
   }, [tables, selectedZoneId]);
 
+  // Active Takeaway and Delivery orders list
+  const activeTakeawayOrders = useMemo(() => {
+    return orders.filter(
+      (o) =>
+        (o.order_channel === 'takeaway' || o.table_id?.startsWith('takeaway')) &&
+        o.payment_status === 'unpaid' &&
+        o.order_status !== 'cancelled'
+    );
+  }, [orders]);
+
+  const activeDeliveryOrders = useMemo(() => {
+    return orders.filter(
+      (o) =>
+        (o.order_channel === 'delivery' || o.table_id?.startsWith('delivery')) &&
+        o.payment_status === 'unpaid' &&
+        o.order_status !== 'cancelled'
+    );
+  }, [orders]);
+
   // Calculate available/reserved count per zone for badges
   const zoneStats = useMemo(() => {
     const stats: Record<string, { available: number; reserved: number; occupied: number }> = {};
@@ -159,25 +201,32 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
 
   // If collapsible and not expanded, render compact view
   if (collapsible && !isExpanded && selectedTable) {
-    const isTakeaway = selectedTable.id === 'takeaway' || selectedTable.id.startsWith('takeaway');
+    const isDelivery = selectedTable.order_channel === 'delivery' || selectedTable.id.startsWith('delivery');
+    const isTakeaway = selectedTable.order_channel === 'takeaway' || selectedTable.id.startsWith('takeaway');
     const tableZone = zones.find((z) => z.id === selectedTable.zone_id);
 
     return (
       <div className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2 shadow-xs ${
         activeExistingOrder
           ? 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800'
+          : isDelivery
+          ? 'bg-emerald-50/90 dark:bg-emerald-950/40 border-emerald-500/30'
+          : isTakeaway
+          ? 'bg-orange-50/90 dark:bg-orange-950/40 border-orange-500/30'
           : 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-500/30'
       }`}>
         <div className="flex items-center gap-2 min-w-0">
           <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
-            activeExistingOrder ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'
+            activeExistingOrder ? 'bg-rose-600 text-white' : isDelivery ? 'bg-emerald-600 text-white' : isTakeaway ? 'bg-orange-500 text-white' : 'bg-amber-500 text-white'
           }`}>
-            {isTakeaway ? <span>🛍️</span> : <CheckCircle2 className="w-4 h-4" />}
+            {isDelivery ? <span>🛵</span> : isTakeaway ? <span>🛍️</span> : <CheckCircle2 className="w-4 h-4" />}
           </div>
           <div className="min-w-0">
             <div className="text-xs font-black text-stone-900 dark:text-white truncate flex items-center gap-1.5">
               <span>
-                {isTakeaway
+                {isDelivery
+                  ? selectedTable.table_number || 'Đơn App Giao Hàng'
+                  : isTakeaway
                   ? selectedTable.table_number || 'Khách Mang Về'
                   : `${tableZone ? `${tableZone.name} - ` : ''}Bàn ${selectedTable.table_number}`}
               </span>
@@ -185,6 +234,8 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
                 className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
                   activeExistingOrder
                     ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                    : isDelivery
+                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
                     : isTakeaway
                     ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300'
                     : selectedTable.status === 'reserved'
@@ -192,12 +243,22 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
                     : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
                 }`}
               >
-                {activeExistingOrder ? 'Đang phục vụ' : isTakeaway ? 'Mang về' : selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
+                {activeExistingOrder
+                  ? 'Đang phục vụ'
+                  : isDelivery
+                  ? 'App Giao Hàng'
+                  : isTakeaway
+                  ? 'Mang về'
+                  : selectedTable.status === 'reserved'
+                  ? 'Đã đặt'
+                  : 'Trống'}
               </span>
             </div>
             <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
               {activeExistingOrder
                 ? `Đang có đơn #${activeExistingOrder.id.slice(-4)} (${activeExistingOrder.items.reduce((s, i) => s + i.quantity, 0)} món) • Gọi thêm món`
+                : isDelivery
+                ? 'Đơn giao hàng App • Bấm để đổi kênh phục vụ'
                 : isTakeaway
                 ? 'Đơn mang về • Bấm để đổi sang bàn'
                 : `${selectedTable.capacity} chỗ ngồi • Bấm để đổi bàn`}
@@ -210,7 +271,7 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
           onClick={() => setIsExpanded(true)}
           className="px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-700 dark:text-stone-300 hover:border-amber-500 transition-colors shrink-0 flex items-center gap-1 shadow-2xs"
         >
-          <span>Đổi bàn</span>
+          <span>Đổi kênh / bàn</span>
           <ChevronDown className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -219,84 +280,273 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* 2 Tabs: [Bàn Trống / Đặt Trước] vs [Đang Phục Vụ (Gọi thêm)] */}
-      <div className="grid grid-cols-2 p-1 bg-stone-100 dark:bg-stone-800 rounded-xl gap-1">
+      {/* 3 Serving Mode Channels (Bento Tab bar) */}
+      <div className="grid grid-cols-3 p-1 bg-stone-100 dark:bg-stone-800 rounded-2xl gap-1 border border-stone-200/60 dark:border-stone-700/60">
         <button
           type="button"
-          onClick={() => setActiveTab('new_order')}
-          className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-            activeTab === 'new_order'
-              ? 'bg-white dark:bg-stone-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+          onClick={() => setSelectedChannel('dine_in')}
+          className={`py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+            selectedChannel === 'dine_in'
+              ? 'bg-white dark:bg-stone-900 text-amber-600 dark:text-amber-400 shadow-sm border border-stone-200/50 dark:border-stone-700'
               : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>Bàn Trống ({totalAvailableCount})</span>
+          <span>🍽️</span>
+          <span className="truncate">Tại Bàn</span>
         </button>
 
         <button
           type="button"
-          onClick={() => setActiveTab('serving')}
-          className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-            activeTab === 'serving'
-              ? 'bg-white dark:bg-stone-900 text-rose-700 dark:text-rose-400 shadow-xs'
+          onClick={() => setSelectedChannel('takeaway')}
+          className={`py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+            selectedChannel === 'takeaway'
+              ? 'bg-white dark:bg-stone-900 text-orange-600 dark:text-orange-400 shadow-sm border border-stone-200/50 dark:border-stone-700'
               : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
           }`}
         >
-          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-          <span>Đang Phục Vụ ({totalOccupiedCount})</span>
+          <span>🛍️</span>
+          <span className="truncate">Mang Về</span>
+          {activeTakeawayOrders.length > 0 && (
+            <span className="w-4 h-4 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {activeTakeawayOrders.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setSelectedChannel('delivery')}
+          className={`py-2 px-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 ${
+            selectedChannel === 'delivery'
+              ? 'bg-white dark:bg-stone-900 text-emerald-600 dark:text-emerald-400 shadow-sm border border-stone-200/50 dark:border-stone-700'
+              : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+          }`}
+        >
+          <span>🛵</span>
+          <span className="truncate">App Giao</span>
+          {activeDeliveryOrders.length > 0 && (
+            <span className="w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] font-bold flex items-center justify-center">
+              {activeDeliveryOrders.length}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* QUICK OPTION: KHÁCH MANG VỀ (TAKEAWAY) - Chỉ hiện khi ở Tab Bàn Trống */}
-      {activeTab === 'new_order' && (
-        <button
-          type="button"
-          onClick={() => {
-            const { tableId, tableNumber } = orderService.generateNextTakeawayLabel();
-            const takeawayTable: RestaurantTable = {
-              id: tableId,
-              table_number: tableNumber,
-              capacity: 1,
-              status: 'available',
-            };
-            handleSelect(takeawayTable);
-          }}
-          className={`w-full p-2.5 rounded-2xl border-2 transition-all flex items-center justify-between shadow-xs ${
-            selectedTableId?.startsWith('takeaway')
-              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-500 ring-2 ring-orange-400/40 font-bold'
-              : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40'
-          }`}
-        >
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">🛍️</span>
-            <div className="text-left">
-              <div className="text-xs font-black leading-tight flex items-center gap-1.5">
-                <span>🛍️ Khách Mang Về (Tạo Đơn Mới)</span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/20 dark:bg-stone-800 font-extrabold uppercase tracking-wider">
-                  Bán Nhanh
-                </span>
+      {/* CHANNEL 2: KHÁCH MANG VỀ (TAKEAWAY) */}
+      {selectedChannel === 'takeaway' && (
+        <div className="space-y-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              const { tableId, tableNumber } = orderService.generateNextTakeawayLabel();
+              const takeawayTable: RestaurantTable = {
+                id: tableId,
+                table_number: tableNumber,
+                capacity: 1,
+                status: 'available',
+                order_channel: 'takeaway',
+              };
+              handleSelect(takeawayTable);
+            }}
+            className="w-full p-3 rounded-2xl border-2 border-orange-500 bg-gradient-to-r from-orange-500 to-amber-500 text-white transition-all flex items-center justify-between shadow-md active:scale-[0.99] cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-2xl">🛍️</span>
+              <div className="text-left">
+                <div className="text-xs font-black flex items-center gap-1.5">
+                  <span>+ Tạo Đơn Mang Về Mới</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/20 font-extrabold uppercase">
+                    Bán Nhanh
+                  </span>
+                </div>
+                <p className="text-[10px] text-white/90 mt-0.5">
+                  Áp dụng giá mang về & trừ nguyên liệu bao bì (ly/túi/hộp)
+                </p>
               </div>
-              <p className="text-[10px] opacity-80 mt-0.5">
-                Tự động đánh số thứ tự: Mang Về #01, #02...
-              </p>
             </div>
-          </div>
-          <div className="text-xs font-extrabold px-3 py-1 rounded-xl bg-white dark:bg-stone-800 text-amber-700 dark:text-amber-300 shadow-2xs shrink-0">
-            {selectedTableId?.startsWith('takeaway') ? '✓ Đang chọn' : '+ Chọn nhanh'}
-          </div>
-        </button>
+            <div className="text-xs font-black px-3 py-1 rounded-xl bg-white text-orange-700 shadow-xs shrink-0">
+              Tạo đơn ngay
+            </div>
+          </button>
+
+          {/* Active takeaway orders list if any */}
+          {activeTakeawayOrders.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <div className="text-[11px] font-bold text-stone-500 dark:text-stone-400">
+                Các đơn mang về đang chờ xử lý ({activeTakeawayOrders.length}):
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-0.5">
+                {activeTakeawayOrders.map((ord) => {
+                  const isSelected = selectedTableId === ord.table_id;
+                  const itemCount = ord.items.reduce((s, i) => s + i.quantity, 0);
+                  return (
+                    <div
+                      key={ord.id}
+                      onClick={() => {
+                        handleSelect({
+                          id: ord.table_id,
+                          table_number: ord.table_number || 'Mang Về',
+                          capacity: 1,
+                          status: 'occupied',
+                          order_channel: 'takeaway',
+                        });
+                      }}
+                      className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer flex justify-between items-center ${
+                        isSelected
+                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40 ring-2 ring-orange-500/20'
+                          : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-orange-400'
+                      }`}
+                    >
+                      <div>
+                        <div className="text-xs font-black text-stone-900 dark:text-white">
+                          🛍️ {ord.table_number}
+                        </div>
+                        <div className="text-[10px] text-stone-400">
+                          {itemCount} món • {formatCurrencyVND(ord.total_amount)}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-500/10 px-2 py-0.5 rounded-md">
+                        {isSelected ? '✓ Đang chọn' : '+ Gọi thêm'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
-      {/* Chọn Khu Vực (Zone) */}
-      <div className="space-y-1">
-        <div className="flex items-center justify-between text-[11px] font-bold text-stone-500">
-          <span>Khu Vực (Zone):</span>
-          <span className="text-stone-400 font-normal">
-            {activeZone ? activeZone.name : 'Tất cả'}
-          </span>
+      {/* CHANNEL 3: ĐƠN APP GIAO HÀNG (DELIVERY) */}
+      {selectedChannel === 'delivery' && (
+        <div className="space-y-2.5">
+          <div className="text-[11px] font-bold text-stone-500 dark:text-stone-400">
+            Chọn nền tảng giao hàng để mở đơn mới:
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'grabfood', name: 'GrabFood', icon: '🟢', bg: 'hover:border-emerald-500 border-emerald-300 dark:border-emerald-800/80 bg-emerald-50/50 dark:bg-emerald-950/30' },
+              { id: 'shopeefood', name: 'ShopeeFood', icon: '🟠', bg: 'hover:border-orange-500 border-orange-300 dark:border-orange-800/80 bg-orange-50/50 dark:bg-orange-950/30' },
+              { id: 'befood', name: 'BeFood', icon: '🟡', bg: 'hover:border-yellow-500 border-yellow-300 dark:border-yellow-800/80 bg-yellow-50/50 dark:bg-yellow-950/30' },
+            ].map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  const { tableId, tableNumber } = orderService.generateNextDeliveryLabel(p.id as any);
+                  const deliveryTable: RestaurantTable = {
+                    id: tableId,
+                    table_number: tableNumber,
+                    capacity: 1,
+                    status: 'available',
+                    order_channel: 'delivery',
+                    delivery_platform: p.id as any,
+                  };
+                  handleSelect(deliveryTable);
+                }}
+                className={`p-2.5 rounded-xl border-2 transition-all flex flex-col items-center justify-center text-center gap-1 active:scale-95 shadow-2xs ${p.bg}`}
+              >
+                <span className="text-xl">{p.icon}</span>
+                <span className="text-xs font-black text-stone-900 dark:text-white">{p.name}</span>
+                <span className="text-[9px] text-stone-400 uppercase font-bold">+ Mở Đơn</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Active delivery orders list */}
+          {activeDeliveryOrders.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <div className="text-[11px] font-bold text-stone-500 dark:text-stone-400">
+                Các đơn App đang xử lý ({activeDeliveryOrders.length}):
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-0.5">
+                {activeDeliveryOrders.map((ord) => {
+                  const isSelected = selectedTableId === ord.table_id;
+                  const itemCount = ord.items.reduce((s, i) => s + i.quantity, 0);
+                  const platform = ord.delivery_platform || 'grabfood';
+                  const platformLabel = platform === 'grabfood' ? 'Grab' : platform === 'shopeefood' ? 'Shopee' : 'Be';
+
+                  return (
+                    <div
+                      key={ord.id}
+                      onClick={() => {
+                        handleSelect({
+                          id: ord.table_id,
+                          table_number: ord.table_number || 'Đơn App',
+                          capacity: 1,
+                          status: 'occupied',
+                          order_channel: 'delivery',
+                          delivery_platform: ord.delivery_platform,
+                        });
+                      }}
+                      className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer flex justify-between items-center ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20'
+                          : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-emerald-400'
+                      }`}
+                    >
+                      <div>
+                        <div className="text-xs font-black text-stone-900 dark:text-white flex items-center gap-1">
+                          <span>🛵 [{platformLabel}] {ord.table_number}</span>
+                        </div>
+                        <div className="text-[10px] text-stone-400">
+                          {itemCount} món • {formatCurrencyVND(ord.total_amount)}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md">
+                        {isSelected ? '✓ Đang chọn' : '+ Thêm món'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-        <div className="grid grid-cols-2 xs:grid-cols-4 gap-1.5">
+      )}
+
+      {/* CHANNEL 1: TẠI BÀN (DINE-IN) */}
+      {selectedChannel === 'dine_in' && (
+        <div className="space-y-3">
+          {/* Dual Tabs for Dine-in */}
+          <div className="grid grid-cols-2 p-1 bg-stone-100 dark:bg-stone-800 rounded-xl gap-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab('new_order')}
+              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'new_order'
+                  ? 'bg-white dark:bg-stone-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+                  : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Bàn Trống ({totalAvailableCount})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('serving')}
+              className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                activeTab === 'serving'
+                  ? 'bg-white dark:bg-stone-900 text-rose-700 dark:text-rose-400 shadow-xs'
+                  : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              }`}
+            >
+              <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              <span>Đang Phục Vụ ({totalOccupiedCount})</span>
+            </button>
+          </div>
+
+          {/* Chọn Khu Vực (Zone) */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[11px] font-bold text-stone-500">
+              <span>Khu Vực (Zone):</span>
+              <span className="text-stone-400 font-normal">
+                {activeZone ? activeZone.name : 'Tất cả'}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 xs:grid-cols-4 gap-1.5">
           {zones.map((zone) => {
             const isSelected = zone.id === selectedZoneId;
             const stats = zoneStats[zone.id] || { available: 0, reserved: 0, occupied: 0 };
@@ -483,11 +733,13 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
           )
         )}
       </div>
+      </div>
+      )}
 
       {!selectedTableId && (
         <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <span>Vui lòng chọn số bàn trước khi gửi order xuống bếp</span>
+          <span>Vui lòng chọn bàn hoặc kênh phục vụ trước khi gửi order</span>
         </p>
       )}
     </div>

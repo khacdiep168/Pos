@@ -620,7 +620,48 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 16. Luật vận hành (Agent Working Rules)
+## 16. Phase 2.3: Multi-Channel Pricing Engine (Dine-in / Takeaway / Delivery App), Operational Fixes & Bento UI Overhaul - HOÀN TẤT
+Đã triển khai thành công kiến trúc POS Đa Kênh F&B toàn diện, chuẩn hóa tài chính quản trị và khắc phục triệt để các hạn chế vận hành thực chiến:
+
+1. **Mô Hình Dữ Liệu & Định Mức Bao Bì Thông Minh ([src/types/index.ts](file:///e:/Vibe%20Coding/POS/src/types/index.ts), [mockData.ts](file:///e:/Vibe%20Coding/POS/src/database/mockData.ts))**:
+   - `MenuItem`: Giữ `price` làm Giá Tại Bàn (Dine-in) chuẩn, mở rộng `takeaway_price?`, `delivery_price?`, `packaging_cost?`, `app_commission_rate?`.
+   - `RecipeBOM` / `BOMItem`: Bổ sung cờ `is_packaging?: boolean` phân loại chính xác nguyên liệu cốt pha chế (`coreBomCost`) và nguyên vật liệu bao bì mang đi/giao app (`packagingCost` như ly giấy, nắp cầu, túi chữ T, ống hút bọc màng).
+   - `Order` & `RestaurantTable`: Bổ sung `order_channel?: 'dine_in' | 'takeaway' | 'delivery'` và `delivery_platform?: 'grabfood' | 'shopeefood' | 'befood'`.
+
+2. **Bộ Máy Định Giá Đa Kênh Chuẩn Tài Chính F&B ([pricingEngine.ts](file:///e:/Vibe%20Coding/POS/src/lib/pricingEngine.ts), [SmartPricingSimulator.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/SmartPricingSimulator.tsx))**:
+   - **Tại Bàn (Dine-in)**: `dineInCost = coreBomCost * (1 + wastagePercent/100)`. Giá đề xuất: `suggestedPrice = dineInCost / (targetFoodCostPercent / 100)`.
+   - **Mang Về (Takeaway)**: `takeawayCost = dineInCost + packagingCost`. Tự động so sánh 2 chế độ: *Đồng giá tại bàn* (thấy rõ biên lãi bị bào mòn do bao bì) và *Cộng phụ phí bao bì* (`dineInPrice + packagingCost`).
+   - **App Giao Đồ Ăn (Delivery App)**: Áp dụng công thức Gross-up bảo toàn tuyệt đối lợi nhuận quán:
+     $$\text{suggestedAppPrice} = \frac{\text{dineInPrice} + \text{packagingCost}}{1 - \text{appCommissionRate} / 100}$$
+     Tính toán minh bạch: Phí sàn thu (`appFee`), Doanh thu thực nhận (`netRevenue`), và Lãi gộp thực tế không bị âm.
+   - **Bộ Làm Tròn Giá Đẹp VNĐ**: Tùy chọn làm tròn chẵn 1.000đ, 5.000đ hoặc đuôi tâm lý bán lẻ 9.000đ.
+   - **Giao Diện Ma Trận 3 Thẻ Bento**: Tích hợp trực tiếp vào [RecipeBOMTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/erp/RecipeBOMTab.tsx), [AddMenuItemModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/AddMenuItemModal.tsx), [EditMenuItemModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/EditMenuItemModal.tsx) với thanh đo Sức khỏe Lợi nhuận (Emerald / Amber / Rose) và nút "Áp dụng giá gợi ý" 1-chạm.
+
+3. **Đồng Bộ Luồng Gọi Món (FOH), Thu Ngân & Trừ Kho Theo Kênh**:
+   - **Chọn Kênh Bán Tại FOH ([TableSelector.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/TableSelector.tsx), [FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx))**:
+     - 🍽️ *Tại Bàn*: Tab con Bàn Trống / Bàn Đang Phục Vụ (gọi thêm món cộng dồn). Áp dụng `price`.
+     - 🛍️ *Mang Về (Takeaway)*: Cho phép tạo nhiều đơn đồng thời (`Mang Về #01`, `Mang Về #02`...). Tự động áp dụng `takeaway_price || price`.
+     - 🛵 *App Giao Hàng*: Hỗ trợ GrabFood, ShopeeFood, BeFood với mã đơn app tự động. Tự động áp dụng `delivery_price || price`.
+   - **Hàng Đợi Đơn Mang Về & App Giao Hàng Tại Thu Ngân ([TableMap.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/TableMap.tsx), [CashierView.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CashierView.tsx))**:
+     - Thẻ Bento nổi bật trên đầu màn hình thu ngân liệt kê tức thì toàn bộ đơn takeaway & delivery đang mở. Bấm mở thanh toán ngay.
+   - **Nút Hủy Đơn / Trả Bàn Nổi Bật ([CheckoutPanel.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CheckoutPanel.tsx))**:
+     - Nút màu Rose trực quan trên Header và thanh tác vụ, kèm modal lý do hủy bắt buộc và ghi nhận lịch sử kiểm toán hóa đơn hủy.
+   - **Trừ Kho Tự Động Thông Minh ([inventoryService.ts](file:///e:/Vibe%20Coding/POS/src/services/inventoryService.ts))**:
+     - Đơn `dine_in`: Chỉ trừ nguyên liệu cốt chế biến (`!is_packaging`).
+     - Đơn `takeaway` / `delivery`: Trừ đồng thời cả nguyên liệu cốt LẪN bao bì (`is_packaging: true`).
+
+4. **Tối Ưu Mobile Bento Grid 2.0 & Trải Nghiệm Người Dùng**:
+   - **Mobile Compact Menu Card ([MenuCard.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/MenuCard.tsx))**: Trên màn hình di động `< md`, thẻ món chuyển sang dạng ngang nhỏ gọn (ảnh thumbnail 64x64px, hiển thị đa mức giá tabular-nums cho cả 3 kênh, nút bấm `+` ngón cái), hiển thị 7-8 món trên 1 màn hình.
+   - **Hộp Lệnh Nhanh Command Palette (Ctrl+K) & Bottom Navigation Bar**: Tìm kiếm xuyên suốt phân hệ, bàn ăn, món ăn và đơn mang về/app giao hàng.
+
+5. **Chất Lượng Kỹ Thuật & Deployment**:
+   - Vitest: Đạt 26/26 tests PASS (100% PASS trên cả 4 test suite: `pricingEngine.test.ts`, `inventoryService.test.ts`, `orderService.test.ts`, `authService.test.ts`).
+   - Next.js Production Build (`npm run build`): Đạt 0 lỗi TypeScript, 11/11 routes tĩnh và động biên dịch thành công.
+   - Triển khai Production tự động lên Vercel: [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
+
+---
+
+## 17. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.

@@ -19,6 +19,8 @@ export interface RestaurantTable {
   status: TableStatus;
   zone_id?: string;
   current_order_id?: string;
+  order_channel?: OrderChannel;
+  delivery_platform?: DeliveryPlatform;
 }
 
 export type CategoryType = 'food' | 'drink' | 'dessert' | 'other';
@@ -42,7 +44,11 @@ export interface MenuItem {
   id: string;
   category_id: string;
   name: string;
-  price: number;
+  price: number; // Giá Tại Bàn (Dine-in) mặc định
+  takeaway_price?: number; // Giá bán Mang về
+  delivery_price?: number; // Giá bán trên App GrabFood/ShopeeFood
+  packaging_cost?: number; // Chi phí bao bì/ly nhựa/túi mang đi ước tính
+  app_commission_rate?: number; // % chiết khấu sàn giao đồ ăn, mặc định 25
   image_url: string;
   station: StationType; // 'kitchen' or 'bar' for real-time routing
   is_available: boolean;
@@ -64,6 +70,8 @@ export type OrderStatus = 'pending' | 'cooking' | 'ready' | 'completed' | 'cance
 export type ItemStatus = 'pending' | 'cooking' | 'ready' | 'served' | 'cancelled';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 export type PaymentMethod = 'cash' | 'transfer_qr' | 'e_wallet' | 'card';
+export type OrderChannel = 'dine_in' | 'takeaway' | 'delivery';
+export type DeliveryPlatform = 'grabfood' | 'shopeefood' | 'befood';
 
 export interface OrderItem {
   id: string;
@@ -87,6 +95,8 @@ export interface Order {
   order_status: OrderStatus;
   payment_status: PaymentStatus;
   payment_method?: PaymentMethod;
+  order_channel?: OrderChannel;
+  delivery_platform?: DeliveryPlatform;
   subtotal: number;
   discount_amount: number;
   tax_amount: number;
@@ -144,7 +154,10 @@ export interface RecipeBOM {
   menu_item_id: string;
   raw_material_id: string;
   quantity: number; // in recipe_unit
+  is_packaging?: boolean; // Đánh dấu nguyên liệu này là Bao bì mang về (ly nhựa, ống hút, túi chữ T...)
 }
+
+export type BOMItem = RecipeBOM;
 
 export interface Supplier {
   id: string;

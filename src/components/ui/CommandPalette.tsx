@@ -67,7 +67,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   // Data sources
   const tables = orderService.getTables();
   const menuItems = menuService.getMenuItems();
-  const takeawayOrders = orderService.getTakeawayOrders();
+  const activeOrders = orderService.getActiveTakeawayAndDeliveryOrders();
 
   // Navigation Items
   const navItems = [
@@ -99,13 +99,22 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
     .filter((m) => m.name.toLowerCase().includes(lowerQuery))
     .slice(0, 6);
 
+  // Filter active takeaway and delivery orders
+  const filteredOrders = activeOrders
+    .filter((tk) =>
+      tk.table_number.toLowerCase().includes(lowerQuery) ||
+      lowerQuery.includes('mang') ||
+      lowerQuery.includes('app') ||
+      lowerQuery.includes('grab') ||
+      lowerQuery.includes('shopee') ||
+      lowerQuery.includes('be')
+    )
+    .slice(0, 4);
+
   // Flattened results for keyboard navigation
   const allResults: { type: 'module' | 'table' | 'takeaway' | 'menu'; data: any }[] = [
     ...filteredNav.map((m) => ({ type: 'module' as const, data: m })),
-    ...takeawayOrders
-      .filter((tk) => tk.table_number.toLowerCase().includes(lowerQuery) || lowerQuery.includes('mang'))
-      .slice(0, 3)
-      .map((tk) => ({ type: 'takeaway' as const, data: tk })),
+    ...filteredOrders.map((tk) => ({ type: 'takeaway' as const, data: tk })),
     ...filteredTables.map((t) => ({ type: 'table' as const, data: t })),
     ...filteredMenuItems.map((m) => ({ type: 'menu' as const, data: m })),
   ];
@@ -224,16 +233,17 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 </div>
               )}
 
-              {/* Đơn Mang Về */}
-              {takeawayOrders.length > 0 && (
+              {/* Đơn Mang Về & Đơn App */}
+              {filteredOrders.length > 0 && (
                 <div>
                   <div className="px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    🛍️ Đơn Mang Về Đang Chờ
+                    🛍️🛵 Đơn Mang Về & App Giao Hàng
                   </div>
                   <div className="space-y-0.5">
-                    {takeawayOrders.slice(0, 3).map((tk) => {
+                    {filteredOrders.map((tk) => {
                       const overallIdx = allResults.findIndex((r) => r.type === 'takeaway' && r.data.id === tk.id);
                       const isSelected = overallIdx === selectedIndex;
+                      const itemCount = (tk.items || []).reduce((s: number, i: any) => s + (i.quantity || 1), 0);
 
                       return (
                         <div
@@ -250,7 +260,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                             <ShoppingBag className={`w-4 h-4 shrink-0 ${isSelected ? 'text-white' : 'text-orange-500'}`} />
                             <span className="font-bold">{tk.table_number} (#{tk.id.slice(-4)})</span>
                             <span className={`text-[11px] ${isSelected ? 'text-orange-100' : 'text-slate-400'} tabular-nums`}>
-                              {tk.items.reduce((s, i) => s + i.quantity, 0)} món • {formatCurrencyVND(tk.total_amount)}
+                              {itemCount} món • {formatCurrencyVND(tk.total_amount)}
                             </span>
                           </div>
                           <span className={`text-[10px] uppercase font-bold px-1.5 py-0.2 rounded ${isSelected ? 'bg-white/20' : 'bg-orange-100 text-orange-700 dark:bg-orange-950/60 dark:text-orange-300'}`}>

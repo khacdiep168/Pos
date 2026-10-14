@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { SearchableSelect, SearchableOption } from '@/components/ui/SearchableSelect';
 
+import { SmartPricingSimulator } from '@/components/erp/SmartPricingSimulator';
+
 interface EditMenuItemModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -62,6 +64,8 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [price, setPrice] = useState('');
+  const [takeawayPrice, setTakeawayPrice] = useState('');
+  const [deliveryPrice, setDeliveryPrice] = useState('');
   const [station, setStation] = useState<StationType>('kitchen');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
@@ -71,11 +75,12 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFileName, setUploadedFileName] = useState<string>('');
 
-  // BOM Configuration State
+  // BOM Configuration State (with is_packaging flag)
   const [rawMaterials] = useState<RawMaterial[]>(() => inventoryService.getRawMaterials());
-  const [bomItems, setBomItems] = useState<{ raw_material_id: string; quantity: number }[]>([]);
+  const [bomItems, setBomItems] = useState<{ raw_material_id: string; quantity: number; is_packaging?: boolean }[]>([]);
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
   const [materialQty, setMaterialQty] = useState('');
+  const [isPackagingItem, setIsPackagingItem] = useState(false);
 
   // Pre-fill form when item changes
   useEffect(() => {
@@ -83,6 +88,8 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
       setName(item.name);
       setCategoryId(item.category_id);
       setPrice(item.price.toLocaleString('vi-VN'));
+      setTakeawayPrice(item.takeaway_price ? item.takeaway_price.toLocaleString('vi-VN') : '');
+      setDeliveryPrice(item.delivery_price ? item.delivery_price.toLocaleString('vi-VN') : '');
       setStation(item.station);
       setDescription(item.description || '');
       setImageUrl(item.image_url || '');
@@ -91,7 +98,13 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
 
       // Load existing BOM items
       const existingBoms = inventoryService.getRecipesByMenuItem(item.id);
-      setBomItems(existingBoms.map((b) => ({ raw_material_id: b.raw_material_id, quantity: b.quantity })));
+      setBomItems(
+        existingBoms.map((b) => ({
+          raw_material_id: b.raw_material_id,
+          quantity: b.quantity,
+          is_packaging: b.is_packaging,
+        }))
+      );
 
       if (rawMaterials.length > 0) {
         setSelectedMaterialId(rawMaterials[0].id);
@@ -134,28 +147,63 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
     if (existingIdx > -1) {
       const updated = [...bomItems];
       updated[existingIdx].quantity += qty;
+      updated[existingIdx].is_packaging = isPackagingItem;
       setBomItems(updated);
     } else {
-      setBomItems([...bomItems, { raw_material_id: selectedMaterialId, quantity: qty }]);
+      setBomItems([
+        ...bomItems,
+        { raw_material_id: selectedMaterialId, quantity: qty, is_packaging: isPackagingItem },
+      ]);
     }
 
     setMaterialQty('');
+    setIsPackagingItem(false);
     setError('');
+  };
+
+  const handleTogglePackaging = (materialId: string) => {
+    setBomItems(
+      bomItems.map((b) =>
+        b.raw_material_id === materialId ? { ...b, is_packaging: !b.is_packaging } : b
+      )
+    );
   };
 
   const handleRemoveBomItem = (materialId: string) => {
     setBomItems(bomItems.filter((b) => b.raw_material_id !== materialId));
   };
 
-  // Calculate COGS
-  const estimatedCOGS = bomItems.reduce((sum, b) => {
+  // Calculate COGS separated into Core Cost vs Packaging Cost
+  const coreBomCost = bomItems.reduce((sum, b) => {
+    if (b.is_packaging) return sum;
     const mat = rawMaterials.find((m) => m.id === b.raw_material_id);
     return sum + (mat ? b.quantity * mat.avg_cost : 0);
   }, 0);
 
+  const packagingBomCost = bomItems.reduce((sum, b) => {
+    if (!b.is_packaging) return sum;
+    const mat = rawMaterials.find((m) => m.id === b.raw_material_id);
+    return sum + (mat ? b.quantity * mat.avg_cost : 0);
+  }, 0);
+
+  const estimatedCOGS = coreBomCost + packagingBomCost;
   const numPrice = parseFloat(price.replace(/\D/g, '')) || 0;
+  const numTakeawayPrice = parseFloat(takeawayPrice.replace(/\D/g, '')) || undefined;
+  const numDeliveryPrice = parseFloat(deliveryPrice.replace(/\D/g, '')) || undefined;
   const estimatedGrossProfit = numPrice - estimatedCOGS;
   const estimatedMargin = numPrice > 0 ? Math.round((estimatedGrossProfit / numPrice) * 100) : 0;
+
+  const handleApplySimulatedPrices = (prices: {
+    dineInPrice: number;
+    takeawayPrice: number;
+    deliveryPrice: number;
+    packagingCost: number;
+    appCommissionRate: number;
+  }) => {
+    setPrice(prices.dineInPrice.toLocaleString('vi-VN'));
+    setTakeawayPrice(prices.takeawayPrice.toLocaleString('vi-VN'));
+    setDeliveryPrice(prices.deliveryPrice.toLocaleString('vi-VN'));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,15 +213,19 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
     }
 
     if (numPrice <= 0) {
-      setError('Vui lòng nhập giá bán hợp lệ (> 0đ)!');
+      setError('Vui lòng nhập giá bán tại bàn hợp lệ (> 0đ)!');
       return;
     }
 
-    // 1. Update Menu Item in menuService
+    // 1. Update Menu Item in menuService with multi-channel pricing
     const updated = menuService.updateMenuItem(item.id, {
       name: name.trim(),
       category_id: categoryId,
       price: numPrice,
+      takeaway_price: numTakeawayPrice,
+      delivery_price: numDeliveryPrice,
+      packaging_cost: packagingBomCost > 0 ? packagingBomCost : undefined,
+      app_commission_rate: 25,
       station,
       description: description.trim() || undefined,
       image_url: imageUrl.trim() || undefined,
@@ -247,7 +299,7 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
               />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
                   Danh mục thực đơn *
@@ -278,26 +330,80 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
                   <option value="bar">🍹 Quầy Bar (Bar / Drink)</option>
                 </select>
               </div>
+            </div>
 
-              <div>
-                <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  Giá bán (VNĐ) *
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={price}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/\D/g, '');
-                      setPrice(val ? parseInt(val, 10).toLocaleString('vi-VN') : '');
-                      setError('');
-                    }}
-                    className="w-full px-3.5 py-2 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-bold pr-12 focus:outline-hidden focus:ring-1 focus:ring-amber-500"
-                    required
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-stone-400">
-                    VNĐ
-                  </span>
+            {/* 3-Channel Pricing Bento Grid */}
+            <div className="p-3 bg-stone-50/70 dark:bg-stone-800/40 rounded-2xl border border-stone-200 dark:border-stone-700/80 space-y-2">
+              <label className="block text-xs font-black uppercase tracking-wider text-stone-700 dark:text-stone-300">
+                💰 Thiết Lập Giá Bán Đa Kênh (Multi-Channel)
+              </label>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* 1. Dine-in Price */}
+                <div className="p-2.5 bg-white dark:bg-stone-900 rounded-xl border border-amber-300 dark:border-amber-700/80 shadow-2xs">
+                  <div className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 mb-1">
+                    <span>🍽️ Tại Bàn (Mặc định) *</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={price}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setPrice(val ? parseInt(val, 10).toLocaleString('vi-VN') : '');
+                        setError('');
+                      }}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-bold pr-10 focus:outline-hidden"
+                      required
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-stone-400">
+                      đ
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Takeaway Price */}
+                <div className="p-2.5 bg-white dark:bg-stone-900 rounded-xl border border-orange-300 dark:border-orange-700/80 shadow-2xs">
+                  <div className="text-[11px] font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1 mb-1">
+                    <span>🛍️ Khách Mang Về</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={takeawayPrice}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setTakeawayPrice(val ? parseInt(val, 10).toLocaleString('vi-VN') : '');
+                      }}
+                      placeholder="Tự động theo giá bàn"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-bold pr-10 focus:outline-hidden"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-stone-400">
+                      đ
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Delivery Price */}
+                <div className="p-2.5 bg-white dark:bg-stone-900 rounded-xl border border-emerald-300 dark:border-emerald-700/80 shadow-2xs">
+                  <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mb-1">
+                    <span>🛵 App Giao Hàng</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={deliveryPrice}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setDeliveryPrice(val ? parseInt(val, 10).toLocaleString('vi-VN') : '');
+                      }}
+                      placeholder="Gross-up bảo toàn lãi"
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 text-stone-900 dark:text-white text-xs font-bold pr-10 focus:outline-hidden"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-stone-400">
+                      đ
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -441,6 +547,17 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
                     <span>Thêm</span>
                   </button>
                 </div>
+                <div className="sm:col-span-12 flex items-center justify-between pt-1">
+                  <label className="flex items-center gap-1.5 text-[11px] font-bold text-stone-600 dark:text-stone-300 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={isPackagingItem}
+                      onChange={(e) => setIsPackagingItem(e.target.checked)}
+                      className="accent-orange-500 rounded"
+                    />
+                    <span>🛍️ Đánh dấu là Bao Bì Mang Về (Ly, túi chữ T, nắp, ống hút...)</span>
+                  </label>
+                </div>
               </div>
 
               {/* Current BOM Items Table */}
@@ -454,9 +571,27 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
                     return (
                       <div
                         key={item.raw_material_id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 text-xs"
+                        className={`flex items-center justify-between p-2 rounded-lg border text-xs ${
+                          item.is_packaging
+                            ? 'bg-orange-50/50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/60'
+                            : 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800'
+                        }`}
                       >
                         <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePackaging(item.raw_material_id)}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 transition-all ${
+                              item.is_packaging
+                                ? 'bg-orange-500 text-white'
+                                : 'bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300'
+                            }`}
+                            title="Bấm để đổi Cốt món vs Bao bì"
+                          >
+                            <span>🛍️</span>
+                            <span>{item.is_packaging ? 'Bao bì' : 'Cốt món'}</span>
+                          </button>
+
                           <span className="font-bold text-stone-900 dark:text-stone-100">
                             {mat.name}
                           </span>
@@ -484,12 +619,12 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
                   {/* COGS Summary */}
                   <div className="p-2.5 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 flex items-center justify-between text-xs font-bold text-amber-900 dark:text-amber-300 mt-2">
                     <div>
-                      <span>Giá vốn ước tính (COGS): </span>
-                      <span className="font-mono">{formatCurrencyVND(estimatedCOGS)}</span>
+                      <span>Vốn cốt: {formatCurrencyVND(coreBomCost)} | Bao bì: {formatCurrencyVND(packagingBomCost)}</span>
+                      <span className="font-mono block text-[10px] opacity-80">Tổng vốn COGS: {formatCurrencyVND(estimatedCOGS)}</span>
                     </div>
                     {numPrice > 0 && (
                       <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                        <span>Lợi nhuận gộp:</span>
+                        <span>Biên LN:</span>
                         <span>{estimatedMargin}%</span>
                       </div>
                     )}
@@ -500,6 +635,19 @@ export const EditMenuItemModal: React.FC<EditMenuItemModalProps> = ({
                   Chưa cấu hình nguyên liệu nào cho món này. Thêm nguyên liệu để hệ thống tự động trừ kho khi bán!
                 </div>
               )}
+            </div>
+
+            {/* Smart Pricing Simulator */}
+            <div className="pt-2">
+              <SmartPricingSimulator
+                coreBomCost={coreBomCost}
+                packagingCost={packagingBomCost}
+                currentDineInPrice={numPrice}
+                currentTakeawayPrice={numTakeawayPrice}
+                currentDeliveryPrice={numDeliveryPrice}
+                onApplyPrices={handleApplySimulatedPrices}
+                compact={true}
+              />
             </div>
           </div>
 

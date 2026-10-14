@@ -128,13 +128,22 @@ export const FOHView: React.FC = () => {
     });
   }, [menuItems, selectedCategoryId, selectedStation, searchQuery]);
 
+  // Current Order Channel based on selected table
+  const currentChannel: import('@/types').OrderChannel =
+    selectedTable?.order_channel ||
+    (selectedTable?.id.startsWith('delivery')
+      ? 'delivery'
+      : selectedTable?.id.startsWith('takeaway')
+      ? 'takeaway'
+      : 'dine_in');
+
   // Click on menu item handler
   const handleSelectItem = (item: MenuItem) => {
     setActiveItemForModal(item);
     setIsModifierModalOpen(true);
   };
 
-  // Add customized item to cart
+  // Add customized item to cart with channel-aware pricing
   const handleAddToCart = (
     item: MenuItem,
     quantity: number,
@@ -144,8 +153,16 @@ export const FOHView: React.FC = () => {
     const modifierIds = selectedModifiers.map((m) => m.id).sort().join('-');
     const cartItemId = `${item.id}_${modifierIds}_${notes.trim()}`;
 
+    // Dynamic price based on serving channel (Dine-in / Takeaway / Delivery App)
+    const basePrice =
+      currentChannel === 'takeaway'
+        ? item.takeaway_price ?? item.price
+        : currentChannel === 'delivery'
+        ? item.delivery_price ?? item.price
+        : item.price;
+
     const modifiersPrice = selectedModifiers.reduce((sum, m) => sum + m.price_adjustment, 0);
-    const unitPrice = item.price + modifiersPrice;
+    const unitPrice = basePrice + modifiersPrice;
     const totalPrice = unitPrice * quantity;
 
     setCartItems((prev) => {
@@ -227,34 +244,52 @@ export const FOHView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Smart Table Indicator Button (KiotViet Inspiration) */}
+            {/* Smart Table Indicator Button (KiotViet & Multi-Channel Inspiration) */}
             <button
               type="button"
               onClick={() => setIsTableModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-black active:scale-95 transition-all shadow-2xs cursor-pointer"
-              title="Bấm để chọn hoặc đổi bàn phục vụ"
+              title="Bấm để chọn hoặc đổi kênh phục vụ / bàn ăn"
             >
               <MapPin className="w-3.5 h-3.5 text-amber-500" />
               {selectedTable ? (
-                <span className="flex items-center gap-1">
-                  <span className="hidden sm:inline font-bold text-stone-500 dark:text-stone-400">
-                    {selectedZone ? `${selectedZone.name} •` : ''}
-                  </span>
-                  <span>Bàn {selectedTable.table_number}</span>
-                  <span
-                    className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
-                      selectedTable.status === 'reserved'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-emerald-600 text-white'
-                    }`}
-                  >
-                    {selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
-                  </span>
+                <span className="flex items-center gap-1.5">
+                  {currentChannel === 'delivery' ? (
+                    <>
+                      <span>🛵 {selectedTable.table_number}</span>
+                      <span className="text-[9px] px-1 py-0.2 rounded font-bold uppercase bg-emerald-600 text-white">
+                        {selectedTable.delivery_platform ? selectedTable.delivery_platform.toUpperCase() : 'APP'}
+                      </span>
+                    </>
+                  ) : currentChannel === 'takeaway' ? (
+                    <>
+                      <span>🛍️ {selectedTable.table_number}</span>
+                      <span className="text-[9px] px-1 py-0.2 rounded font-bold uppercase bg-orange-600 text-white">
+                        Mang Về
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="hidden sm:inline font-bold text-stone-500 dark:text-stone-400">
+                        {selectedZone ? `${selectedZone.name} •` : ''}
+                      </span>
+                      <span>Bàn {selectedTable.table_number}</span>
+                      <span
+                        className={`text-[9px] px-1 py-0.2 rounded font-bold uppercase ${
+                          selectedTable.status === 'reserved'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-emerald-600 text-white'
+                        }`}
+                      >
+                        {selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
+                      </span>
+                    </>
+                  )}
                 </span>
               ) : (
                 <span className="text-rose-500 font-bold flex items-center gap-1">
                   <AlertCircle className="w-3 h-3" />
-                  <span>Chọn bàn</span>
+                  <span>Chọn bàn / kênh</span>
                 </span>
               )}
               <ChevronDown className="w-3.5 h-3.5 opacity-60" />
@@ -291,7 +326,12 @@ export const FOHView: React.FC = () => {
             onViewModeChange={setViewMode}
           />
 
-          <MenuGrid items={filteredItems} onSelectItem={handleSelectItem} viewMode={viewMode} />
+          <MenuGrid
+            items={filteredItems}
+            onSelectItem={handleSelectItem}
+            viewMode={viewMode}
+            orderChannel={currentChannel}
+          />
         </div>
 
         {/* Mobile Fixed Floating Cart Bar: elevated to bottom-16 above the Thumb-Friendly Bottom Nav */}

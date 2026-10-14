@@ -262,7 +262,20 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
             <div className="min-w-0">
               <h3 className="text-xs sm:text-sm font-extrabold flex items-center gap-2 truncate">
                 <span className="truncate">
-                  THANH TOÁN: {table.zone_id ? `${orderService.getZones().find((z) => z.id === table.zone_id)?.name || ''} - ` : ''}{table.table_number}
+                  THANH TOÁN:{' '}
+                  {order.order_channel === 'delivery' || table.order_channel === 'delivery' || table.id.startsWith('delivery') ? (
+                    <span className="text-emerald-400">
+                      🛵 [{((order.delivery_platform || table.delivery_platform || 'grabfood') as string).toUpperCase()}]{' '}
+                      {table.table_number}
+                    </span>
+                  ) : order.order_channel === 'takeaway' || table.order_channel === 'takeaway' || table.id.startsWith('takeaway') ? (
+                    <span className="text-orange-400">🛍️ {table.table_number}</span>
+                  ) : (
+                    <span>
+                      {table.zone_id ? `${orderService.getZones().find((z) => z.id === table.zone_id)?.name || ''} - ` : ''}
+                      Bàn {table.table_number}
+                    </span>
+                  )}
                 </span>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-stone-800 text-amber-400 shrink-0">
                   #{order.id.slice(-6)}

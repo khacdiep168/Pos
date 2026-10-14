@@ -117,7 +117,7 @@ class InventoryService {
   public addRawMaterial(material: Omit<RawMaterial, 'id'>): RawMaterial {
     const newMaterial: RawMaterial = {
       ...material,
-      id: `raw-${Date.now().toString().slice(-6)}`,
+      id: `raw-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 7)}`,
       current_stock: material.current_stock ?? 0,
       avg_cost: material.avg_cost ?? 0,
     };
@@ -146,7 +146,7 @@ class InventoryService {
 
   public saveRecipeBOM(
     menuItemId: string,
-    boms: { raw_material_id: string; quantity: number }[]
+    boms: { raw_material_id: string; quantity: number; is_packaging?: boolean }[]
   ): void {
     // Remove old recipe entries for this menu item
     this.recipes = this.recipes.filter((r) => r.menu_item_id !== menuItemId);
@@ -158,6 +158,7 @@ class InventoryService {
         menu_item_id: menuItemId,
         raw_material_id: b.raw_material_id,
         quantity: b.quantity,
+        is_packaging: b.is_packaging ?? false,
       });
     });
 
@@ -252,18 +253,38 @@ class InventoryService {
     return [...this.transactions];
   }
 
-  // Automatic Stock Deduction upon completed Order
+  // Automatic Stock Deduction upon completed Order with Channel Intelligence
   public deductStockForOrder(order: Order): {
     deductedMaterials: { name: string; quantity: number; unit: string }[];
   } {
     const deductedMaterials: { name: string; quantity: number; unit: string }[] = [];
     const now = new Date().toISOString();
 
+    const isTakeawayOrDelivery =
+      order.order_channel === 'takeaway' ||
+      order.order_channel === 'delivery' ||
+      order.table_id === 'takeaway' ||
+      order.table_id.startsWith('takeaway') ||
+      order.table_id.startsWith('delivery') ||
+      (order.table_number && (
+        order.table_number.toLowerCase().includes('mang về') ||
+        order.table_number.toLowerCase().includes('giao') ||
+        order.table_number.toLowerCase().includes('grab') ||
+        order.table_number.toLowerCase().includes('shopee') ||
+        order.table_number.toLowerCase().includes('be')
+      ));
+
     order.items.forEach((orderItem) => {
       // Find BOM items for this menuItem
       const itemRecipes = this.recipes.filter((r) => r.menu_item_id === orderItem.menu_item_id);
 
       itemRecipes.forEach((recipe) => {
+        // Nếu là đơn ăn tại bàn (Dine-in): CHỈ trừ nguyên liệu cốt (!is_packaging)
+        // Nếu là đơn Mang về hoặc App Giao hàng: Trừ cả nguyên liệu cốt LẪN bao bì
+        if (!isTakeawayOrDelivery && recipe.is_packaging) {
+          return;
+        }
+
         const material = this.rawMaterials.find((m) => m.id === recipe.raw_material_id);
         if (material) {
           const totalConsumed = recipe.quantity * orderItem.quantity;
@@ -280,7 +301,7 @@ class InventoryService {
             reference_type: 'order',
             reference_id: order.id,
             created_at: now,
-            created_by: `Order #${order.id.slice(-6)} (${order.table_number})`,
+            created_by: `Order #${order.id.slice(-6)} (${order.table_number} - ${isTakeawayOrDelivery ? 'Mang Về/App' : 'Tại Bàn'})`,
           };
           this.transactions.unshift(tx);
 
@@ -485,6 +506,35 @@ class InventoryService {
       const mat = this.rawMaterials.find((m) => m.id === b.raw_material_id);
       return sum + (mat ? b.quantity * mat.avg_cost : 0);
     }, 0);
+  }
+
+  /**
+   * Tách chi tiết Vốn cốt chế biến và Vốn bao bì
+   */
+  public calculateMenuItemCostBreakdown(menuItemId: string): {
+    coreCost: number;
+    packagingCost: number;
+    totalCost: number;
+  } {
+    const boms = this.getRecipesByMenuItem(menuItemId);
+    let coreCost = 0;
+    let packagingCost = 0;
+
+    boms.forEach((b) => {
+      const mat = this.rawMaterials.find((m) => m.id === b.raw_material_id);
+      const lineCost = mat ? b.quantity * mat.avg_cost : 0;
+      if (b.is_packaging) {
+        packagingCost += lineCost;
+      } else {
+        coreCost += lineCost;
+      }
+    });
+
+    return {
+      coreCost: Math.round(coreCost),
+      packagingCost: Math.round(packagingCost),
+      totalCost: Math.round(coreCost + packagingCost),
+    };
   }
 }
 

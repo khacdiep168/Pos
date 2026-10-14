@@ -72,6 +72,10 @@ export const initialMenuItems: MenuItem[] = [
     category_id: 'cat-food',
     name: 'Bò Bít Tết Sốt Tiêu Đen (Wagyu)',
     price: 320000,
+    takeaway_price: 325000,
+    delivery_price: 433000,
+    packaging_cost: 5000,
+    app_commission_rate: 25,
     image_url: 'https://images.unsplash.com/photo-1558030006-450675393462?auto=format&fit=crop&w=600&q=80',
     station: 'kitchen',
     is_available: true,
@@ -88,6 +92,10 @@ export const initialMenuItems: MenuItem[] = [
     category_id: 'cat-food',
     name: 'Mì Ý Hải Sản Tươi Sốt Cà Chua',
     price: 185000,
+    takeaway_price: 190000,
+    delivery_price: 253000,
+    packaging_cost: 5000,
+    app_commission_rate: 25,
     image_url: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=600&q=80',
     station: 'kitchen',
     is_available: true,
@@ -98,6 +106,10 @@ export const initialMenuItems: MenuItem[] = [
     category_id: 'cat-drink',
     name: 'Trà Đào Cam Sả Tươi Mát',
     price: 55000,
+    takeaway_price: 57000,
+    delivery_price: 76000,
+    packaging_cost: 2000,
+    app_commission_rate: 25,
     image_url: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&w=600&q=80',
     station: 'bar',
     is_available: true,
@@ -115,6 +127,10 @@ export const initialMenuItems: MenuItem[] = [
     category_id: 'cat-drink',
     name: 'Cà Phê Muối Kem Béo Huế',
     price: 45000,
+    takeaway_price: 47000,
+    delivery_price: 63000,
+    packaging_cost: 2000,
+    app_commission_rate: 25,
     image_url: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=600&q=80',
     station: 'bar',
     is_available: true,
@@ -125,6 +141,10 @@ export const initialMenuItems: MenuItem[] = [
     category_id: 'cat-starter',
     name: 'Salad Hoàng Gia Sốt Caesar & Gà Nướng',
     price: 120000,
+    takeaway_price: 125000,
+    delivery_price: 167000,
+    packaging_cost: 5000,
+    app_commission_rate: 25,
     image_url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=600&q=80',
     station: 'kitchen',
     is_available: true,
@@ -135,6 +155,10 @@ export const initialMenuItems: MenuItem[] = [
     category_id: 'cat-dessert',
     name: 'Bánh Mousse Chanh Leo Phủ Dừa',
     price: 65000,
+    takeaway_price: 68000,
+    delivery_price: 91000,
+    packaging_cost: 3000,
+    app_commission_rate: 25,
     image_url: 'https://images.unsplash.com/photo-1587314168485-3236d6710814?auto=format&fit=crop&w=600&q=80',
     station: 'bar',
     is_available: true,
@@ -259,27 +283,98 @@ export const initialRawMaterials: RawMaterial[] = [
     min_stock_level: 2500,
     avg_cost: 160,
   },
+  // Packaging Raw Materials (Vật tư bao bì mang về / delivery)
+  {
+    id: 'raw-pkg-1',
+    name: 'Ly Nhựa PP 500ml & Nắp Cầu Mang Về',
+    supplier_id: 'sup-2',
+    category: 'Bao bì',
+    purchase_unit: 'lốc',
+    recipe_unit: 'cái',
+    conversion_factor: 50,
+    current_stock: 500,
+    min_stock_level: 100,
+    avg_cost: 1200, // 1.200đ / cái
+  },
+  {
+    id: 'raw-pkg-2',
+    name: 'Ống Hút Giấy & Muỗng Gỗ Tiệt Trùng',
+    supplier_id: 'sup-2',
+    category: 'Bao bì',
+    purchase_unit: 'gói',
+    recipe_unit: 'cái',
+    conversion_factor: 100,
+    current_stock: 800,
+    min_stock_level: 200,
+    avg_cost: 300, // 300đ / cái
+  },
+  {
+    id: 'raw-pkg-3',
+    name: 'Túi Chữ T Tự Hủy Đựng 1 Ly',
+    supplier_id: 'sup-2',
+    category: 'Bao bì',
+    purchase_unit: 'kg',
+    recipe_unit: 'cái',
+    conversion_factor: 250,
+    current_stock: 1200,
+    min_stock_level: 300,
+    avg_cost: 500, // 500đ / cái
+  },
+  {
+    id: 'raw-pkg-4',
+    name: 'Hộp Giấy Bã Mía Sinh Thái (Steak / Mì)',
+    supplier_id: 'sup-2',
+    category: 'Bao bì',
+    purchase_unit: 'thùng',
+    recipe_unit: 'cái',
+    conversion_factor: 100,
+    current_stock: 350,
+    min_stock_level: 80,
+    avg_cost: 3500, // 3.500đ / cái
+  },
+  {
+    id: 'raw-pkg-5',
+    name: 'Bộ Dao Muỗng Nĩa Gỗ & Khăn Lạnh Mang Về',
+    supplier_id: 'sup-2',
+    category: 'Bao bì',
+    purchase_unit: 'set',
+    recipe_unit: 'bộ',
+    conversion_factor: 1,
+    current_stock: 400,
+    min_stock_level: 100,
+    avg_cost: 1500, // 1.500đ / bộ
+  },
 ];
 
 // Bill of Materials (BOM) Recipes for Menu Items
 export const initialRecipes: RecipeBOM[] = [
   // item-1: Bò Bít Tết Sốt Tiêu Đen (Wagyu)
-  { id: 'bom-1', menu_item_id: 'item-1', raw_material_id: 'raw-1', quantity: 200 }, // 200g Bò Wagyu
-  { id: 'bom-2', menu_item_id: 'item-1', raw_material_id: 'raw-3', quantity: 150 }, // 150g Khoai tây
-  { id: 'bom-3', menu_item_id: 'item-1', raw_material_id: 'raw-4', quantity: 15 },  // 15g Tiêu đen
+  { id: 'bom-1', menu_item_id: 'item-1', raw_material_id: 'raw-1', quantity: 200 }, // 200g Bò Wagyu (vốn cốt)
+  { id: 'bom-2', menu_item_id: 'item-1', raw_material_id: 'raw-3', quantity: 150 }, // 150g Khoai tây (vốn cốt)
+  { id: 'bom-3', menu_item_id: 'item-1', raw_material_id: 'raw-4', quantity: 15 },  // 15g Tiêu đen (vốn cốt)
+  { id: 'bom-1-pkg1', menu_item_id: 'item-1', raw_material_id: 'raw-pkg-4', quantity: 1, is_packaging: true }, // Hộp bã mía mang về
+  { id: 'bom-1-pkg2', menu_item_id: 'item-1', raw_material_id: 'raw-pkg-5', quantity: 1, is_packaging: true }, // Bộ dao nĩa gỗ
 
   // item-2: Mì Ý Hải Sản Tươi Sốt Cà Chua
-  { id: 'bom-4', menu_item_id: 'item-2', raw_material_id: 'raw-5', quantity: 120 }, // 120g Mì Ý
-  { id: 'bom-5', menu_item_id: 'item-2', raw_material_id: 'raw-6', quantity: 100 }, // 100g Tôm sú
-  { id: 'bom-6', menu_item_id: 'item-2', raw_material_id: 'raw-7', quantity: 80 },  // 80g Mực tươi
+  { id: 'bom-4', menu_item_id: 'item-2', raw_material_id: 'raw-5', quantity: 120 }, // 120g Mì Ý (vốn cốt)
+  { id: 'bom-5', menu_item_id: 'item-2', raw_material_id: 'raw-6', quantity: 100 }, // 100g Tôm sú (vốn cốt)
+  { id: 'bom-6', menu_item_id: 'item-2', raw_material_id: 'raw-7', quantity: 80 },  // 80g Mực tươi (vốn cốt)
+  { id: 'bom-2-pkg1', menu_item_id: 'item-2', raw_material_id: 'raw-pkg-4', quantity: 1, is_packaging: true }, // Hộp bã mía
+  { id: 'bom-2-pkg2', menu_item_id: 'item-2', raw_material_id: 'raw-pkg-5', quantity: 1, is_packaging: true }, // Dao nĩa
 
   // item-3: Trà Đào Cam Sả Tươi Mát
-  { id: 'bom-7', menu_item_id: 'item-3', raw_material_id: 'raw-2', quantity: 15 },  // 15g Trà đen
-  { id: 'bom-8', menu_item_id: 'item-3', raw_material_id: 'raw-8', quantity: 45 },  // 45g Đào ngâm
-  { id: 'bom-9', menu_item_id: 'item-3', raw_material_id: 'raw-9', quantity: 60 },  // 60g Cam vàng
+  { id: 'bom-7', menu_item_id: 'item-3', raw_material_id: 'raw-2', quantity: 15 },  // 15g Trà đen (vốn cốt)
+  { id: 'bom-8', menu_item_id: 'item-3', raw_material_id: 'raw-8', quantity: 45 },  // 45g Đào ngâm (vốn cốt)
+  { id: 'bom-9', menu_item_id: 'item-3', raw_material_id: 'raw-9', quantity: 60 },  // 60g Cam vàng (vốn cốt)
+  { id: 'bom-3-pkg1', menu_item_id: 'item-3', raw_material_id: 'raw-pkg-1', quantity: 1, is_packaging: true }, // Ly nhựa PP
+  { id: 'bom-3-pkg2', menu_item_id: 'item-3', raw_material_id: 'raw-pkg-2', quantity: 1, is_packaging: true }, // Ống hút
+  { id: 'bom-3-pkg3', menu_item_id: 'item-3', raw_material_id: 'raw-pkg-3', quantity: 1, is_packaging: true }, // Túi chữ T
 
   // item-4: Cà Phê Muối Kem Béo Huế
-  { id: 'bom-10', menu_item_id: 'item-4', raw_material_id: 'raw-10', quantity: 25 }, // 25g Cà phê hạt
+  { id: 'bom-10', menu_item_id: 'item-4', raw_material_id: 'raw-10', quantity: 25 }, // 25g Cà phê hạt (vốn cốt)
+  { id: 'bom-4-pkg1', menu_item_id: 'item-4', raw_material_id: 'raw-pkg-1', quantity: 1, is_packaging: true }, // Ly nhựa
+  { id: 'bom-4-pkg2', menu_item_id: 'item-4', raw_material_id: 'raw-pkg-2', quantity: 1, is_packaging: true }, // Ống hút
+  { id: 'bom-4-pkg3', menu_item_id: 'item-4', raw_material_id: 'raw-pkg-3', quantity: 1, is_packaging: true }, // Túi chữ T
 ];
 
 export const initialPurchaseOrders: PurchaseOrder[] = [

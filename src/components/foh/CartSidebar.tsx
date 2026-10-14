@@ -208,10 +208,20 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
         created_at: now,
       }));
 
+      const channel: import('@/types').OrderChannel =
+        selectedTable.order_channel ||
+        (selectedTable.id.startsWith('delivery')
+          ? 'delivery'
+          : selectedTable.id.startsWith('takeaway')
+          ? 'takeaway'
+          : 'dine_in');
+
       const newOrder: Order = {
         id: orderId,
         table_id: selectedTable.id,
         table_number: selectedTable.table_number,
+        order_channel: channel,
+        delivery_platform: selectedTable.delivery_platform,
         customer_id: attachedCustomer?.id,
         customer_name: attachedCustomer?.name,
         customer_phone: attachedCustomer?.phone,
