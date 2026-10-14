@@ -30,8 +30,13 @@ import {
   UserCheck,
   Volume2,
   VolumeX,
+  Mic,
+  Radio,
+  Activity,
+  Play,
+  Cpu,
 } from 'lucide-react';
-import { voiceNotificationService } from '@/services/voiceNotificationService';
+import { voiceNotificationService, VIENEU_PRESET_VOICES } from '@/services/voiceNotificationService';
 
 interface StoreSettingsTabProps {
   settings: StoreSettings;
@@ -65,8 +70,19 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
   // Production vs Demo Mode Toggle
   const [isDemoMode, setIsDemoMode] = useState<boolean>(settings.is_demo_mode !== false);
 
-  // Voice Alert Toggle (Phase 2.6)
+  // Voice Alert Toggle (Phase 2.6 & 2.7 VieNeu-TTS)
   const [enableVoiceAlert, setEnableVoiceAlert] = useState<boolean>(settings.enable_voice_alert !== false);
+  const [ttsEngine, setTtsEngine] = useState<'vieneu' | 'browser'>(
+    settings.tts_engine || voiceNotificationService.getEngine()
+  );
+  const [vieneuVoice, setVieNeuVoice] = useState<string>(
+    settings.vieneu_voice || voiceNotificationService.getVieNeuVoice()
+  );
+  const [vieneuApiUrl, setVieNeuApiUrl] = useState<string>(
+    settings.vieneu_api_url || voiceNotificationService.getVieNeuApiUrl()
+  );
+  const [testSpeechStatus, setTestSpeechStatus] = useState<string | null>(null);
+  const [connectionStatus, setConnectionStatus] = useState<{ checked: boolean; online: boolean; message: string } | null>(null);
 
   const [isSuccess, setIsSuccess] = useState(false);
 
@@ -97,13 +113,31 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
       bank_account_name: bankAccountName,
       is_demo_mode: isDemoMode,
       enable_voice_alert: enableVoiceAlert,
+      tts_engine: ttsEngine,
+      vieneu_voice: vieneuVoice,
+      vieneu_api_url: vieneuApiUrl,
     });
 
     voiceNotificationService.setEnabled(enableVoiceAlert);
+    voiceNotificationService.setEngine(ttsEngine);
+    voiceNotificationService.setVieNeuVoice(vieneuVoice);
+    voiceNotificationService.setVieNeuApiUrl(vieneuApiUrl);
 
     onRefresh();
     setIsSuccess(true);
     setTimeout(() => setIsSuccess(false), 2500);
+  };
+
+  const handleTestVoice = () => {
+    setTestSpeechStatus('Đang phát âm thanh mẫu...');
+    voiceNotificationService.speakText('Khách Tầng 1, Bàn 1 đặt món: Cà phê sữa, số lượng một.');
+    setTimeout(() => setTestSpeechStatus(null), 3500);
+  };
+
+  const handleCheckConnection = async () => {
+    setConnectionStatus({ checked: false, online: false, message: 'Đang kiểm tra kết nối VieNeu-TTS...' });
+    const res = await voiceNotificationService.checkVieNeuConnection();
+    setConnectionStatus({ checked: true, online: res.online, message: res.message });
   };
 
   const handleFactoryReset = async () => {
@@ -407,38 +441,173 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
             </div>
           </div>
 
-          {/* CẤU HÌNH LOA THÔNG BÁO GIỌNG NÓI (PHASE 2.6) */}
-          <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Volume2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                <h4 className="font-extrabold text-sm text-emerald-950 dark:text-emerald-200">
-                  Loa Thông Báo Giọng Nói Tiếng Việt: {enableVoiceAlert ? 'Đang Bật' : 'Đã Tắt'}
-                </h4>
+          {/* CẤU HÌNH LOA THÔNG BÁO GIỌNG NÓI & VIENEU-TTS AI ENGINE (PHASE 2.6 & 2.7) */}
+          <div className="p-5 bg-stone-50 dark:bg-stone-800/40 rounded-2xl border border-stone-200/80 dark:border-stone-700/60 space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <Volume2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-sm text-stone-900 dark:text-white flex items-center gap-2">
+                      <span>Loa Thông Báo Giọng Nói Tự Động (Bếp/Bar & Phục Vụ)</span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                        VieNeu-TTS AI Ready
+                      </span>
+                    </h4>
+                  </div>
+                </div>
+                <p className="text-xs text-stone-500 dark:text-stone-400">
+                  Tự động phát chuông và đọc to tên món, số bàn bằng giọng đọc tiếng Việt tự nhiên khi có đơn hàng mới hoặc khi món ăn làm xong.
+                </p>
               </div>
-              <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
-                {enableVoiceAlert
-                  ? '🔊 Tự động phát âm thanh chuông và đọc to tên món, số bàn khi có đơn mới đổ về KDS Bếp/Bar hoặc khi món ăn làm xong sẵn sàng ra món.'
-                  : '🔇 Đã tắt giọng đọc tự động. Hệ thống sẽ giữ không gian yên tĩnh cho quán.'}
-              </p>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const next = !enableVoiceAlert;
+                  setEnableVoiceAlert(next);
+                  voiceNotificationService.setEnabled(next);
+                }}
+                className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shrink-0 ${
+                  enableVoiceAlert
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                    : 'bg-stone-800 text-stone-200 border border-stone-700'
+                }`}
+              >
+                {enableVoiceAlert ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5 text-stone-400" />}
+                <span>{enableVoiceAlert ? 'Đang Bật Loa' : 'Đã Tắt Loa'}</span>
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                const next = !enableVoiceAlert;
-                setEnableVoiceAlert(next);
-                voiceNotificationService.setEnabled(next);
-              }}
-              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shrink-0 ${
-                enableVoiceAlert
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                  : 'bg-stone-800 text-stone-200 border border-stone-700'
-              }`}
-            >
-              {enableVoiceAlert ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5 text-stone-400" />}
-              <span>{enableVoiceAlert ? 'Đang Bật Loa' : 'Đã Tắt Loa'}</span>
-            </button>
+            {enableVoiceAlert && (
+              <div className="pt-3 border-t border-stone-200 dark:border-stone-700/80 space-y-4 animate-fade-in">
+                {/* 1. Chọn Engine Giọng Nói */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div
+                    onClick={() => setTtsEngine('vieneu')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      ttsEngine === 'vieneu'
+                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
+                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Cpu className={`w-4 h-4 ${ttsEngine === 'vieneu' ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400'}`} />
+                        <span className="font-extrabold text-xs text-stone-900 dark:text-stone-100">VieNeu-TTS AI (Khuyên dùng)</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500 text-white">48 kHz</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+                      Giọng AI nhân bản siêu tự nhiên, dõng dạc, chuẩn phát thanh viên tiếng Việt 3 miền. Tự động dự phòng trình duyệt khi offline.
+                    </p>
+                  </div>
+
+                  <div
+                    onClick={() => setTtsEngine('browser')}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      ttsEngine === 'browser'
+                        ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20 shadow-xs'
+                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <Radio className={`w-4 h-4 ${ttsEngine === 'browser' ? 'text-emerald-600 dark:text-emerald-400' : 'text-stone-400'}`} />
+                        <span className="font-extrabold text-xs text-stone-900 dark:text-stone-100">Trình Duyệt (Web Speech API)</span>
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300">Offline</span>
+                    </div>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-relaxed">
+                      Dùng bộ đọc gốc của điện thoại/máy tính (Google, Apple, Microsoft). Không cần cài thêm server.
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Cấu hình chi tiết VieNeu-TTS (Khi chọn VieNeu) */}
+                {ttsEngine === 'vieneu' && (
+                  <div className="p-3.5 bg-stone-100/70 dark:bg-stone-900/60 rounded-xl border border-stone-200 dark:border-stone-800 space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="font-bold text-xs text-stone-700 dark:text-stone-300 flex items-center gap-1.5 mb-1.5">
+                          <Mic className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Chọn Giọng Đọc VieNeu-TTS:</span>
+                        </label>
+                        <select
+                          value={vieneuVoice}
+                          onChange={(e) => setVieNeuVoice(e.target.value)}
+                          className="w-full px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-bold text-xs text-stone-900 dark:text-white"
+                        >
+                          {VIENEU_PRESET_VOICES.map((v) => (
+                            <option key={v.id} value={v.id}>
+                              {v.name} ({v.gender.toUpperCase()} - Miền {v.region})
+                            </option>
+                          ))}
+                        </select>
+                        <p className="text-[10px] text-stone-400 mt-1">
+                          {VIENEU_PRESET_VOICES.find((v) => v.id === vieneuVoice)?.description || ''}
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="font-bold text-xs text-stone-700 dark:text-stone-300 flex items-center gap-1.5 mb-1.5">
+                          <Activity className="w-3.5 h-3.5 text-blue-500" />
+                          <span>VieNeu-TTS Server Endpoint:</span>
+                        </label>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={vieneuApiUrl}
+                            onChange={(e) => setVieNeuApiUrl(e.target.value)}
+                            placeholder="http://127.0.0.1:8000/v1"
+                            className="flex-1 px-3 py-2 bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono text-xs font-bold text-stone-900 dark:text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleCheckConnection}
+                            className="px-3 py-2 bg-stone-200 hover:bg-stone-300 dark:bg-stone-700 dark:hover:bg-stone-600 rounded-xl text-xs font-bold text-stone-700 dark:text-stone-200 transition-colors whitespace-nowrap"
+                          >
+                            Kiểm Tra
+                          </button>
+                        </div>
+                        {connectionStatus && (
+                          <p className={`text-[10px] font-bold mt-1 ${connectionStatus.online ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+                            {connectionStatus.online ? '🟢 ' : '🟡 '}
+                            {connectionStatus.message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Nút Nghe Thử Âm Thanh Mẫu */}
+                <div className="flex items-center justify-between pt-1">
+                  <div className="text-xs text-stone-500 dark:text-stone-400 flex items-center gap-2">
+                    <span>Mẫu câu thử nghiệm:</span>
+                    <span className="italic text-stone-700 dark:text-stone-300">
+                      "Khách Tầng 1, Bàn 1 đặt món: Cà phê sữa, số lượng một."
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleTestVoice}
+                    className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current" />
+                    <span>Nghe Thử Giọng</span>
+                  </button>
+                </div>
+                {testSpeechStatus && (
+                  <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 animate-pulse text-right">
+                    {testSpeechStatus}
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* CHẾ ĐỘ PRODUCTION / DEMO TOGGLE */}

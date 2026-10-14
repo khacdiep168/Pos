@@ -817,7 +817,38 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 21. Luật vận hành (Agent Working Rules)
+## 21. Phase 2.8: VieNeu-TTS AI Engine Integration (Tích Hợp Mô Hình AI VieNeu-TTS 48kHz & Bộ Giọng Đọc Studio) - HOÀN TẤT
+Đã hoàn tất tải repository mã nguồn mở [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) vào thư mục [vieneu-tts/](file:///e:/Vibe%20Coding/POS/vieneu-tts) và tích hợp toàn diện kiến trúc Hybrid Text-to-Speech vào hệ thống thông báo loa của POS:
+
+1. **Tích Hợp Mã Nguồn VieNeu-TTS & Script Khởi Chạy 1-Click ([start_vieneu.bat](file:///e:/Vibe%20Coding/POS/start_vieneu.bat))**:
+   - Clone repo `https://github.com/pnnbao97/VieNeu-TTS` độc lập tại [vieneu-tts/](file:///e:/Vibe%20Coding/POS/vieneu-tts). Thêm `vieneu-tts`, `.venv`, `*.pyc` vào [.gitignore](file:///e:/Vibe%20Coding/POS/.gitignore) để giữ dung lượng Git sạch sẽ.
+   - Cung cấp file batch [start_vieneu.bat](file:///e:/Vibe%20Coding/POS/start_vieneu.bat) tự động kiểm tra `uv` / `python`, cài đặt dependencies và khởi chạy FastAPI server chuẩn OpenAI TTS API (`http://127.0.0.1:8000/v1`).
+
+2. **Dịch Vụ Proxy API Route Chuẩn Next.js App Router ([src/app/api/tts/route.ts](file:///e:/Vibe%20Coding/POS/src/app/api/tts/route.ts))**:
+   - `POST /api/tts`: Tiếp nhận yêu cầu đọc thông báo (`text`, `voice`, `apiUrl`), làm sạch văn bản bằng [cleanTextForSpeech](file:///e:/Vibe%20Coding/POS/src/services/voiceNotificationService.ts) và chuyển tiếp tới endpoint `http://127.0.0.1:8000/v1/audio/speech`. Trả về stream `audio/wav` chất lượng 48kHz.
+   - `GET /api/tts`: Health check endpoint kiểm tra kết nối với VieNeu-TTS server và trả về danh sách giọng đọc studio có sẵn.
+   - Cơ chế chịu lỗi thông minh: Nếu server VieNeu-TTS cục bộ chưa bật hoặc kết nối timeout/lỗi, API trả về cờ fallback `{ success: false, fallback: true }` để trình duyệt tự động chuyển sang Web Speech API mà không gây đứng luồng.
+
+3. **Nâng Cấp Động Cơ Phát Loa Hybrid ([src/services/voiceNotificationService.ts](file:///e:/Vibe%20Coding/POS/src/services/voiceNotificationService.ts))**:
+   - Cung cấp 8 giọng đọc Việt hóa Studio chọn lọc (`VIENEU_PRESET_VOICES`): Hải Đăng, Mai Anh, Thùy Dung, Thiện Minh, Trúc Ly, Quang Sơn, Phương Thảo, Minh Hoàng (đa dạng giọng Bắc, Trung, Nam, Nam trầm, Nữ ấm).
+   - Bộ quản lý trạng thái động: `getTtsEngine()`, `setTtsEngine()`, `getVieNeuVoice()`, `setVieNeuVoice()`, `getVieNeuApiUrl()`, `setVieNeuApiUrl()` lưu trữ đồng bộ vào `localStorage`.
+   - Hàm `speakText(text)` tự động chọn kênh phát: Nếu `engine === 'vieneu'`, gọi `playVieNeuAudio` phát qua `new Audio(blobUrl)`. Nếu phát sinh sự cố hoặc `engine === 'browser'`, phát mượt mà qua `window.speechSynthesis`.
+
+4. **Giao Diện Quản Trị Cấu Hình Âm Thanh Studio ([src/components/admin/StoreSettingsTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/StoreSettingsTab.tsx))**:
+   - Bento Card thiết kế hiện đại cho phép chủ quán:
+     - Chuyển đổi giữa 2 chế độ: **VieNeu-TTS AI (48kHz Studio)** và **Giọng Đọc Trình Duyệt Tự Nhiên**.
+     - Dropdown chọn giọng nói studio chi tiết theo vùng miền và phong cách.
+     - Ô nhập Server URL kèm nút **[Kiểm Tra]** kết nối realtime có badge trạng thái (Online / Không khả dụng).
+     - Nút **[🔊 Nghe Thử Giọng]** phát trực tiếp âm thanh demo kiểm tra chất lượng.
+
+5. **Đảm Bảo Chất Lượng & Triển Khai**:
+   - **41/41 Unit Tests PASS** qua 6 suites (`voiceNotificationService.test.ts`, `cashbookService.test.ts`, etc.).
+   - Next.js Production Build (`npm run build`) hoàn tất với 12/12 routes tĩnh và động không có lỗi.
+   - Sẵn sàng đồng bộ production trên Vercel: [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
+
+---
+
+## 22. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.

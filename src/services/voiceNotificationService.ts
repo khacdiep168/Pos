@@ -1,5 +1,24 @@
-// Smart Voice Notification Engine for Kitchen/Bar & Waiter Orders
-// Uses Web Speech API (window.speechSynthesis) with Vietnamese Voice Prioritization & Queue Management
+// Smart Voice Notification Engine with VieNeu-TTS AI (48kHz) & Web Speech API Fallback
+// Provides Studio-Grade Vietnamese Voice Cloning & Natural Announcements for Kitchen, Bar & Floor
+
+export interface VieNeuVoiceOption {
+  id: string;
+  name: string;
+  gender: 'nam' | 'nữ';
+  region: 'Bắc' | 'Trung' | 'Nam';
+  description: string;
+}
+
+export const VIENEU_PRESET_VOICES: VieNeuVoiceOption[] = [
+  { id: 'Hải Đăng', name: 'Hải Đăng', gender: 'nam', region: 'Bắc', description: 'Giọng Nam phát thanh viên, trầm ấm, truyền cảm (Mặc định)' },
+  { id: 'Mai Anh', name: 'Mai Anh', gender: 'nữ', region: 'Bắc', description: 'Giọng Nữ dịu dàng, tự nhiên, ngọt ngào' },
+  { id: 'Thùy Dung', name: 'Thùy Dung', gender: 'nữ', region: 'Nam', description: 'Giọng Nữ miền Nam thanh thoát, thân thiện' },
+  { id: 'Thiện Minh', name: 'Thiện Minh', gender: 'nam', region: 'Bắc', description: 'Giọng Nam dứt khoát, chuẩn phong cách Bếp' },
+  { id: 'Trúc Ly', name: 'Trúc Ly', gender: 'nữ', region: 'Bắc', description: 'Giọng Nữ tươi vui, thanh mảnh, nhanh nhẹn' },
+  { id: 'Quang Sơn', name: 'Quang Sơn', gender: 'nam', region: 'Trung', description: 'Giọng Nam miền Trung dõng dạc, khỏe khoắn' },
+  { id: 'Ngọc Huyền', name: 'Ngọc Huyền', gender: 'nữ', region: 'Bắc', description: 'Giọng Nữ nhẹ nhàng, lịch sự' },
+  { id: 'Ngọc Trân', name: 'Ngọc Trân', gender: 'nữ', region: 'Trung', description: 'Giọng Nữ miền Trung trong trẻo' },
+];
 
 /**
  * Helper to naturalize text for Vietnamese speech synthesis:
@@ -63,9 +82,7 @@ export function cleanTextForSpeech(text: string): string {
   });
 
   // 7. Clean punctuation & redundant spaces
-  // Remove space before punctuation (e.g. " 1 ," -> " 1,")
   cleaned = cleaned.replace(/\s+([,.:!?])/g, '$1');
-  // Collapse consecutive commas and periods
   cleaned = cleaned.replace(/,+/g, ',');
   cleaned = cleaned.replace(/,\s*,+/g, ',');
   cleaned = cleaned.replace(/\s*,\s*/g, ', ');
@@ -85,11 +102,16 @@ class VoiceNotificationService {
   private queue: string[] = [];
   private isSpeaking: boolean = false;
   private isEnabledState: boolean = true;
+  private ttsEngineState: 'vieneu' | 'browser' = 'vieneu';
+  private vieneuVoiceState: string = 'Hải Đăng';
+  private vieneuApiUrlState: string = 'http://127.0.0.1:8000/v1';
+
   private lastSpokenText: string = '';
   private lastSpokenTime: number = 0;
   private selectedVoice: SpeechSynthesisVoice | null = null;
   private listeners: Set<(enabled: boolean) => void> = new Set();
   private voicesLoaded: boolean = false;
+  private currentAudioElement: HTMLAudioElement | null = null;
 
   constructor() {
     this.init();
@@ -98,11 +120,26 @@ class VoiceNotificationService {
   private init() {
     if (typeof window === 'undefined') return;
 
-    // Load persisted state (defaults to true)
+    // Load persisted state (defaults to enabled, VieNeu-TTS engine)
     try {
-      const saved = localStorage.getItem('vibe_pos_voice_alert');
-      if (saved !== null) {
-        this.isEnabledState = saved !== 'false';
+      const savedAlert = localStorage.getItem('vibe_pos_voice_alert');
+      if (savedAlert !== null) {
+        this.isEnabledState = savedAlert !== 'false';
+      }
+
+      const savedEngine = localStorage.getItem('vibe_pos_tts_engine');
+      if (savedEngine === 'browser' || savedEngine === 'vieneu') {
+        this.ttsEngineState = savedEngine;
+      }
+
+      const savedVoice = localStorage.getItem('vibe_pos_vieneu_voice');
+      if (savedVoice) {
+        this.vieneuVoiceState = savedVoice;
+      }
+
+      const savedUrl = localStorage.getItem('vibe_pos_vieneu_api_url');
+      if (savedUrl) {
+        this.vieneuApiUrlState = savedUrl;
       }
     } catch {
       this.isEnabledState = true;
@@ -118,7 +155,6 @@ class VoiceNotificationService {
       try {
         const voices = window.speechSynthesis.getVoices();
         if (voices && voices.length > 0) {
-          // Prioritize Vietnamese voices: e.g. Google Tiếng Việt, Microsoft HoaiMy/NamMinh, Apple Linh
           const viVoice =
             voices.find((v) => v.lang === 'vi-VN' || v.lang === 'vi_VN') ||
             voices.find((v) => v.lang.toLowerCase().startsWith('vi')) ||
@@ -138,16 +174,10 @@ class VoiceNotificationService {
     }
   }
 
-  /**
-   * Check if voice notifications are currently enabled
-   */
   public isEnabled(): boolean {
     return this.isEnabledState;
   }
 
-  /**
-   * Set voice notification enabled state and persist to localStorage
-   */
   public setEnabled(enabled: boolean): void {
     this.isEnabledState = enabled;
     if (typeof window !== 'undefined') {
@@ -155,27 +185,61 @@ class VoiceNotificationService {
         localStorage.setItem('vibe_pos_voice_alert', enabled ? 'true' : 'false');
       } catch {}
 
-      if (!enabled && 'speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        this.queue = [];
-        this.isSpeaking = false;
+      if (!enabled) {
+        this.cancel();
       }
     }
     this.notifyListeners();
   }
 
-  /**
-   * Toggle voice notification on/off
-   */
   public toggle(): boolean {
     const next = !this.isEnabledState;
     this.setEnabled(next);
     return next;
   }
 
-  /**
-   * Subscribe to toggle changes for real-time header UI syncing
-   */
+  public getEngine(): 'vieneu' | 'browser' {
+    return this.ttsEngineState;
+  }
+
+  public setEngine(engine: 'vieneu' | 'browser'): void {
+    this.ttsEngineState = engine;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('vibe_pos_tts_engine', engine);
+      } catch {}
+    }
+    this.notifyListeners();
+  }
+
+  public getVieNeuVoice(): string {
+    return this.vieneuVoiceState;
+  }
+
+  public setVieNeuVoice(voice: string): void {
+    this.vieneuVoiceState = voice;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('vibe_pos_vieneu_voice', voice);
+      } catch {}
+    }
+    this.notifyListeners();
+  }
+
+  public getVieNeuApiUrl(): string {
+    return this.vieneuApiUrlState;
+  }
+
+  public setVieNeuApiUrl(url: string): void {
+    this.vieneuApiUrlState = url;
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('vibe_pos_vieneu_api_url', url);
+      } catch {}
+    }
+    this.notifyListeners();
+  }
+
   public subscribe(listener: (enabled: boolean) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
@@ -191,29 +255,40 @@ class VoiceNotificationService {
     });
   }
 
-  /**
-   * Clean string helper exposed on service instance
-   */
   public cleanText(text: string): string {
     return cleanTextForSpeech(text);
   }
 
   /**
-   * Unlock mobile browser audio autoplay policy (AudioContext & SpeechSynthesis)
-   * Must be called during or triggered by user interaction.
+   * Check connection to VieNeu-TTS API
+   */
+  public async checkVieNeuConnection(): Promise<{ online: boolean; message: string }> {
+    if (typeof window === 'undefined') return { online: false, message: 'SSR environment' };
+    try {
+      const res = await fetch(`/api/tts?apiUrl=${encodeURIComponent(this.vieneuApiUrlState)}`);
+      const data = await res.json();
+      if (data.online) {
+        return { online: true, message: `Kết nối VieNeu-TTS v3 Turbo thành công (${this.vieneuApiUrlState})` };
+      }
+      return { online: false, message: `Chưa kết nối được VieNeu-TTS tại ${this.vieneuApiUrlState}. Hệ thống sẽ dùng giọng đọc trình duyệt làm dự phòng.` };
+    } catch {
+      return { online: false, message: `Không thể kết nối tới ${this.vieneuApiUrlState}` };
+    }
+  }
+
+  /**
+   * Unlock mobile browser audio autoplay policy
    */
   public async unlockMobileAudio(): Promise<boolean> {
     if (typeof window === 'undefined') return false;
 
     try {
-      // 1. Unlock Web Audio Context
       const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioCtxClass) {
         const tempCtx = new AudioCtxClass();
         if (tempCtx.state === 'suspended') {
           await tempCtx.resume();
         }
-        // Play tiny silent buffer
         const buffer = tempCtx.createBuffer(1, 1, 22050);
         const source = tempCtx.createBufferSource();
         source.buffer = buffer;
@@ -221,7 +296,6 @@ class VoiceNotificationService {
         source.start(0);
       }
 
-      // 2. Unlock SpeechSynthesis with silent utterance
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
         const silentUtterance = new SpeechSynthesisUtterance(' ');
@@ -241,9 +315,6 @@ class VoiceNotificationService {
     }
   }
 
-  /**
-   * Check if mobile audio has already been unlocked in this session
-   */
   public isMobileAudioUnlocked(): boolean {
     if (typeof window === 'undefined') return true;
     try {
@@ -254,14 +325,12 @@ class VoiceNotificationService {
   }
 
   /**
-   * Speak a text sentence using Web Speech API with sequential queue management and deduplication.
-   * Text is automatically passed through cleanTextForSpeech to guarantee natural pronunciation.
+   * Speak a text sentence using VieNeu-TTS AI (with Web Speech API fallback)
    */
   public speakText(text: string, lang = 'vi-VN'): void {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined') return;
     if (!this.isEnabledState) return;
 
-    // Clean text automatically before queueing
     const cleaned = cleanTextForSpeech(text);
     if (!cleaned) return;
 
@@ -274,25 +343,98 @@ class VoiceNotificationService {
     this.lastSpokenText = cleaned;
     this.lastSpokenTime = now;
 
-    // Enqueue message
     this.queue.push(cleaned);
     this.processQueue(lang);
   }
 
   /**
-   * Process the speech queue sequentially to prevent voice overlap or chaos
+   * Process the speech queue sequentially
    */
-  private processQueue(lang: string) {
+  private async processQueue(lang: string) {
     if (this.isSpeaking || this.queue.length === 0) return;
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+    if (typeof window === 'undefined') return;
 
     const textToSpeak = this.queue.shift();
     if (!textToSpeak) return;
 
     this.isSpeaking = true;
 
+    // Try VieNeu-TTS first if configured
+    if (this.ttsEngineState === 'vieneu') {
+      const synthesized = await this.playVieNeuAudio(textToSpeak, lang);
+      if (synthesized) {
+        return; // Successfully played through VieNeu-TTS
+      }
+      // If VieNeu-TTS is unreachable, seamlessly fall back to browser speech
+    }
+
+    // Browser Web Speech API fallback
+    this.speakBrowser(textToSpeak, lang);
+  }
+
+  /**
+   * Synthesize & play speech via VieNeu-TTS
+   */
+  private async playVieNeuAudio(text: string, lang: string): Promise<boolean> {
     try {
-      // Re-scan for Vietnamese voice if not loaded earlier
+      const response = await fetch('/api/tts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text,
+          voice: this.vieneuVoiceState,
+          apiUrl: this.vieneuApiUrlState,
+        }),
+      });
+
+      const contentType = response.headers.get('content-type') || '';
+
+      if (response.ok && contentType.includes('audio')) {
+        const audioBlob = await response.blob();
+        const audioUrl = URL.createObjectURL(audioBlob);
+
+        return new Promise<boolean>((resolve) => {
+          const audio = new Audio(audioUrl);
+          this.currentAudioElement = audio;
+          audio.volume = 1.0;
+
+          audio.onended = () => {
+            URL.revokeObjectURL(audioUrl);
+            this.currentAudioElement = null;
+            this.isSpeaking = false;
+            setTimeout(() => this.processQueue(lang), 250);
+            resolve(true);
+          };
+
+          audio.onerror = () => {
+            URL.revokeObjectURL(audioUrl);
+            this.currentAudioElement = null;
+            resolve(false);
+          };
+
+          audio.play().catch(() => {
+            URL.revokeObjectURL(audioUrl);
+            this.currentAudioElement = null;
+            resolve(false);
+          });
+        });
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Fallback using Web Speech API (speechSynthesis)
+   */
+  private speakBrowser(textToSpeak: string, lang: string) {
+    if (!('speechSynthesis' in window)) {
+      this.isSpeaking = false;
+      return;
+    }
+
+    try {
       if (!this.selectedVoice) {
         const voices = window.speechSynthesis.getVoices();
         this.selectedVoice =
@@ -306,20 +448,19 @@ class VoiceNotificationService {
       if (this.selectedVoice) {
         utterance.voice = this.selectedVoice;
       }
-      utterance.rate = 1.05; // Natural, clear pace for busy kitchen/floor
-      utterance.pitch = 1.0;  // Natural pitch
-      utterance.volume = 1.0; // Maximum volume for phone/tablet speakers
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
 
       utterance.onend = () => {
         this.isSpeaking = false;
-        // 250ms breathing gap between multiple items in queue
         setTimeout(() => {
           this.processQueue(lang);
         }, 250);
       };
 
       utterance.onerror = (event) => {
-        console.warn('[VoiceNotificationService] Speech error:', event);
+        console.warn('[VoiceNotificationService] Browser speech error:', event);
         this.isSpeaking = false;
         setTimeout(() => {
           this.processQueue(lang);
@@ -328,18 +469,28 @@ class VoiceNotificationService {
 
       window.speechSynthesis.speak(utterance);
     } catch (err) {
-      console.warn('[VoiceNotificationService] speak error:', err);
+      console.warn('[VoiceNotificationService] Browser speak error:', err);
       this.isSpeaking = false;
     }
   }
 
   /**
-   * Cancel any pending or current speech immediately
+   * Cancel any pending speech or active audio playback
    */
   public cancel(): void {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    if (this.currentAudioElement) {
+      try {
+        this.currentAudioElement.pause();
+        this.currentAudioElement = null;
+      } catch {}
     }
+
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+
     this.queue = [];
     this.isSpeaking = false;
   }

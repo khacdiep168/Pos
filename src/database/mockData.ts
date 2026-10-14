@@ -37,6 +37,9 @@ export const initialStoreSettings: StoreSettings = {
   bank_account_name: 'VIBE TASTE RESTAURANT',
   is_demo_mode: true,
   enable_voice_alert: true,
+  tts_engine: 'vieneu',
+  vieneu_voice: 'Hải Đăng',
+  vieneu_api_url: 'http://127.0.0.1:8000/v1',
 };
 
 export const initialZones: Zone[] = [

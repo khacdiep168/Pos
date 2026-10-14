@@ -235,6 +235,9 @@ export interface StoreSettings {
   bank_account_name?: string;
   is_demo_mode?: boolean;
   enable_voice_alert?: boolean; // Bật/Tắt loa thông báo giọng nói tự động cho Bếp/Bar & Phục vụ
+  tts_engine?: 'vieneu' | 'browser'; // Động cơ phát giọng nói: VieNeu-TTS AI (48kHz) hoặc Trình duyệt
+  vieneu_voice?: string; // Giọng đọc VieNeu: 'Hải Đăng', 'Mai Anh', 'Thùy Dung', 'Thiện Minh', 'Trúc Ly', 'Quang Sơn', etc.
+  vieneu_api_url?: string; // Endpoint VieNeu-TTS API (mặc định: http://127.0.0.1:8000/v1)
 }
 
 export interface Promotion {

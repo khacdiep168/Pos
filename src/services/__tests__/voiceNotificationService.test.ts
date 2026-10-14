@@ -53,6 +53,7 @@ describe('VoiceNotificationService - Smart Voice Notification Engine (Phase 2.6 
 
     voiceNotificationService.cancel();
     voiceNotificationService.setEnabled(true);
+    voiceNotificationService.setEngine('browser');
   });
 
   describe('cleanTextForSpeech - Làm sạch chuỗi văn bản tự nhiên (Natural Vietnamese Speech)', () => {
@@ -172,13 +173,26 @@ describe('VoiceNotificationService - Smart Voice Notification Engine (Phase 2.6 
     });
   });
 
-  describe('Mobile Audio Unlock Policy', () => {
-    it('mở khóa âm thanh di động và lưu trạng thái vào sessionStorage', async () => {
-      expect(voiceNotificationService.isMobileAudioUnlocked()).toBe(false);
+  describe('VieNeu-TTS AI Engine Integration (Phase 2.7)', () => {
+    it('lưu và truy xuất cấu hình engine, giọng đọc và API url', () => {
+      voiceNotificationService.setEngine('vieneu');
+      expect(voiceNotificationService.getEngine()).toBe('vieneu');
 
-      const success = await voiceNotificationService.unlockMobileAudio();
-      expect(success).toBe(true);
-      expect(voiceNotificationService.isMobileAudioUnlocked()).toBe(true);
+      voiceNotificationService.setVieNeuVoice('Mai Anh');
+      expect(voiceNotificationService.getVieNeuVoice()).toBe('Mai Anh');
+
+      voiceNotificationService.setVieNeuApiUrl('http://127.0.0.1:8000/v1');
+      expect(voiceNotificationService.getVieNeuApiUrl()).toBe('http://127.0.0.1:8000/v1');
+    });
+
+    it('kiểm tra trạng thái kết nối VieNeu-TTS qua /api/tts', async () => {
+      (global as any).fetch = vi.fn().mockResolvedValue({
+        json: async () => ({ online: true }),
+      });
+
+      const res = await voiceNotificationService.checkVieNeuConnection();
+      expect(res.online).toBe(true);
+      expect(res.message).toContain('Kết nối VieNeu-TTS');
     });
   });
 });

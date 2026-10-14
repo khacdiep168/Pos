@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# VieNeu-TTS local AI engine & python venv
+/vieneu-tts
+/.venv
+/__pycache__
+*.pyc
