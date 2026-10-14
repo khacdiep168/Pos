@@ -20,6 +20,7 @@ import { ModifierModal } from './ModifierModal';
 import { CartSidebar } from './CartSidebar';
 import { TableSelector } from './TableSelector';
 import { playReadySound } from '@/lib/audioAlert';
+import { voiceNotificationService } from '@/services/voiceNotificationService';
 import {
   ShoppingBag,
   ChevronRight,
@@ -65,12 +66,22 @@ export const FOHView: React.FC = () => {
       refreshTablesAndZones();
     });
 
-    // Lắng nghe khi Bếp/Bar hoàn thành món -> Chuông Ting thanh thoát cho phục vụ
+    // Lắng nghe khi Bếp/Bar hoàn thành món -> Chuông Ting thanh thoát & Loa thông báo cho phục vụ
     const unsubItemReady = realtimeEngine.subscribe<{ orderId: string; item: any }>(
       'ITEM_STATUS_CHANGED',
       (payload) => {
         if (payload?.item?.item_status === 'ready') {
           playReadySound();
+
+          const order = orderService.getOrders().find((o) => o.id === payload.orderId);
+          const table = orderService.getTables().find((t) => t.id === order?.table_id || t.table_number === order?.table_number);
+          const zone = table?.zone_id ? orderService.getZones().find((z) => z.id === table.zone_id) : undefined;
+          const zoneName = zone ? zone.name : (order?.order_channel === 'takeaway' ? 'Mang Về' : order?.order_channel === 'delivery' ? 'Giao Hàng' : 'Sảnh');
+          const tableName = order?.table_number || (order?.order_channel === 'takeaway' ? 'Mang Về' : 'Giao Hàng');
+          const itemName = payload.item.menu_item_name;
+
+          const speechText = `Món ${itemName}, ${zoneName} - Bàn ${tableName} đã hoàn thành. Nhân viên hãy mang ra phục vụ cho khách.`;
+          voiceNotificationService.speakText(speechText);
         }
       }
     );

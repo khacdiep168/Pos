@@ -19,9 +19,12 @@ import {
   LogOut,
   User,
   Search,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { realtimeEngine } from '@/services/realtimeEngine';
+import { voiceNotificationService } from '@/services/voiceNotificationService';
 
 export default function Home() {
   const { user, isLoading, logout, canAccess, allowedModules, roleLabel } = useAuth();
@@ -32,6 +35,20 @@ export default function Home() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => adminService.getSettings().is_demo_mode !== false);
+  const [isVoiceAlertEnabled, setIsVoiceAlertEnabled] = useState<boolean>(() =>
+    voiceNotificationService.isEnabled()
+  );
+
+  useEffect(() => {
+    return voiceNotificationService.subscribe((enabled) => {
+      setIsVoiceAlertEnabled(enabled);
+    });
+  }, []);
+
+  const handleToggleVoiceAlert = () => {
+    const next = voiceNotificationService.toggle();
+    setIsVoiceAlertEnabled(next);
+  };
 
   // Global Keyboard Shortcut: Ctrl + K or Cmd + K for Linear Command Palette
   useEffect(() => {
@@ -221,6 +238,33 @@ export default function Home() {
 
         {/* Right Top Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Quick Voice Notification Toggle (Phase 2.6) */}
+          <button
+            onClick={handleToggleVoiceAlert}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all border active:scale-95 cursor-pointer ${
+              isVoiceAlertEnabled
+                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
+                : 'bg-stone-800 text-stone-400 border-stone-700/60 hover:text-stone-200'
+            }`}
+            title={
+              isVoiceAlertEnabled
+                ? 'Loa thông báo giọng nói: ĐANG BẬT (Bấm để tắt)'
+                : 'Loa thông báo giọng nói: ĐÃ TẮT (Bấm để bật)'
+            }
+          >
+            {isVoiceAlertEnabled ? (
+              <>
+                <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline text-emerald-400">Loa Bật</span>
+              </>
+            ) : (
+              <>
+                <VolumeX className="w-3.5 h-3.5 text-stone-400" />
+                <span className="hidden sm:inline text-stone-400">Loa Tắt</span>
+              </>
+            )}
+          </button>
+
           {/* Quick Command Palette Button (Ctrl + K) */}
           <button
             onClick={() => setIsCommandPaletteOpen(true)}
@@ -408,6 +452,23 @@ export default function Home() {
 
             {/* Drawer Footer */}
             <div className="p-3 border-t border-stone-800 bg-stone-950/40 space-y-2">
+              {/* Voice Alert Quick Toggle */}
+              <button
+                onClick={handleToggleVoiceAlert}
+                className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition-all border active:scale-95 ${
+                  isVoiceAlertEnabled
+                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                    : 'bg-stone-800 text-stone-400 border-stone-700/60'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {isVoiceAlertEnabled ? <Volume2 className="w-4 h-4 text-emerald-400" /> : <VolumeX className="w-4 h-4 text-stone-400" />}
+                  <span>Loa Giọng Nói (Bếp/Bar/Order)</span>
+                </div>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${isVoiceAlertEnabled ? 'bg-emerald-500/20 text-emerald-300' : 'bg-stone-700 text-stone-300'}`}>
+                  {isVoiceAlertEnabled ? 'BẬT' : 'TẮT'}
+                </span>
+              </button>
               {isDemoMode && (
                 <button
                   onClick={() => {

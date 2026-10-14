@@ -36,6 +36,7 @@ export const initialStoreSettings: StoreSettings = {
   bank_account_no: '0901234567',
   bank_account_name: 'VIBE TASTE RESTAURANT',
   is_demo_mode: true,
+  enable_voice_alert: true,
 };
 
 export const initialZones: Zone[] = [

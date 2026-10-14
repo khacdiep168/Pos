@@ -28,7 +28,10 @@ import {
   Calendar,
   Building2,
   UserCheck,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
+import { voiceNotificationService } from '@/services/voiceNotificationService';
 
 interface StoreSettingsTabProps {
   settings: StoreSettings;
@@ -62,6 +65,9 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
   // Production vs Demo Mode Toggle
   const [isDemoMode, setIsDemoMode] = useState<boolean>(settings.is_demo_mode !== false);
 
+  // Voice Alert Toggle (Phase 2.6)
+  const [enableVoiceAlert, setEnableVoiceAlert] = useState<boolean>(settings.enable_voice_alert !== false);
+
   const [isSuccess, setIsSuccess] = useState(false);
 
   // Danger Zone Factory Reset State
@@ -90,7 +96,10 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
       bank_account_no: bankAccountNo,
       bank_account_name: bankAccountName,
       is_demo_mode: isDemoMode,
+      enable_voice_alert: enableVoiceAlert,
     });
+
+    voiceNotificationService.setEnabled(enableVoiceAlert);
 
     onRefresh();
     setIsSuccess(true);
@@ -396,6 +405,40 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
                 />
               </div>
             </div>
+          </div>
+
+          {/* CẤU HÌNH LOA THÔNG BÁO GIỌNG NÓI (PHASE 2.6) */}
+          <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800 rounded-2xl flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Volume2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <h4 className="font-extrabold text-sm text-emerald-950 dark:text-emerald-200">
+                  Loa Thông Báo Giọng Nói Tiếng Việt: {enableVoiceAlert ? 'Đang Bật' : 'Đã Tắt'}
+                </h4>
+              </div>
+              <p className="text-[11px] text-emerald-800 dark:text-emerald-300">
+                {enableVoiceAlert
+                  ? '🔊 Tự động phát âm thanh chuông và đọc to tên món, số bàn khi có đơn mới đổ về KDS Bếp/Bar hoặc khi món ăn làm xong sẵn sàng ra món.'
+                  : '🔇 Đã tắt giọng đọc tự động. Hệ thống sẽ giữ không gian yên tĩnh cho quán.'}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const next = !enableVoiceAlert;
+                setEnableVoiceAlert(next);
+                voiceNotificationService.setEnabled(next);
+              }}
+              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shrink-0 ${
+                enableVoiceAlert
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                  : 'bg-stone-800 text-stone-200 border border-stone-700'
+              }`}
+            >
+              {enableVoiceAlert ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5 text-stone-400" />}
+              <span>{enableVoiceAlert ? 'Đang Bật Loa' : 'Đã Tắt Loa'}</span>
+            </button>
           </div>
 
           {/* CHẾ ĐỘ PRODUCTION / DEMO TOGGLE */}

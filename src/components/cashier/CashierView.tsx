@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { RestaurantTable, Order, TableStatus, Zone, WorkShift } from '@/types';
 import { orderService } from '@/services/orderService';
 import { realtimeEngine } from '@/services/realtimeEngine';
+import { playReadySound } from '@/lib/audioAlert';
+import { voiceNotificationService } from '@/services/voiceNotificationService';
 import { TableMap } from './TableMap';
 import { CheckoutPanel } from './CheckoutPanel';
 import { ShiftManagementModal } from './ShiftManagementModal';
@@ -57,11 +59,32 @@ export const CashierView: React.FC = () => {
       refreshData();
     });
 
+    // Lắng nghe khi Bếp/Bar hoàn thành món -> Chuông Ting & Giọng nói nhắc nhân viên
+    const unsubItemReady = realtimeEngine.subscribe<{ orderId: string; item: any }>(
+      'ITEM_STATUS_CHANGED',
+      (payload) => {
+        if (payload?.item?.item_status === 'ready') {
+          playReadySound();
+
+          const order = orderService.getOrders().find((o) => o.id === payload.orderId);
+          const table = orderService.getTables().find((t) => t.id === order?.table_id || t.table_number === order?.table_number);
+          const zone = table?.zone_id ? orderService.getZones().find((z) => z.id === table.zone_id) : undefined;
+          const zoneName = zone ? zone.name : (order?.order_channel === 'takeaway' ? 'Mang Về' : order?.order_channel === 'delivery' ? 'Giao Hàng' : 'Sảnh');
+          const tableName = order?.table_number || (order?.order_channel === 'takeaway' ? 'Mang Về' : 'Giao Hàng');
+          const itemName = payload.item.menu_item_name;
+
+          const speechText = `Món ${itemName}, ${zoneName} - Bàn ${tableName} đã hoàn thành. Nhân viên hãy mang ra phục vụ cho khách.`;
+          voiceNotificationService.speakText(speechText);
+        }
+      }
+    );
+
     return () => {
       unsubOrderCreated();
       unsubOrderUpdated();
       unsubTableStatus();
       unsubPaymentCompleted();
+      unsubItemReady();
     };
   }, [refreshData]);
 

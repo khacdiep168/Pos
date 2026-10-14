@@ -234,6 +234,7 @@ export interface StoreSettings {
   bank_account_no?: string;
   bank_account_name?: string;
   is_demo_mode?: boolean;
+  enable_voice_alert?: boolean; // Bật/Tắt loa thông báo giọng nói tự động cho Bếp/Bar & Phục vụ
 }
 
 export interface Promotion {

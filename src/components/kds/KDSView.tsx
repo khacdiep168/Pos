@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Order, OrderItem, StationType, ItemStatus } from '@/types';
 import { orderService } from '@/services/orderService';
 import { realtimeEngine } from '@/services/realtimeEngine';
 import { playNewOrderSound, toggleAudioMute, isAudioAlertMuted } from '@/lib/audioAlert';
+import { voiceNotificationService } from '@/services/voiceNotificationService';
 import { useAuth } from '@/context/AuthContext';
 import { KDSTicket } from './KDSTicketCard';
 import { KDSKanbanBoard } from './KDSKanbanBoard';
@@ -18,6 +19,11 @@ export const KDSView: React.FC = () => {
     if (user?.role === 'kitchen') return 'kitchen';
     return 'all';
   });
+  const selectedStationRef = useRef(selectedStation);
+  useEffect(() => {
+    selectedStationRef.current = selectedStation;
+  }, [selectedStation]);
+
   const [isMuted, setIsMuted] = useState(false);
   const [printTicket, setPrintTicket] = useState<KDSTicket | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -125,6 +131,27 @@ export const KDSView: React.FC = () => {
       // Bếp & Bar: Tiếng bíp dồn dập báo món mới
       playNewOrderSound();
 
+      // Loa thông báo giọng nói: Tự động bóc tách trạm Bếp chỉ đọc món Bếp, trạm Bar chỉ đọc món Bar
+      const currentStation = selectedStationRef.current;
+      const targetItems = newOrder.items.filter((item: any) => {
+        if (currentStation === 'all') return true;
+        return item.station === currentStation;
+      });
+
+      if (targetItems.length > 0) {
+        const table = orderService.getTables().find((t) => t.id === newOrder.table_id || t.table_number === newOrder.table_number);
+        const zone = table?.zone_id ? orderService.getZones().find((z) => z.id === table.zone_id) : undefined;
+        const zoneName = zone ? zone.name : (newOrder.order_channel === 'takeaway' ? 'Mang Về' : newOrder.order_channel === 'delivery' ? 'Giao Hàng' : 'Sảnh');
+        const tableName = newOrder.table_number || (newOrder.order_channel === 'takeaway' ? 'Mang Về' : 'Giao Hàng');
+
+        const itemDescriptions = targetItems
+          .map((i: any) => `${i.menu_item_name}, số lượng ${i.quantity}`)
+          .join('. ');
+
+        const speechText = `Khách ${zoneName} - Bàn ${tableName} đặt món: ${itemDescriptions}.`;
+        voiceNotificationService.speakText(speechText);
+      }
+
       const newTickets = breakOrderIntoTickets(newOrder);
       if (newTickets.length === 0) return;
 
@@ -229,10 +256,12 @@ export const KDSView: React.FC = () => {
   const handleToggleMute = () => {
     const nextMuted = toggleAudioMute();
     setIsMuted(nextMuted);
+    voiceNotificationService.setEnabled(!nextMuted);
   };
 
   const handleTestSound = () => {
     playNewOrderSound();
+    voiceNotificationService.speakText('Kiểm tra loa thông báo Bếp và Bar thành công!');
   };
 
   // Clear completed tickets from the board view

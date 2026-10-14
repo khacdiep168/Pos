@@ -746,7 +746,40 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 19. Luật vận hành (Agent Working Rules)
+## 19. Phase 2.6: Smart Voice Notification Engine (Hệ Thống Loa Thông Báo Giọng Nói Tự Động cho Bếp/Bar & Phục Vụ) - HOÀN TẤT
+Đã xây dựng và tích hợp thành công hệ thống loa thông báo giọng nói tiếng Việt tự động cho các phân hệ vận hành Bếp/Bar và Phục vụ:
+
+1. **Dịch Vụ Phát Giọng Nói Tiếng Việt ([voiceNotificationService.ts](file:///e:/Vibe%20Coding/POS/src/services/voiceNotificationService.ts))**:
+   - Sử dụng chuẩn trình duyệt `window.speechSynthesis` (Web Speech API) hoàn toàn không phụ thuộc thư viện ngoài (zero-dependency).
+   - **Tối ưu hóa giọng đọc Tiếng Việt**: Tự động nhận diện và ưu tiên giọng `vi-VN` / `vi` tự nhiên nhất trên thiết bị (Google Tiếng Việt trên Android/Chrome, Microsoft Hoài My/Nam Minh trên Windows, Apple Linh trên iOS/macOS). Cấu hình tốc độ `rate = 1.05`, cao độ `pitch = 1.0` truyền cảm, dứt khoát.
+   - **Cơ chế chống tràn hàng đợi (Speech Queue Management)**: Khi có nhiều món/đơn gửi xuống dồn dập, các câu nói được xếp hàng và phát tuần tự có khoảng nghỉ 250ms giữa các câu, ngăn chặn hoàn toàn hiện tượng nói đè tiếng hoặc lộn xộn.
+   - **Cơ chế chống lặp âm (Deduplication)**: Tự động lọc bỏ các câu thông báo giống nhau trong cửa sổ 2 giây.
+
+2. **Loa Thông Báo Cho Trạm Bếp & Bar ([KDSView.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSView.tsx))**:
+   - Lắng nghe sự kiện Realtime `ORDER_CREATED`.
+   - Kết hợp chuông báo động dồn dập `playNewOrderSound()` cùng giọng đọc:
+     *"Khách [Tên Khu Vực] - Bàn [Số Bàn] đặt món: [Tên Món], số lượng [X]."*
+   - **Tự động bóc tách trạm thông minh**: Trạm Bếp chỉ đọc món Bếp (`item.station === 'kitchen'`), trạm Bar chỉ đọc món Bar (`item.station === 'bar'`), trạm Tất Cả đọc toàn bộ. Sử dụng `useRef(selectedStation)` để đảm bảo luôn đọc đúng trạm ngay cả khi người dùng vừa chuyển tab.
+
+3. **Loa Thông Báo Cho Nhân Viên Phục Vụ & Thu Ngân ([FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx), [CashierView.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CashierView.tsx))**:
+   - Lắng nghe sự kiện Realtime `ITEM_STATUS_CHANGED` khi món chuyển sang trạng thái `ready`.
+   - Kết hợp chuông Ting thanh thoát `playReadySound()` cùng giọng đọc:
+     *"Món [Tên Món], [Tên Khu Vực] - Bàn [Số Bàn] đã hoàn thành. Nhân viên hãy mang ra phục vụ cho khách."*
+
+4. **Nút Bật / Tắt Nhanh Tiện Lợi (Header & Cấu Hình Cửa Hàng)**:
+   - **Nút Loa Nhanh (Volume2 / VolumeX)**: Tích hợp ngay trên thanh Header Desktop và Menu Drawer Mobile của toàn bộ hệ thống ([page.tsx](file:///e:/Vibe%20Coding/POS/src/app/page.tsx)), cho phép nhân viên bật/tắt 1-chạm khi quán cần yên tĩnh.
+   - **Cấu hình cửa hàng ([StoreSettingsTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/StoreSettingsTab.tsx))**: Thẻ thiết lập trực quan *"Loa Thông Báo Giọng Nói Tiếng Việt"* lưu trạng thái `enable_voice_alert` đồng bộ vào `StoreSettings` và `localStorage`.
+   - Nút tắt tiếng trên KDS ([KDSView.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSView.tsx)) đồng bộ tắt cả âm thanh chuông lẫn giọng đọc.
+
+5. **Kiểm Thử & Đóng Gói Deployment**:
+   - Unit Tests: Tạo mới test suite [voiceNotificationService.test.ts](file:///e:/Vibe%20Coding/POS/src/services/__tests__/voiceNotificationService.test.ts). Toàn bộ **34/34 tests PASS 100%** trên cả 6 test suites.
+   - Type Checking (`npx tsc --noEmit`): Đạt 0 lỗi TypeScript (100% clean).
+   - Next.js Production Build (`npm run build`): Biên dịch 11/11 routes thành công.
+   - Tự động deploy lên Vercel Production: [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
+
+---
+
+## 20. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
