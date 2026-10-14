@@ -154,12 +154,21 @@ export const FOHView: React.FC = () => {
     const cartItemId = `${item.id}_${modifierIds}_${notes.trim()}`;
 
     // Dynamic price based on serving channel (Dine-in / Takeaway / Delivery App)
-    const basePrice =
-      currentChannel === 'takeaway'
-        ? item.takeaway_price ?? item.price
-        : currentChannel === 'delivery'
-        ? item.delivery_price ?? item.price
-        : item.price;
+    let basePrice = item.price;
+    if (currentChannel === 'takeaway') {
+      basePrice = item.takeaway_price && item.takeaway_price > 0
+        ? item.takeaway_price
+        : item.price + (item.packaging_cost ?? 2000);
+    } else if (currentChannel === 'delivery') {
+      if (item.delivery_price && item.delivery_price > 0) {
+        basePrice = item.delivery_price;
+      } else {
+        const pkg = item.packaging_cost ?? 2000;
+        const commission = item.app_commission_rate ?? 25;
+        const grossUp = (item.price + pkg) / (1 - commission / 100);
+        basePrice = Math.round(grossUp / 1000) * 1000;
+      }
+    }
 
     const modifiersPrice = selectedModifiers.reduce((sum, m) => sum + m.price_adjustment, 0);
     const unitPrice = basePrice + modifiersPrice;
@@ -464,6 +473,7 @@ export const FOHView: React.FC = () => {
         item={activeItemForModal}
         isOpen={isModifierModalOpen}
         onClose={() => setIsModifierModalOpen(false)}
+        orderChannel={currentChannel}
         onAddToCart={handleAddToCart}
       />
     </div>

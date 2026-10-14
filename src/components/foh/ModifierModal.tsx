@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { MenuItem, MenuItemModifier } from '@/types';
+import { MenuItem, MenuItemModifier, OrderChannel } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
 import { X, Plus, Minus, Flame, Wine, Check } from 'lucide-react';
 
@@ -9,6 +9,7 @@ interface ModifierModalProps {
   item: MenuItem | null;
   isOpen: boolean;
   onClose: () => void;
+  orderChannel?: OrderChannel;
   onAddToCart: (
     item: MenuItem,
     quantity: number,
@@ -21,6 +22,7 @@ export const ModifierModal: React.FC<ModifierModalProps> = ({
   item,
   isOpen,
   onClose,
+  orderChannel = 'dine_in',
   onAddToCart,
 }) => {
   const [quantity, setQuantity] = useState(1);
@@ -89,9 +91,27 @@ export const ModifierModal: React.FC<ModifierModalProps> = ({
 
   const isSelected = (modId: string) => selectedModifiers.some((m) => m.id === modId);
 
+  // Calculate channel-aware base price
+  const channelBasePrice = useMemo(() => {
+    if (!item) return 0;
+    if (orderChannel === 'takeaway') {
+      return item.takeaway_price && item.takeaway_price > 0
+        ? item.takeaway_price
+        : item.price + (item.packaging_cost ?? 2000);
+    }
+    if (orderChannel === 'delivery') {
+      if (item.delivery_price && item.delivery_price > 0) return item.delivery_price;
+      const pkg = item.packaging_cost ?? 2000;
+      const commission = item.app_commission_rate ?? 25;
+      const grossUp = (item.price + pkg) / (1 - commission / 100);
+      return Math.round(grossUp / 1000) * 1000;
+    }
+    return item.price;
+  }, [item, orderChannel]);
+
   // Calculate unit price and total price
   const modifiersPrice = selectedModifiers.reduce((sum, m) => sum + m.price_adjustment, 0);
-  const unitPrice = item.price + modifiersPrice;
+  const unitPrice = channelBasePrice + modifiersPrice;
   const totalPrice = unitPrice * quantity;
 
   const handleConfirm = () => {

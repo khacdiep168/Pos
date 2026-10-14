@@ -20,13 +20,22 @@ export const MenuCard: React.FC<MenuCardProps> = ({
 }) => {
   const hasModifiers = item.modifiers && item.modifiers.length > 0;
 
-  // Determine active channel price
-  const activePrice =
-    orderChannel === 'takeaway'
-      ? item.takeaway_price || item.price
-      : orderChannel === 'delivery'
-      ? item.delivery_price || item.price
-      : item.price;
+  // Determine active channel price with intelligent dynamic calculation fallback
+  const activePrice = React.useMemo(() => {
+    if (orderChannel === 'takeaway') {
+      if (item.takeaway_price && item.takeaway_price > 0) return item.takeaway_price;
+      const pkg = item.packaging_cost ?? 2000;
+      return item.price + pkg;
+    }
+    if (orderChannel === 'delivery') {
+      if (item.delivery_price && item.delivery_price > 0) return item.delivery_price;
+      const pkg = item.packaging_cost ?? 2000;
+      const commission = item.app_commission_rate ?? 25;
+      const grossUp = (item.price + pkg) / (1 - commission / 100);
+      return Math.round(grossUp / 1000) * 1000;
+    }
+    return item.price;
+  }, [item, orderChannel]);
 
   const channelLabel =
     orderChannel === 'takeaway' ? 'Mang Về' : orderChannel === 'delivery' ? 'App Giao Hàng' : 'Tại Bàn';

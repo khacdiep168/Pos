@@ -131,10 +131,27 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     setIsSaved(false);
   };
 
-  // Save BOM
+  const [priceNotice, setPriceNotice] = useState<string | null>(null);
+
+  // Save BOM & sync multi-channel pricing
   const handleSaveBOM = () => {
     if (!selectedItem) return;
     inventoryService.saveRecipeBOM(selectedItem.id, draftBOM);
+
+    const calculatedTakeaway = selectedItem.takeaway_price || (selectedItem.price + packagingCost);
+    const calculatedDelivery = selectedItem.delivery_price || Math.round(((selectedItem.price + packagingCost) / 0.75) / 1000) * 1000;
+
+    const updated = menuService.updateMenuItem(selectedItem.id, {
+      packaging_cost: packagingCost,
+      takeaway_price: calculatedTakeaway,
+      delivery_price: calculatedDelivery,
+    });
+
+    if (updated) {
+      setSelectedItem(updated);
+      setMenuItems(menuService.getMenuItems());
+    }
+
     onRefresh();
     setIsSaved(true);
     setTimeout(() => setIsSaved(false), 2500);
@@ -159,6 +176,8 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     if (updated) {
       setSelectedItem(updated);
       setMenuItems(menuService.getMenuItems());
+      setPriceNotice('Đã áp dụng bảng giá 3 kênh thành công!');
+      setTimeout(() => setPriceNotice(null), 3000);
     }
   };
 
@@ -172,6 +191,9 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
     if (updated) {
       setSelectedItem(updated);
       setMenuItems(menuService.getMenuItems());
+      const channelLabel = channel === 'takeaway' ? 'Mang Về' : channel === 'delivery' ? 'App Giao Hàng' : 'Tại Bàn';
+      setPriceNotice(`Đã áp dụng giá ${channelLabel} (${formatCurrencyVND(price)}) thành công!`);
+      setTimeout(() => setPriceNotice(null), 3000);
     }
   };
 
@@ -511,16 +533,24 @@ export const RecipeBOMTab: React.FC<RecipeBOMTabProps> = ({
 
         {/* Footer Save Button */}
         <div className="pt-4 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between mt-4">
-          <span className="text-xs text-stone-400">
-            {isSaved ? (
-              <span className="text-emerald-500 font-bold flex items-center gap-1">
+          <div className="flex flex-col gap-1">
+            {priceNotice && (
+              <span className="text-xs text-emerald-500 font-extrabold flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
-                Đã lưu định mức thành công!
+                {priceNotice}
               </span>
-            ) : (
-              'Thay đổi sẽ áp dụng ngay vào luồng trừ kho tự động'
             )}
-          </span>
+            <span className="text-xs text-stone-400">
+              {isSaved ? (
+                <span className="text-emerald-500 font-bold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  Đã lưu định mức thành công!
+                </span>
+              ) : (
+                'Thay đổi sẽ áp dụng ngay vào luồng trừ kho tự động'
+              )}
+            </span>
+          </div>
 
           <button
             onClick={handleSaveBOM}
