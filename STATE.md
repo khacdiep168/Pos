@@ -594,10 +594,37 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 15. Luật vận hành (Agent Working Rules)
+## 15. Phase 2.4: Sửa Triệt Để Lỗi Crash Màn Hình KDS Khi Đăng Nhập Bar ("This page couldn't load") - HOÀN TẤT
+1. **Phân Tích Nguyên Nhân Gốc (Root Cause Analysis)**:
+   - Khi tài khoản Pha Chế (`bartender`, role: `bar`) đăng nhập, quyền hạn bị giới hạn ở phân hệ `kds`.
+   - Khi `orderService.syncFromSupabase()` hoàn tất tải dữ liệu từ Cloud, hệ thống phát tín hiệu `realtimeEngine.emit('ORDER_UPDATED', { type: 'SUPABASE_SYNC_COMPLETED' })`.
+   - Trong [KDSView.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSView.tsx), hàm lắng nghe sự kiện `ORDER_UPDATED` đã truyền thẳng payload này vào `breakOrderIntoTickets`. Do payload là tín hiệu hệ thống `{ type: ... }` chứ không phải một đơn hàng có mảng `items`, hàm gọi `order.items.filter(...)` dẫn tới lỗi JavaScript: `TypeError: Cannot read properties of undefined (reading 'filter')`.
+   - Ngoại lệ chưa được bắt (uncaught exception) trong React Client Component kích hoạt Error Boundary mặc định của Next.js/Vercel: *"This page couldn't load. Reload to try again, or go back"*.
+
+2. **Các Biện Pháp Khắc Phục Triệt Để**:
+   - **Bảo Vệ Đơn Hàng & Món Ăn Trong KDS ([KDSView.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSView.tsx))**:
+     - Thêm kiểm tra nghiêm ngặt `if (!order || !order.id || !Array.isArray(order.items)) return stationTickets;`.
+     - Phân loại sự kiện Realtime: Nếu payload `ORDER_UPDATED` là tín hiệu hệ thống hoặc thiếu `items`, tự động gọi `refreshTickets()` để tải lại danh sách vé từ kho đơn mới nhất thay vì cố gắng phân tách một payload rỗng.
+     - Tự động nhận diện vai trò: Khi nhân viên `bar` đăng nhập, KDS mặc định chọn ngay tab trạm "Bar" (tương tự với `kitchen`).
+   - **Chống Lỗi Render Ban Đầu ([page.tsx](file:///e:/Vibe%20Coding/POS/src/app/page.tsx))**:
+     - Tính toán `effectiveTab` ngay trong lần render đầu tiên dựa trên quyền hạn `allowedModules`. Người dùng `bar` hoặc `kitchen` sẽ không bao giờ kích hoạt render tạm thời màn hình `FOHView` trước khi `useEffect` chuyển tab.
+   - **An Toàn Dữ Liệu Thời Gian ([KDSTicketCard.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSTicketCard.tsx))**:
+     - Bọc kiểm tra `isNaN(new Date(ticket.createdAt).getTime())` cho bộ đếm thời gian và tooltip `toLocaleTimeString` để không bao giờ quăng lỗi `Invalid time value`.
+   - **Khởi Tạo Mảng An Toàn ([orderService.ts](file:///e:/Vibe%20Coding/POS/src/services/orderService.ts))**:
+     - Bổ sung `if (!Array.isArray(order.items)) order.items = [];` trong `updateItemStatus` và `updateStationItemsStatus`.
+
+3. **Kiểm Thử & Đóng Gói Deployment**:
+   - Vitest: Đạt 19/19 tests PASS (100%), bổ sung test case chuyên biệt cho tài khoản `bartender`.
+   - Next.js Production Build: 11/11 routes tĩnh và động biên dịch thành công 100%.
+   - Đã push commit `a5792c9` lên nhánh `main` tại GitHub repository `khacdiep168/Pos` để Vercel tự động build và triển khai live.
+
+---
+
+## 16. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
+
 
 
 
