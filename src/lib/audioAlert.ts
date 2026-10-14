@@ -25,6 +25,14 @@ export function initAudioContext(): AudioContext | null {
   return audioCtx;
 }
 
+export function unlockAudioContext(): AudioContext | null {
+  const ctx = initAudioContext();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+  }
+  return ctx;
+}
+
 function getAudioContext(): AudioContext | null {
   return initAudioContext();
 }

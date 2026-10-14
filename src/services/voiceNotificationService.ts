@@ -1,6 +1,86 @@
 // Smart Voice Notification Engine for Kitchen/Bar & Waiter Orders
 // Uses Web Speech API (window.speechSynthesis) with Vietnamese Voice Prioritization & Queue Management
 
+/**
+ * Helper to naturalize text for Vietnamese speech synthesis:
+ * - Strips tech IDs (e.g. #ORD-123, ORD-..., tbl-..., item-...)
+ * - Replaces hyphens/dashes with natural comma pauses (avoiding TTS reading "gạch nối" or "trừ")
+ * - Removes brackets, hashes, technical symbols
+ * - Cleans duplicate table prefixes (e.g. "Bàn Bàn 01" -> "Bàn 1")
+ * - Converts leading zero table numbers (e.g. "Bàn 01" -> "Bàn 1")
+ * - Naturalizes small quantities ("số lượng 1" -> "số lượng một", "số lượng 2" -> "số lượng hai", etc.)
+ */
+export function cleanTextForSpeech(text: string): string {
+  if (!text) return '';
+
+  let cleaned = text;
+
+  // 1. Remove technical identifiers like #ORD-1234, ORD-99, item-cafe-da, tbl-01
+  cleaned = cleaned.replace(/#?[a-zA-Z0-9_\-]+(?:-[a-zA-Z0-9_\-]+)+/g, (match) => {
+    // If it looks like a tech ID (starts with ord, tbl, item, zone, pos, cat, usr, shift, etc.)
+    if (/^(#?)(ord|tbl|item|zone|pos|cat|usr|shift|vnd)/i.test(match)) {
+      return '';
+    }
+    return match;
+  });
+
+  // Remove standalone hashes and IDs: #ORD-123, #123, #ABC
+  cleaned = cleaned.replace(/#[a-zA-Z0-9_\-]+/g, '');
+
+  // 2. Remove brackets and parentheses but keep inside text with gentle comma pauses
+  cleaned = cleaned.replace(/\[([^\]]+)\]/g, ', $1, ');
+  cleaned = cleaned.replace(/\(([^)]+)\)/g, ', $1, ');
+
+  // 3. Replace hyphens, dashes, slashes, underscores with commas/spaces for natural breathing pause
+  cleaned = cleaned.replace(/[-–—]/g, ', ');
+  cleaned = cleaned.replace(/[/\\_#@*~^|]/g, ' ');
+
+  // 4. Fix duplicated prefixes (e.g. "Bàn Bàn 01" -> "Bàn 01")
+  cleaned = cleaned.replace(/\bBàn\s+Bàn\b/gi, 'Bàn');
+
+  // 5. Convert leading zero table numbers: "Bàn 01" -> "Bàn 1", "Bàn 02" -> "Bàn 2"
+  cleaned = cleaned.replace(/\bBàn\s+0([1-9])\b/gi, 'Bàn $1');
+
+  // 6. Naturalize Vietnamese numbers for quantities: "số lượng 1" -> "số lượng một"
+  const numberWords: Record<string, string> = {
+    '1': 'một',
+    '2': 'hai',
+    '3': 'ba',
+    '4': 'bốn',
+    '5': 'năm',
+    '6': 'sáu',
+    '7': 'bảy',
+    '8': 'tám',
+    '9': 'chín',
+    '10': 'mười',
+  };
+
+  cleaned = cleaned.replace(/\bsố lượng\s+(\d+)\b/gi, (match, num) => {
+    if (numberWords[num]) {
+      return `số lượng ${numberWords[num]}`;
+    }
+    return match;
+  });
+
+  // 7. Clean punctuation & redundant spaces
+  // Remove space before punctuation (e.g. " 1 ," -> " 1,")
+  cleaned = cleaned.replace(/\s+([,.:!?])/g, '$1');
+  // Collapse consecutive commas and periods
+  cleaned = cleaned.replace(/,+/g, ',');
+  cleaned = cleaned.replace(/,\s*,+/g, ',');
+  cleaned = cleaned.replace(/\s*,\s*/g, ', ');
+  cleaned = cleaned.replace(/,\s*\./g, '.');
+  cleaned = cleaned.replace(/\.\s*,/g, '.');
+  cleaned = cleaned.replace(/\s+/g, ' ');
+  cleaned = cleaned.replace(/^[\s,.]+/, '');
+  cleaned = cleaned.trim();
+  if (cleaned && !/[.!?]$/.test(cleaned)) {
+    cleaned += '.';
+  }
+
+  return cleaned;
+}
+
 class VoiceNotificationService {
   private queue: string[] = [];
   private isSpeaking: boolean = false;
@@ -112,26 +192,90 @@ class VoiceNotificationService {
   }
 
   /**
-   * Speak a text sentence using Web Speech API with sequential queue management and deduplication
+   * Clean string helper exposed on service instance
+   */
+  public cleanText(text: string): string {
+    return cleanTextForSpeech(text);
+  }
+
+  /**
+   * Unlock mobile browser audio autoplay policy (AudioContext & SpeechSynthesis)
+   * Must be called during or triggered by user interaction.
+   */
+  public async unlockMobileAudio(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+
+    try {
+      // 1. Unlock Web Audio Context
+      const AudioCtxClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioCtxClass) {
+        const tempCtx = new AudioCtxClass();
+        if (tempCtx.state === 'suspended') {
+          await tempCtx.resume();
+        }
+        // Play tiny silent buffer
+        const buffer = tempCtx.createBuffer(1, 1, 22050);
+        const source = tempCtx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(tempCtx.destination);
+        source.start(0);
+      }
+
+      // 2. Unlock SpeechSynthesis with silent utterance
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const silentUtterance = new SpeechSynthesisUtterance(' ');
+        silentUtterance.volume = 0.01;
+        silentUtterance.rate = 2;
+        window.speechSynthesis.speak(silentUtterance);
+      }
+
+      try {
+        sessionStorage.setItem('vibe_pos_mobile_audio_unlocked', 'true');
+      } catch {}
+
+      return true;
+    } catch (err) {
+      console.warn('[VoiceNotificationService] unlockMobileAudio error:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Check if mobile audio has already been unlocked in this session
+   */
+  public isMobileAudioUnlocked(): boolean {
+    if (typeof window === 'undefined') return true;
+    try {
+      return sessionStorage.getItem('vibe_pos_mobile_audio_unlocked') === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Speak a text sentence using Web Speech API with sequential queue management and deduplication.
+   * Text is automatically passed through cleanTextForSpeech to guarantee natural pronunciation.
    */
   public speakText(text: string, lang = 'vi-VN'): void {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     if (!this.isEnabledState) return;
 
-    const trimmed = text.trim();
-    if (!trimmed) return;
+    // Clean text automatically before queueing
+    const cleaned = cleanTextForSpeech(text);
+    if (!cleaned) return;
 
     // Deduplication check: ignore identical text within 2 seconds
     const now = Date.now();
-    if (trimmed === this.lastSpokenText && now - this.lastSpokenTime < 2000) {
+    if (cleaned === this.lastSpokenText && now - this.lastSpokenTime < 2000) {
       return;
     }
 
-    this.lastSpokenText = trimmed;
+    this.lastSpokenText = cleaned;
     this.lastSpokenTime = now;
 
     // Enqueue message
-    this.queue.push(trimmed);
+    this.queue.push(cleaned);
     this.processQueue(lang);
   }
 
@@ -162,8 +306,9 @@ class VoiceNotificationService {
       if (this.selectedVoice) {
         utterance.voice = this.selectedVoice;
       }
-      utterance.rate = 1.05; // Slightly brisk, clear pace for busy kitchen/floor
-      utterance.pitch = 1.0; // Natural pitch
+      utterance.rate = 1.05; // Natural, clear pace for busy kitchen/floor
+      utterance.pitch = 1.0;  // Natural pitch
+      utterance.volume = 1.0; // Maximum volume for phone/tablet speakers
 
       utterance.onend = () => {
         this.isSpeaking = false;

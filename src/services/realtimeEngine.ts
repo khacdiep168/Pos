@@ -25,10 +25,12 @@ class RealtimeEngine {
   private broadcastChannel: BroadcastChannel | null = null;
   private supabaseChannel: RealtimeChannel | null = null;
   private isConnected = false;
+  private reconnectTimer: any = null;
 
   constructor() {
     this.initLocalBroadcast();
     this.initSupabaseRealtime();
+    this.initMobileLifecycleListeners();
   }
 
   /**
@@ -50,10 +52,16 @@ class RealtimeEngine {
   /**
    * 2. Initialize cross-device room 'pos-channel' via Supabase Realtime broadcast
    */
-  private initSupabaseRealtime() {
+  public initSupabaseRealtime() {
     if (!supabase) return;
 
     try {
+      if (this.supabaseChannel) {
+        try {
+          supabase.removeChannel(this.supabaseChannel);
+        } catch {}
+      }
+
       this.supabaseChannel = supabase.channel('pos-channel', {
         config: {
           broadcast: { self: false }, // Do not echo back to self
@@ -79,15 +87,59 @@ class RealtimeEngine {
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') {
             this.isConnected = true;
+            if (this.reconnectTimer) {
+              clearTimeout(this.reconnectTimer);
+              this.reconnectTimer = null;
+            }
             console.log('[RealtimeEngine] Connected to Supabase Realtime room: pos-channel (Cross-device sync ACTIVE)');
-          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             this.isConnected = false;
             console.warn('[RealtimeEngine] Supabase Realtime status:', status);
+            this.scheduleReconnect();
           }
         });
     } catch (err) {
       console.warn('[RealtimeEngine] Could not initialize Supabase Realtime channel:', err);
+      this.scheduleReconnect();
     }
+  }
+
+  /**
+   * Auto-reconnect when device screen turns on or network recovers
+   */
+  private initMobileLifecycleListeners() {
+    if (typeof window === 'undefined') return;
+
+    // When phone screen unlocks or user switches back to browser tab
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && !this.isConnected) {
+        console.log('[RealtimeEngine] Tab resumed visible on mobile, reconnecting Realtime...');
+        this.reconnect();
+      }
+    });
+
+    // When network reconnects (e.g. WiFi reconnections in kitchen)
+    window.addEventListener('online', () => {
+      console.log('[RealtimeEngine] Network online event detected, reconnecting Realtime...');
+      this.reconnect();
+    });
+  }
+
+  private scheduleReconnect() {
+    if (typeof window === 'undefined') return;
+    if (this.reconnectTimer) return;
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      if (!this.isConnected) {
+        console.log('[RealtimeEngine] Attempting automatic reconnection to pos-channel...');
+        this.initSupabaseRealtime();
+      }
+    }, 3000);
+  }
+
+  public reconnect(): void {
+    this.initSupabaseRealtime();
   }
 
   /**

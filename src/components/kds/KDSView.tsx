@@ -10,6 +10,7 @@ import { useAuth } from '@/context/AuthContext';
 import { KDSTicket } from './KDSTicketCard';
 import { KDSKanbanBoard } from './KDSKanbanBoard';
 import { KitchenReceiptModal } from './KitchenReceiptModal';
+import { MobileAudioUnlockBanner } from '@/components/ui/MobileAudioUnlockBanner';
 
 export const KDSView: React.FC = () => {
   const { user } = useAuth();
@@ -142,13 +143,14 @@ export const KDSView: React.FC = () => {
         const table = orderService.getTables().find((t) => t.id === newOrder.table_id || t.table_number === newOrder.table_number);
         const zone = table?.zone_id ? orderService.getZones().find((z) => z.id === table.zone_id) : undefined;
         const zoneName = zone ? zone.name : (newOrder.order_channel === 'takeaway' ? 'Mang Về' : newOrder.order_channel === 'delivery' ? 'Giao Hàng' : 'Sảnh');
-        const tableName = newOrder.table_number || (newOrder.order_channel === 'takeaway' ? 'Mang Về' : 'Giao Hàng');
+        const rawTable = newOrder.table_number || (newOrder.order_channel === 'takeaway' ? 'Mang Về' : 'Giao Hàng');
+        const tableLabel = rawTable.toLowerCase().startsWith('bàn') ? rawTable : `Bàn ${rawTable}`;
 
         const itemDescriptions = targetItems
           .map((i: any) => `${i.menu_item_name}, số lượng ${i.quantity}`)
           .join('. ');
 
-        const speechText = `Khách ${zoneName} - Bàn ${tableName} đặt món: ${itemDescriptions}.`;
+        const speechText = `Khách ${zoneName}, ${tableLabel} đặt món: ${itemDescriptions}.`;
         voiceNotificationService.speakText(speechText);
       }
 
@@ -291,6 +293,9 @@ export const KDSView: React.FC = () => {
         ticket={printTicket}
         autoPrint={true}
       />
+
+      {/* Mobile Audio Autoplay Policy Unlock Banner */}
+      <MobileAudioUnlockBanner moduleName="Bếp & Bar (KDS)" />
     </div>
   );
 };

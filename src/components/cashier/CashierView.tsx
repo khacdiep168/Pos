@@ -70,10 +70,11 @@ export const CashierView: React.FC = () => {
           const table = orderService.getTables().find((t) => t.id === order?.table_id || t.table_number === order?.table_number);
           const zone = table?.zone_id ? orderService.getZones().find((z) => z.id === table.zone_id) : undefined;
           const zoneName = zone ? zone.name : (order?.order_channel === 'takeaway' ? 'Mang Về' : order?.order_channel === 'delivery' ? 'Giao Hàng' : 'Sảnh');
-          const tableName = order?.table_number || (order?.order_channel === 'takeaway' ? 'Mang Về' : 'Giao Hàng');
+          const rawTable = order?.table_number || (order?.order_channel === 'takeaway' ? 'Mang Về' : 'Giao Hàng');
+          const tableLabel = rawTable.toLowerCase().startsWith('bàn') ? rawTable : `Bàn ${rawTable}`;
           const itemName = payload.item.menu_item_name;
 
-          const speechText = `Món ${itemName}, ${zoneName} - Bàn ${tableName} đã hoàn thành. Nhân viên hãy mang ra phục vụ cho khách.`;
+          const speechText = `Món ${itemName}, ${zoneName}, ${tableLabel} đã hoàn thành. Nhân viên hãy mang ra phục vụ cho khách.`;
           voiceNotificationService.speakText(speechText);
         }
       }

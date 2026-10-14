@@ -790,7 +790,34 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 20. Luật vận hành (Agent Working Rules)
+## 20. Phase 2.7: Natural Voice & Mobile Audio Fix (Khắc Phục Triệt Để Lỗi Giọng Đọc Robot & Mở Khóa Loa Điện Thoại) - HOÀN TẤT
+Đã triển khai bộ giải pháp tối ưu hóa giọng đọc tiếng Việt tự nhiên và vượt qua rào cản chính sách tự động phát âm thanh (Audio Autoplay Policy) trên thiết bị di động:
+
+1. **Làm Sạch Chuỗi Văn Bản Trước Khi Đọc ([cleanTextForSpeech in voiceNotificationService.ts](file:///e:/Vibe%20Coding/POS/src/services/voiceNotificationService.ts))**:
+   - **Xóa mã kỹ thuật & ký tự thừa**: Tự động loại bỏ hoàn toàn các mã định danh kỹ thuật dạng `#ORD-1234`, `tbl-xxx`, `item-xxx`, dấu `#`, dấu ngoặc `[...]`, `(...)`.
+   - **Chuyển đổi dấu gạch ngang thành dấu phẩy**: Thay thế `-` thành `, ` tạo nhịp ngắt nghỉ tự nhiên, tránh hiện tượng TTS đọc thành "dấu gạch nối" hoặc "trừ".
+   - **Khắc phục lỗi lặp tên bàn**: Lọc bỏ lặp từ `"Bàn Bàn 01"` thành `"Bàn 1"`, chuyển đổi số bàn có số 0 đứng đầu (`"Bàn 01"` -> `"Bàn 1"`).
+   - **Việt hóa số lượng món**: Tự động dịch số lượng trong câu thành từ ngữ tiếng Việt tự nhiên (`"số lượng 1"` -> `"số lượng một"`, `"số lượng 2"` -> `"số lượng hai"`), giúp giọng đọc mạch lạc, không đánh vần từng ký tự rời rạc.
+
+2. **Mở Khóa Loa Thông Báo Trên Điện Thoại & Máy Tính Bảng ([MobileAudioUnlockBanner.tsx](file:///e:/Vibe%20Coding/POS/src/components/ui/MobileAudioUnlockBanner.tsx))**:
+   - **Thanh thông báo nổi bật**: Hiển thị nút bấm `"🔊 Bật loa"` khi phát hiện `AudioContext` hoặc `SpeechSynthesis` đang bị trình duyệt di động (Safari iOS, Chrome Android) khóa quyền phát tự động.
+   - **Kích hoạt 1-chạm & Chạm bất kỳ (Passive Unlock)**:
+     - Khi nhân viên chạm vào nút `"🔊 Bật loa"`, hệ thống kích hoạt đồng thời `AudioContext.resume()`, phát micro-pulse im lặng và `speechSynthesis.speak(new SpeechSynthesisUtterance(' '))` để mở khóa vĩnh viễn trong phiên làm việc.
+     - Lắng nghe sự kiện `touchstart` / `click` toàn cục: Bất kỳ thao tác chạm nào trên màn hình đều tự động mở khóa quyền phát âm thanh ngầm.
+     - Lưu trạng thái vào `sessionStorage` để không làm phiền nhân viên trong suốt ca làm việc.
+
+3. **Tối Ưu Hóa Realtime & Âm Lượng Cho Trạm Bếp/Bar ([realtimeEngine.ts](file:///e:/Vibe%20Coding/POS/src/services/realtimeEngine.ts), [KDSView.tsx](file:///e:/Vibe%20Coding/POS/src/components/kds/KDSView.tsx), [FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx))**:
+   - Thiết lập `utterance.volume = 1.0` (âm lượng cực đại) để đảm bảo loa điện thoại/tablet trong môi trường bếp ồn ào vẫn nghe rõ.
+   - **Cơ chế tự động kết nối lại trên di động (Lifecycle Listeners)**: Bổ sung lắng nghe sự kiện `visibilitychange` (khi điện thoại bật sáng màn hình hoặc chuyển tab) và `online` (khi WiFi quán chập chờn kết nối lại), tự động tái kích hoạt kênh `pos-channel` để không bỏ sót bất kỳ order nào.
+
+4. **Kiểm Thử & Đóng Gói Deployment**:
+   - Unit Tests: Cập nhật [voiceNotificationService.test.ts](file:///e:/Vibe%20Coding/POS/src/services/__tests__/voiceNotificationService.test.ts) với 11 test cases bao quát mọi kịch bản làm sạch văn bản, mở khóa âm thanh và chống đè tiếng. Toàn bộ **40/40 tests PASS 100%**.
+   - Next.js Production Build (`npm run build`): Đạt 0 lỗi TypeScript, 11/11 routes tĩnh và động biên dịch thành công.
+   - Sẵn sàng tự động deploy lên Vercel Production: [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
+
+---
+
+## 21. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
