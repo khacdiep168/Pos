@@ -15,6 +15,7 @@ import {
   Order,
   Customer,
   SupplierDebtTransaction,
+  CashbookTransaction,
 } from '@/types';
 
 export const initialStoreSettings: StoreSettings = {
@@ -1029,6 +1030,64 @@ export const initialUsers: UserAccount[] = [
     role: 'waiter',
     is_active: true,
     avatar_url: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=100&q=80',
+  },
+];
+
+export const initialManualCashbookTransactions: CashbookTransaction[] = [
+  {
+    id: 'cb-init-1',
+    code: 'PC-202610-001',
+    type: 'out',
+    fund_type: 'bank',
+    category: 'rent',
+    amount: 15000000,
+    is_tax_valid: true,
+    invoice_ref: 'HD-MB-10/2026',
+    description: 'Thanh toán tiền thuê mặt bằng kinh doanh Tháng 10/2026',
+    created_by: 'Nguyễn Quản Trị',
+    created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+    is_auto: false,
+  },
+  {
+    id: 'cb-init-2',
+    code: 'PC-202610-002',
+    type: 'out',
+    fund_type: 'bank',
+    category: 'utilities',
+    amount: 3250000,
+    is_tax_valid: true,
+    invoice_ref: 'EVN-HCM-882190',
+    description: 'Tiền điện & Nước sinh hoạt quán Tháng 10/2026',
+    created_by: 'Nguyễn Quản Trị',
+    created_at: new Date(Date.now() - 6 * 86400000).toISOString(),
+    is_auto: false,
+  },
+  {
+    id: 'cb-init-3',
+    code: 'PC-202610-003',
+    type: 'out',
+    fund_type: 'cash',
+    category: 'daily_supplies',
+    amount: 450000,
+    is_tax_valid: false,
+    description: 'Mua đá bi & đồ dùng phụ trợ quầy bar',
+    created_by: 'Trần Thị Mai (Thu Ngân)',
+    created_at: new Date(Date.now() - 2 * 86400000).toISOString(),
+    is_auto: false,
+  },
+  {
+    id: 'cb-init-4',
+    code: 'PC-202610-004',
+    type: 'out',
+    fund_type: 'bank',
+    category: 'marketing',
+    amount: 1200000,
+    is_tax_valid: true,
+    invoice_ref: 'INV-GRAB-09341',
+    description: 'Phí kích hoạt gian hàng & chạy quảng cáo App GrabFood',
+    created_by: 'Nguyễn Quản Trị',
+    created_at: new Date(Date.now() - 1 * 86400000).toISOString(),
+    is_auto: false,
   },
 ];
 

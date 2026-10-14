@@ -69,7 +69,7 @@ export interface CartItem {
 export type OrderStatus = 'pending' | 'cooking' | 'ready' | 'completed' | 'cancelled';
 export type ItemStatus = 'pending' | 'cooking' | 'ready' | 'served' | 'cancelled';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
-export type PaymentMethod = 'cash' | 'transfer_qr' | 'e_wallet' | 'card';
+export type PaymentMethod = 'cash' | 'transfer_qr' | 'e_wallet' | 'card' | 'vietqr';
 export type OrderChannel = 'dine_in' | 'takeaway' | 'delivery';
 export type DeliveryPlatform = 'grabfood' | 'shopeefood' | 'befood';
 
@@ -104,6 +104,8 @@ export interface Order {
   customer_id?: string;
   customer_name?: string;
   customer_phone?: string;
+  cancellation_reason?: string;
+  cancelled_by?: string;
   notes?: string;
   items: OrderItem[];
   created_at: string;
@@ -281,5 +283,64 @@ export interface WorkShift {
   difference_cash?: number; // Chênh lệch thừa / thiếu
   status: 'open' | 'closed';
   notes?: string;
+}
+
+// ==========================================
+// Phase 2.4: Smart Cashbook & Tax Declaration (NĐ 254/2026 & TT 91/2026)
+// ==========================================
+export type CashbookCategory =
+  | 'sales'
+  | 'supplier_payment'
+  | 'rent'
+  | 'utilities'
+  | 'salary'
+  | 'daily_supplies'
+  | 'marketing'
+  | 'tax'
+  | 'other';
+
+export type CashbookType = 'in' | 'out';
+export type CashbookFundType = 'cash' | 'bank';
+
+export interface CashbookTransaction {
+  id: string;
+  code: string; // PT-xxxx cho Phiếu Thu, PC-xxxx cho Phiếu Chi
+  type: CashbookType;
+  fund_type: CashbookFundType;
+  category: CashbookCategory;
+  amount: number;
+  is_tax_valid: boolean; // Chi phí có hóa đơn/chứng từ hợp lệ theo Thông tư 91/2026/TT-BTC
+  invoice_ref?: string; // Số hóa đơn / chứng từ kèm theo
+  description: string;
+  reference_id?: string;
+  created_by?: string;
+  created_at: string;
+  is_auto: boolean; // Tự động sinh từ đơn hàng / trả NCC
+}
+
+export type TaxRegimeMethod = 'revenue_percentage' | 'deduction_method';
+
+export interface TaxConfiguration {
+  method: TaxRegimeMethod;
+  vatRatePercent: number; // Mặc định 3% đối với HKD F&B, hoặc 8%/10% đối với DN
+  personalIncomeTaxRatePercent: number; // Mặc định 1.5% đối với HKD F&B
+  annualRevenueThreshold: number; // Ngưỡng doanh thu bắt buộc HĐĐT máy tính tiền theo NĐ 254 (1 tỷ đ)
+}
+
+export interface TaxCalculationSummary {
+  periodLabel: string;
+  totalGrossRevenue: number;
+  cancelledRevenue: number;
+  netTaxableRevenue: number; // Chỉ tiêu [28]
+  vatTaxAmount: number; // Chỉ tiêu [29]
+  pitTaxableRevenue: number; // Chỉ tiêu [30]
+  pitTaxAmount: number; // Chỉ tiêu [31]
+  totalTaxPayable: number;
+  totalCOGS: number;
+  validOperatingExpenses: number; // Chi phí hợp lệ khấu trừ
+  invalidOperatingExpenses: number;
+  totalExpenses: number;
+  netProfit: number;
+  cancelledOrdersCount: number;
 }
 

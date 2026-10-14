@@ -16,6 +16,8 @@ import { InvoiceHistoryTab } from './InvoiceHistoryTab';
 import { SupplierTab } from './SupplierTab';
 import { CustomerTab } from './CustomerTab';
 import { ReportTab } from './ReportTab';
+import { CashbookTab } from './CashbookTab';
+import { TaxDeclarationTab } from './TaxDeclarationTab';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -33,11 +35,15 @@ import {
   Boxes,
   ArrowLeft,
   ChevronRight,
+  Wallet,
+  Scale,
 } from 'lucide-react';
 
 export const AdminView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<
     | 'dashboard'
+    | 'cashbook'
+    | 'tax'
     | 'invoices'
     | 'suppliers'
     | 'customers'
@@ -107,6 +113,30 @@ export const AdminView: React.FC = () => {
             >
               <LayoutDashboard className="w-4 h-4" />
               <span>Tổng Quan (Dashboard)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('cashbook')}
+              className={`w-full flex items-center gap-2.5 p-3 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'cashbook'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'
+              }`}
+            >
+              <Wallet className="w-4 h-4" />
+              <span>Sổ Quỹ (Thu / Chi)</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('tax')}
+              className={`w-full flex items-center gap-2.5 p-3 rounded-xl text-xs font-bold transition-all ${
+                activeTab === 'tax'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'text-stone-600 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'
+              }`}
+            >
+              <Scale className="w-4 h-4" />
+              <span>Thuế & Kế Toán (TT 91)</span>
             </button>
 
             <button
@@ -251,6 +281,8 @@ export const AdminView: React.FC = () => {
           )}
           <h1 className="text-sm font-extrabold text-stone-900 dark:text-white truncate">
             {activeTab === 'dashboard' && 'Tổng Quan'}
+            {activeTab === 'cashbook' && 'Sổ Quỹ (Thu / Chi)'}
+            {activeTab === 'tax' && 'Thuế & Kế Toán (TT 91)'}
             {activeTab === 'invoices' && 'Hóa Đơn'}
             {activeTab === 'menu' && 'Thực Đơn'}
             {activeTab === 'reports' && 'Báo Cáo'}
@@ -280,6 +312,8 @@ export const AdminView: React.FC = () => {
           <div className="min-w-0 pr-2">
             <h1 className="text-sm sm:text-base font-extrabold text-stone-900 dark:text-white truncate">
               {activeTab === 'dashboard' && 'Tổng Quan Kinh Doanh & Phân Tích (Dashboard)'}
+              {activeTab === 'cashbook' && 'Sổ Quỹ Thu & Chi (Smart Cashbook & Dòng Tiền)'}
+              {activeTab === 'tax' && 'Trợ Lý Khai Thuế & Sổ Kế Toán (NĐ 254/2026 & TT 91/2026)'}
               {activeTab === 'reports' && 'Trung Tâm Báo Cáo Doanh Thu (Z-Report) & Tồn Kho'}
               {activeTab === 'invoices' && 'Quản Lý Lịch Sử Hóa Đơn & Đối Soát Giao Dịch'}
               {activeTab === 'customers' && 'Quản Trị Khách Hàng Thân Thiết (CRM & Tích Điểm)'}
@@ -309,6 +343,14 @@ export const AdminView: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-3 sm:p-6 pt-16 pb-20 md:pt-6 md:pb-6">
           {activeTab === 'dashboard' && (
             <DashboardTab orders={orders} materials={materials} />
+          )}
+
+          {activeTab === 'cashbook' && (
+            <CashbookTab />
+          )}
+
+          {activeTab === 'tax' && (
+            <TaxDeclarationTab />
           )}
 
           {activeTab === 'reports' && (
@@ -354,6 +396,38 @@ export const AdminView: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-2 gap-3.5">
+                {/* 0. Sổ Quỹ Thu Chi */}
+                <button
+                  onClick={() => setActiveTab('cashbook')}
+                  className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 shadow-xs hover:border-emerald-500/50 hover:shadow-md transition-all text-left flex flex-col justify-between h-32 active:scale-98 cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                    <Wallet className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-extrabold text-stone-900 dark:text-white leading-tight">
+                      Sổ Quỹ Thu & Chi
+                    </h3>
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5">Tiền mặt & Ngân hàng</p>
+                  </div>
+                </button>
+
+                {/* 0.1 Thuế & Kế Toán */}
+                <button
+                  onClick={() => setActiveTab('tax')}
+                  className="p-4 bg-purple-50/60 dark:bg-purple-950/20 rounded-2xl border border-purple-200/80 dark:border-purple-800/50 shadow-xs hover:border-purple-500/50 hover:shadow-md transition-all text-left flex flex-col justify-between h-32 active:scale-98 cursor-pointer"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                    <Scale className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-extrabold text-stone-900 dark:text-white leading-tight">
+                      Thuế & Kế Toán
+                    </h3>
+                    <p className="text-[11px] text-purple-600 dark:text-purple-400 mt-0.5">NĐ 254 & TT 91</p>
+                  </div>
+                </button>
+
                 {/* 1. Khách Hàng CRM */}
                 <button
                   onClick={() => setActiveTab('customers')}
@@ -536,7 +610,7 @@ export const AdminView: React.FC = () => {
         <button
           onClick={() => setActiveTab('more')}
           className={`flex flex-col items-center justify-center flex-1 py-1 transition-all ${
-            activeTab === 'more' || ['suppliers', 'customers', 'tables', 'promotions', 'hr', 'settings'].includes(activeTab)
+            activeTab === 'more' || ['suppliers', 'customers', 'tables', 'promotions', 'hr', 'settings', 'cashbook', 'tax'].includes(activeTab)
               ? 'text-purple-600 dark:text-purple-400 font-bold scale-105'
               : 'text-stone-400 dark:text-stone-500 hover:text-stone-600'
           }`}

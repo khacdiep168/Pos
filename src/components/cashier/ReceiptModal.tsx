@@ -39,6 +39,7 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const paymentMethodLabel: Record<PaymentMethod, string> = {
     cash: 'Tiền mặt (Cash)',
     transfer_qr: 'Chuyển khoản VietQR',
+    vietqr: 'Chuyển khoản VietQR',
     card: 'Thẻ POS / Ngân hàng',
     e_wallet: 'Ví điện tử',
   };

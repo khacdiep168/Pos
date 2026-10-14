@@ -661,7 +661,54 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 17. Luật vận hành (Agent Working Rules)
+## 17. Phase 2.4: Smart Cashbook (Sổ Quỹ Thu/Chi) & Trợ Lý Khai Thuế Tự Động (Chuẩn Nghị định 254/2026/NĐ-CP & Thông tư 91/2026/TT-BTC) - HOÀN TẤT
+Đã triển khai phân hệ Kế toán Quản trị Sổ Quỹ dòng tiền và Trợ lý Kê khai Thuế F&B toàn diện, chuẩn hóa theo pháp lý thuế Việt Nam mới nhất năm 2026:
+
+1. **Mô Hình Dữ Liệu & Dịch Vụ Sổ Quỹ Tự Động (Zero-Entry Accounting)**:
+   - **`CashbookTransaction` (`src/types/index.ts`)**: Quản lý mã phiếu (`PT-xxxx` cho Phiếu Thu, `PC-xxxx` cho Phiếu Chi), loại dòng tiền (`in` / `out`), phân loại nguồn quỹ (`cash` tại két / `bank` chuyển khoản VietQR, thẻ), danh mục thu chi (9 danh mục chuẩn F&B: `sales`, `supplier_payment`, `rent`, `utilities`, `salary`, `daily_supplies`, `marketing`, `tax`, `other`).
+   - **Tự động liên thông dòng tiền không cần nhập liệu tay (Zero-Entry)**:
+     - Tự động kết chuyển toàn bộ đơn hàng thanh toán thành công (`completed` & `paid`) sang giao dịch Thu (`type: 'in'`), chia tách chính xác vào Quỹ Tiền Mặt nếu thanh toán `cash` và Quỹ Ngân Hàng nếu thanh toán `vietqr`, `transfer_qr`, `card`, `e_wallet`.
+     - Tự động kết chuyển thanh toán công nợ Nhà cung cấp (`SupplierDebtTransaction` loại `payment`) thành giao dịch Chi (`type: 'out'`).
+   - **Lưu trữ & Đồng bộ**: Cho phép tạo Phiếu Thu / Chi thủ công lưu trữ cục bộ `localStorage` và tự động phát tín hiệu Realtime `CASHBOOK_UPDATED` trên Supabase Channel.
+
+2. **Giao Diện Sổ Quỹ Thu & Chi ([CashbookTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/CashbookTab.tsx))**:
+   - **4 Thẻ Bento Tổng Quan Dòng Tiền (Tabular-nums)**:
+     - 💵 *Tồn Quỹ Tiền Mặt (Tại Két)*: Tổng thu tiền mặt trừ tổng chi tiền mặt.
+     - 🏦 *Số Dư Ngân Hàng (VietQR/Thẻ)*: Tổng thu chuyển khoản trừ tổng chi chuyển khoản.
+     - 📈 *Tổng Thu Trong Kỳ*: Thống kê doanh thu kèm tỷ trọng Tiền mặt vs Chuyển khoản.
+     - 📉 *Tổng Chi Trong Kỳ & Dòng Tiền Ròng*: Thể hiện sức khỏe lưu chuyển tiền tệ thực tế (`Net Cashflow = Tổng Thu - Tổng Chi`).
+   - **Modal Lập Phiếu Thu / Phiếu Chi 1-Chạm**: Ngôn ngữ trực quan dành cho chủ quán không biết kế toán (Mặt bằng, Điện nước Wifi, Lương nhân viên, Đá/Gas/Đồ vặt, Quảng cáo/Phí sàn, Nộp thuế).
+   - **Cờ Khấu Trừ Chi Phí**: Nút gạt `is_tax_valid` xác nhận có hóa đơn/chứng từ hợp lệ theo Thông tư 91/2026/TT-BTC.
+   - **Bộ Lọc Đa Năng & Xuất Excel Chuẩn**: Lọc theo thời gian, loại quỹ, loại phiếu; tích hợp nút xuất Sổ Quỹ Tiền Mặt (Mẫu S6) và Sổ Tiền Gửi Ngân Hàng (Mẫu S7) ra CSV UTF-8 BOM tiếng Việt không lỗi font.
+
+3. **Trợ Lý Khai Thuế & Sổ Kế Toán Điện Tử ([TaxDeclarationTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/TaxDeclarationTab.tsx))**:
+   - **Cấu hình chế độ Thuế chuẩn NĐ 254/2026/NĐ-CP & TT 91/2026/TT-BTC**:
+     - *Hộ Kinh Doanh F&B (Tỷ lệ % Doanh Thu)*: Thuế GTGT 3% + Thuế TNCN 1.5% = 4.5% Doanh thu tính thuế.
+     - *Hộ Kê Khai Khấu Trừ / Doanh Nghiệp F&B*: Thuế GTGT 8%/10% và thuế TNDN tính trên Lợi nhuận chịu thuế (`Doanh thu - Giá vốn BOM - Chi phí hợp lệ is_tax_valid`).
+   - **Bộ Chọn Kỳ Kê Khai & Thanh Đo Ngưỡng NĐ 254**: Cho phép chọn Tháng, Quý 1-4, Cả năm. Thanh đo theo dõi ngưỡng doanh thu bắt buộc khởi tạo từ máy tính tiền (1 tỷ VNĐ/năm) và kiểm toán hóa đơn hủy có biên bản.
+   - **Bảng "Copy & Dán Tờ Khai Thuế 1-Chạm" (eTax Mobile)**:
+     - Chỉ tiêu [28] - Doanh thu tính thuế GTGT (Đã trừ đơn hủy) + Nút [📋 Copy số].
+     - Chỉ tiêu [29] - Thuế GTGT phải nộp (3%) + Nút [📋 Copy số].
+     - Chỉ tiêu [30] - Doanh thu tính thuế TNCN + Nút [📋 Copy số].
+     - Chỉ tiêu [31] - Thuế TNCN phải nộp (1.5%) + Nút [📋 Copy số].
+     - Nút [✅ Ghi nhận Đã Nộp Thuế vào Sổ Quỹ] tự động sinh Phiếu Chi nộp NSNN.
+   - **Báo Cáo P&L Tóm Tắt Cho Chủ Quán**:
+     - $\text{Lợi Nhuận Ròng Thực Bỏ Túi} = \text{Doanh Thu Thực Thu} - \text{Giá Vốn Nguyên Liệu BOM} - \text{Chi Phí Vận Hành} - \text{Nghĩa Vụ Thuế}$.
+   - **Trung Tâm Xuất 5 Bộ Sổ Kế Toán Điện Tử Chuẩn TT 91 & NĐ 254 (1-Click CSV UTF-8 BOM)**:
+     1. Bảng Kê Chi Tiết Hóa Đơn Máy Tính Tiền & Biên Bản Hủy (Chuẩn NĐ 254/2026/NĐ-CP).
+     2. Sổ Chi Tiết Doanh Thu Bán Hàng Hóa, Dịch Vụ (Mẫu S1 - TT 91/2026/TT-BTC).
+     3. Sổ Chi Tiết Vật Liệu, Dụng Cụ, Sản Phẩm, Hàng Hóa Nhập-Xuất-Tồn (Mẫu S2 - TT 91/2026/TT-BTC).
+     4. Sổ Chi Phí Sản Xuất, Kinh Doanh & Nghĩa Vụ Thuế (Mẫu S3 & S4 - TT 91/2026/TT-BTC).
+     5. Sổ Quỹ Tiền Mặt & Sổ Tiền Gửi Ngân Hàng (Mẫu S6 & S7 - TT 91/2026/TT-BTC).
+
+4. **Chất Lượng Kỹ Thuật & Deployment**:
+   - Unit Tests: Đạt 29/29 tests PASS (100% PASS trên toàn bộ 5 test suites bao gồm `cashbookService.test.ts`).
+   - Next.js Production Build (`npm run build`): Đạt 0 lỗi TypeScript/ESLint, 11/11 routes tĩnh và động biên dịch thành công.
+   - Sẵn sàng tự động deploy lên Vercel Production: [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
+
+---
+
+## 18. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
