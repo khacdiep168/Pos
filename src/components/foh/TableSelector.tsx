@@ -113,28 +113,31 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
 
   // If collapsible and not expanded, render compact view
   if (collapsible && !isExpanded && selectedTable) {
+    const isTakeaway = selectedTable.id === 'takeaway';
     const tableZone = zones.find((z) => z.id === selectedTable.zone_id);
     return (
       <div className="p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
-            <CheckCircle2 className="w-4 h-4" />
+            {isTakeaway ? <span>🛍️</span> : <CheckCircle2 className="w-4 h-4" />}
           </div>
           <div className="min-w-0">
             <div className="text-xs font-bold text-stone-900 dark:text-white truncate flex items-center gap-1.5">
-              <span>{tableZone ? `${tableZone.name} - ` : ''}Bàn {selectedTable.table_number}</span>
+              <span>{isTakeaway ? 'Khách Mang Về (Takeaway)' : `${tableZone ? `${tableZone.name} - ` : ''}Bàn ${selectedTable.table_number}`}</span>
               <span
                 className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
-                  selectedTable.status === 'reserved'
+                  isTakeaway
+                    ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300'
+                    : selectedTable.status === 'reserved'
                     ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'
                     : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
                 }`}
               >
-                {selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
+                {isTakeaway ? 'Mang về' : selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
               </span>
             </div>
             <p className="text-[10px] text-stone-500 dark:text-stone-400">
-              {selectedTable.capacity} chỗ ngồi • Bấm để đổi bàn
+              {isTakeaway ? 'Đơn bán nhanh mang đi • Bấm để đổi sang bàn' : `${selectedTable.capacity} chỗ ngồi • Bấm để đổi bàn`}
             </p>
           </div>
         </div>
@@ -153,17 +156,54 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
 
   return (
     <div className="space-y-3">
+      {/* QUICK OPTION: KHÁCH MANG VỀ (TAKEAWAY) */}
+      <button
+        type="button"
+        onClick={() => {
+          const takeawayTable: RestaurantTable = {
+            id: 'takeaway',
+            table_number: 'Mang Về (Takeaway)',
+            capacity: 1,
+            status: 'available',
+          };
+          handleSelect(takeawayTable);
+        }}
+        className={`w-full p-2.5 rounded-2xl border-2 transition-all flex items-center justify-between shadow-xs ${
+          selectedTableId === 'takeaway'
+            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-500 ring-2 ring-orange-400/40 font-bold'
+            : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">🛍️</span>
+          <div className="text-left">
+            <div className="text-xs font-black leading-tight flex items-center gap-1.5">
+              <span>🛍️ Khách Mang Về (Takeaway)</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/20 dark:bg-stone-800 font-extrabold uppercase tracking-wider">
+                Bán Nhanh
+              </span>
+            </div>
+            <p className="text-[10px] opacity-80 mt-0.5">
+              Không làm bận bàn vật lý, lên đơn và thu tiền nhanh
+            </p>
+          </div>
+        </div>
+        <div className="text-xs font-extrabold px-3 py-1 rounded-xl bg-white dark:bg-stone-800 text-amber-700 dark:text-amber-300 shadow-2xs shrink-0">
+          {selectedTableId === 'takeaway' ? '✓ Đang chọn' : 'Chọn nhanh'}
+        </div>
+      </button>
+
       {/* Header Info */}
       <div className="flex items-center justify-between text-xs font-semibold text-stone-600 dark:text-stone-400">
         <span className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-200">
           <MapPin className="w-3.5 h-3.5 text-amber-500" />
-          <span>Luồng chọn bàn 2 bước</span>
+          <span>Hoặc chọn bàn ngồi tại quán</span>
         </span>
         <div className="flex items-center gap-1.5">
           {selectedTable && (
             <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-500/20 text-[11px]">
               <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-              Bàn: {selectedTable.table_number}
+              {selectedTable.id === 'takeaway' ? 'Đơn Mang Về' : `Bàn: ${selectedTable.table_number}`}
             </span>
           )}
           {collapsible && selectedTable && (

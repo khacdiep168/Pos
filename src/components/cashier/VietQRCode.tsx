@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { formatCurrencyVND } from '@/lib/utils';
 import { QrCode, Copy, Check, ShieldCheck, Smartphone } from 'lucide-react';
 
+import { adminService } from '@/services/adminService';
+
 interface VietQRCodeProps {
   amount: number;
   orderId: string;
@@ -13,11 +15,12 @@ interface VietQRCodeProps {
 export const VietQRCode: React.FC<VietQRCodeProps> = ({ amount, orderId, tableNumber }) => {
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  // Bank Account Information
-  const bankId = 'MB'; // MBBank (Ngân hàng Quân Đội)
-  const bankName = 'MBBank (Ngân hàng TMCP Quân Đội)';
-  const accountNo = '0901234567';
-  const accountName = 'VIBE TASTE RESTAURANT';
+  // Dynamic Bank Account Information from Store Settings
+  const settings = adminService.getSettings();
+  const bankId = settings.bank_id || 'MB';
+  const bankName = `${bankId} (Ngân hàng TMCP)`;
+  const accountNo = settings.bank_account_no || '0901234567';
+  const accountName = settings.bank_account_name || settings.store_name || 'VIBE TASTE RESTAURANT';
 
   // Content for transfer
   const cleanTable = tableNumber.replace(/\s+/g, '');

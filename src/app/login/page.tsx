@@ -18,13 +18,16 @@ import {
   AlertCircle,
   Volume2,
 } from 'lucide-react';
+import { adminService } from '@/services/adminService';
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
 
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('123456');
+  const isDemoMode = adminService.getSettings().is_demo_mode !== false;
+
+  const [username, setUsername] = useState(isDemoMode ? 'admin' : '');
+  const [password, setPassword] = useState(isDemoMode ? '123456' : '');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -134,44 +137,48 @@ export default function LoginPage() {
               <h2 className="text-sm font-extrabold text-stone-900 dark:text-white">
                 Đăng Nhập Nhân Viên
               </h2>
-              <p className="text-[11px] text-stone-400">Chọn tài khoản mẫu hoặc nhập thủ công</p>
+              <p className="text-[11px] text-stone-400">
+                {isDemoMode ? 'Chọn tài khoản mẫu hoặc nhập thủ công' : 'Vui lòng nhập tài khoản và mật khẩu được cấp'}
+              </p>
             </div>
             <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-              RBAC v1.12
+              {isDemoMode ? 'Chế độ Demo' : 'Production'}
             </span>
           </div>
 
-          {/* Quick Demo Switcher Pills */}
-          <div className="space-y-2">
-            <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block">
-              1-Chạm Chọn Vai Trò Thử Nghiệm:
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {demoAccounts.map((acc) => {
-                const Icon = acc.icon;
-                const isSelected = username === acc.username;
-                return (
-                  <button
-                    key={acc.username}
-                    type="button"
-                    onClick={() => handleSelectDemo(acc.username)}
-                    className={`flex items-center gap-2 p-2 rounded-xl text-left transition-all border text-xs ${
-                      isSelected
-                        ? `${acc.activeColor} shadow-xs font-bold`
-                        : `${acc.color} hover:bg-stone-50 dark:hover:bg-stone-800`
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold">{acc.role}</div>
-                      <div className="text-[10px] opacity-75 truncate">{acc.badge}</div>
-                    </div>
-                  </button>
-                );
-              })}
+          {/* Quick Demo Switcher Pills (Hidden when isDemoMode === false) */}
+          {isDemoMode && (
+            <div className="space-y-2">
+              <span className="text-[11px] font-bold text-stone-500 dark:text-stone-400 uppercase tracking-wider block">
+                1-Chạm Chọn Vai Trò Thử Nghiệm:
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {demoAccounts.map((acc) => {
+                  const Icon = acc.icon;
+                  const isSelected = username === acc.username;
+                  return (
+                    <button
+                      key={acc.username}
+                      type="button"
+                      onClick={() => handleSelectDemo(acc.username)}
+                      className={`flex items-center gap-2 p-2 rounded-xl text-left transition-all border text-xs ${
+                        isSelected
+                          ? `${acc.activeColor} shadow-xs font-bold`
+                          : `${acc.color} hover:bg-stone-50 dark:hover:bg-stone-800`
+                      }`}
+                    >
+                      <Icon className="w-3.5 h-3.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-semibold">{acc.role}</div>
+                        <div className="text-[10px] opacity-75 truncate">{acc.badge}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Error Message Alert */}
           {errorMessage && (

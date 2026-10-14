@@ -210,6 +210,11 @@ export interface StoreSettings {
   business_hours: string;
   tax_rate: number; // e.g. 0.08 for 8%
   wifi_password?: string;
+  wifi_ssid?: string;
+  bank_id?: string;
+  bank_account_no?: string;
+  bank_account_name?: string;
+  is_demo_mode?: boolean;
 }
 
 export interface Promotion {

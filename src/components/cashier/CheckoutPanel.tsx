@@ -25,7 +25,10 @@ import {
   UserPlus,
   Phone,
   Search,
+  Ban,
+  AlertTriangle,
 } from 'lucide-react';
+import { authService } from '@/services/authService';
 
 interface CheckoutPanelProps {
   table: RestaurantTable;
@@ -50,6 +53,15 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [paidOrder, setPaidOrder] = useState<Order | null>(null);
+
+  // Cancellation with Reason State
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState('Khách đổi ý không dùng');
+  const [customReason, setCustomReason] = useState('');
+  const [cancelError, setCancelError] = useState('');
+
+  const currentUser = authService.getCurrentUser();
+  const canCancel = !currentUser || ['cashier', 'manager', 'admin'].includes(currentUser.role);
 
   // Customer CRM State
   const [customerPhone, setCustomerPhone] = useState(order?.customer_phone || '');
@@ -221,6 +233,18 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
         onPaymentSuccess(result.order, result.table);
       }
     }, 500);
+  };
+
+  const handleConfirmCancel = () => {
+    if (!order) return;
+    const finalReason = cancelReason === 'Lý do khác' ? customReason.trim() : cancelReason;
+    if (!finalReason) {
+      setCancelError('Vui lòng chọn hoặc nhập lý do hủy đơn hàng!');
+      return;
+    }
+    orderService.cancelOrder(order.id, finalReason);
+    setIsCancelModalOpen(false);
+    onClose();
   };
 
   return (
@@ -711,6 +735,22 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
           <span className="hidden sm:inline">In Tạm Tính</span>
         </button>
 
+        {canCancel && (
+          <button
+            onClick={() => {
+              setCancelReason('Khách đổi ý không dùng');
+              setCustomReason('');
+              setCancelError('');
+              setIsCancelModalOpen(true);
+            }}
+            className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-rose-200 dark:border-rose-800 shrink-0"
+            title="Hủy đơn hàng có lý do và giải phóng bàn"
+          >
+            <Ban className="w-4 h-4" />
+            <span className="hidden sm:inline">Hủy Đơn</span>
+          </button>
+        )}
+
         <button
           onClick={handleConfirmPayment}
           disabled={isProcessing}
@@ -735,6 +775,105 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
         cashGiven={selectedMethod === 'cash' ? numericCashGiven : undefined}
         changeDue={selectedMethod === 'cash' ? changeDue : undefined}
       />
+
+      {/* Modal Hủy Đơn Hàng Có Lý Do Bắt Buộc */}
+      {isCancelModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full p-5 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800">
+              <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-extrabold text-sm">
+                <AlertTriangle className="w-5 h-5" />
+                <span>Xác Nhận Hủy Đơn Hàng #{order?.id.slice(-6)}</span>
+              </div>
+              <button
+                onClick={() => setIsCancelModalOpen(false)}
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-stone-600 dark:text-stone-400">
+              Hành động này sẽ hủy toàn bộ các món trong đơn, giải phóng bàn{' '}
+              <strong className="text-stone-900 dark:text-white font-bold">{table.table_number}</strong> về
+              trạng thái trống, và lưu lý do vào biên bản đối soát.
+            </p>
+
+            {cancelError && (
+              <p className="text-xs text-rose-500 font-bold bg-rose-50 dark:bg-rose-950/40 p-2 rounded-xl border border-rose-200 dark:border-rose-800">
+                ⚠️ {cancelError}
+              </p>
+            )}
+
+            <div className="space-y-2 text-xs">
+              <label className="font-bold text-stone-700 dark:text-stone-300 block">
+                Chọn lý do hủy đơn *:
+              </label>
+              {[
+                'Khách đổi ý không dùng',
+                'Gọi nhầm món / Nhập sai bàn',
+                'Khách có việc gấp về sớm',
+                'Món hết / Thời gian chờ quá lâu',
+                'Lý do khác',
+              ].map((reason) => (
+                <label
+                  key={reason}
+                  className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                    cancelReason === reason
+                      ? 'border-rose-500 bg-rose-50/60 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 font-bold'
+                      : 'border-stone-200 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="cancelReason"
+                    value={reason}
+                    checked={cancelReason === reason}
+                    onChange={() => {
+                      setCancelReason(reason);
+                      setCancelError('');
+                    }}
+                    className="accent-rose-600"
+                  />
+                  <span>{reason}</span>
+                </label>
+              ))}
+
+              {cancelReason === 'Lý do khác' && (
+                <div className="pt-2">
+                  <textarea
+                    rows={2}
+                    placeholder="Nhập chi tiết lý do hủy đơn để Admin kiểm tra..."
+                    value={customReason}
+                    onChange={(e) => {
+                      setCustomReason(e.target.value);
+                      setCancelError('');
+                    }}
+                    className="w-full p-2.5 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl text-xs text-stone-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+              <button
+                type="button"
+                onClick={() => setIsCancelModalOpen(false)}
+                className="flex-1 py-2.5 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-bold text-xs hover:bg-stone-200"
+              >
+                Quay Lại
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmCancel}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-md shadow-rose-600/20 active:scale-95 transition-all"
+              >
+                Xác Nhận Hủy Đơn
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

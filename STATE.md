@@ -548,10 +548,40 @@ Hoàn thành kiểm thử tự động TDD, nâng cấp kiến trúc đồng b�
 
 ---
 
-## 14. Các bước tiếp theo (Phase 2.2 - Live Monitoring & Hardware Setup)
-1. Kiểm tra bản build mới nhất trên Vercel tại [https://vercel.com/dashboard](https://vercel.com/dashboard) (đang tự động deploy xanh mượt).
-2. Mở đồng thời [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/) trên máy tính và điện thoại để trải nghiệm gọi món, ra món và thanh toán đồng bộ thời gian thực.
-3. Kết nối máy in nhiệt Bluetooth/LAN thật tại quầy để in thử nghiệm.
+---
+
+## 14. Phase 2.2: Final Production Polish & Client Handover Package - HOÀN TẤT
+Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Client Handover Package), bảo đảm độ ổn định, tính năng vận hành thực tế và bảo mật cao cấp:
+
+1. **Đồng Bộ Cloud 2 Chiều Toàn Diện (Full Supabase State Sync)**:
+   - **Bàn & Khu vực (`pos_tables`, `pos_zones`)**: Đồng bộ 2 chiều tức thì lên Supabase Cloud. Khởi tạo sẵn dữ liệu sơ đồ bàn nếu database trống. Trạng thái bàn `available`, `occupied`, `billing` đồng bộ đa thiết bị không độ trễ.
+   - **Đơn hàng (`pos_orders`)**: Toàn bộ luồng tạo đơn, đổi trạng thái món KDS, chuyển/gộp bàn, hủy đơn, hoàn tất thanh toán đều tự động ghi nhận lên bảng `pos_orders` trong Supabase. Khi F5 hoặc mở thiết bị mới, hệ thống tự động tải trạng thái mới nhất từ đám mây.
+   - **Cấu hình nhà hàng (`pos_store_settings`)**: Tạo bảng PostgreSQL `pos_store_settings` trên Supabase với Public RLS và thêm vào `supabase_realtime` publication. Mọi thay đổi tên quán, địa chỉ, hotline, Wi-Fi, tài khoản VietQR đều tự động đồng bộ lên Cloud.
+
+2. **Tạo & In Mã QR Đặt Món Tại Bàn ([ZoneTableTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/ZoneTableTab.tsx), [TableQRCodeModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/TableQRCodeModal.tsx))**:
+   - Thêm nút "Mã QR" trên từng thẻ bàn trong danh sách bàn.
+   - Thêm nút "In Tất Cả QR Bàn" ở thanh công cụ phía trên.
+   - Modal QR Code động tạo mã QR quét trực tiếp URL `/menu/[tableId]`, kèm logo thương hiệu, tên quán, khu vực, số ghế và thông tin Wi-Fi (SSID + Password) để chủ quán in tem decal dán lên từng bàn ăn. Hỗ trợ chế độ in trình duyệt `window.print()` căn chỉnh chuẩn trang in.
+
+3. **Bổ Sung Nghiệp Vụ Thực Chiến: Đơn Mang Về & Hủy Đơn Có Lý Do**:
+   - **🛍️ Khách Mang Về (Takeaway - [TableSelector.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/TableSelector.tsx))**: Nút chọn nhanh nổi bật trên giao diện gọi món FOH. Bàn ảo `takeaway` cho phép lên đơn mang đi tức thì mà không chiếm bàn vật lý tại quán.
+   - **Hủy Đơn Có Lý Do & Giải Phóng Bàn ([CheckoutPanel.tsx](file:///e:/Vibe%20Coding/POS/src/components/cashier/CheckoutPanel.tsx))**: Nút "Hủy Đơn" phân quyền cho Cashier, Manager và Admin. Hộp thoại bắt buộc chọn lý do hủy (Khách đổi ý, Nhập nhầm bàn, Khách về sớm, Hết món, Khác...) và lưu vào biên bản kiểm toán hóa đơn bị hủy, tự động trả bàn về trạng thái trống (available) và cập nhật Cloud Realtime.
+
+4. **Công Cụ Bàn Giao Khách Hàng & Bảo Mật Production**:
+   - **Chế độ Production / Demo Toggle ([StoreSettingsTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/StoreSettingsTab.tsx), [/login](file:///e:/Vibe%20Coding/POS/src/app/login/page.tsx), [page.tsx](file:///e:/Vibe%20Coding/POS/src/app/page.tsx))**: Khi tắt Chế độ Demo (chuyển sang Production chính thức):
+     - Tự động ẩn danh sách Đăng nhập 1-chạm trên trang `/login` (yêu cầu nhân viên gõ đúng tài khoản/mật khẩu).
+     - Tự động ẩn nút "⚡ Giả Lập E2E" trên Header và Mobile Drawer.
+   - **Khởi Tạo Lại Dữ Liệu Giao Dịch (Factory Reset Orders)**: Nút vùng nguy hiểm (Danger Zone) yêu cầu gõ chữ `RESET` để xác nhận. Xóa sạch 100% lịch sử đơn hàng test, ca làm việc test, đưa doanh thu về 0đ và trả toàn bộ bàn về trống trên cả máy và Supabase Cloud; bảo lưu nguyên vẹn Thực đơn, Nguyên vật liệu, Định mức BOM, Sơ đồ bàn và Danh sách nhân sự.
+   - **Đổi Mật Khẩu Nhân Viên ([HRTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/HRTab.tsx))**: Cho phép Quản trị viên đặt lại mật khẩu mới cho bất kỳ tài khoản nhân sự nào.
+
+5. **Xuất Báo Cáo Excel/CSV Chuẩn Tiếng Việt ([exportUtils.ts](file:///e:/Vibe%20Coding/POS/src/lib/exportUtils.ts), [InvoiceHistoryTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/InvoiceHistoryTab.tsx), [ReportTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/ReportTab.tsx))**:
+   - Tạo tiện ích `exportToCSV` đính kèm tiền tố Byte Order Mark `\uFEFF` (UTF-8 BOM), giải quyết triệt để lỗi bể font tiếng Việt khi mở bằng Microsoft Excel.
+   - Tích hợp nút "Xuất Excel Hóa Đơn" trong Lịch sử hóa đơn và "Xuất Excel Doanh Thu / Tồn Kho" trong Trung tâm báo cáo.
+
+6. **Chất Lượng Kỹ Thuật & Deployment**:
+   - Unit Tests: Đạt 15/15 tests PASS (100%).
+   - Next.js Production Build: Compiled 11/11 routes thành công, Turbopack + PPR tối ưu.
+   - Đã push mã nguồn lên nhánh `main` tại GitHub repository `khacdiep168/Pos` và tự động deploy lên [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
 
 ---
 
@@ -559,5 +589,6 @@ Hoàn thành kiểm thử tự động TDD, nâng cấp kiến trúc đồng b�
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
+
 
 

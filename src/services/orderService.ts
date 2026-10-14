@@ -1,6 +1,7 @@
 import { Order, OrderItem, RestaurantTable, PaymentMethod, Zone, WorkShift } from '@/types';
 import { initialTables, initialZones, initialOrders } from '@/database/mockData';
 import { realtimeEngine } from './realtimeEngine';
+import { supabase } from '@/lib/supabaseClient';
 
 const STORAGE_ORDERS_KEY = 'pos_orders_data';
 const STORAGE_TABLES_KEY = 'pos_tables_data';
@@ -17,6 +18,7 @@ class OrderService {
 
   constructor() {
     this.initStorage();
+    this.syncFromSupabase();
   }
 
   private initStorage() {
@@ -95,6 +97,148 @@ class OrderService {
     }
   }
 
+  /**
+   * Full 2-Way Sync with Supabase Cloud
+   */
+  public async syncFromSupabase(): Promise<void> {
+    if (!supabase) return;
+
+    try {
+      // 1. Sync Zones
+      const { data: zoneData, error: zoneErr } = await supabase
+        .from('pos_zones')
+        .select('*')
+        .order('sort_order', { ascending: true });
+
+      if (!zoneErr && zoneData && zoneData.length > 0) {
+        this.zones = zoneData.map((z: any) => ({
+          id: z.id,
+          name: z.name,
+          description: z.description,
+          sort_order: z.sort_order || 1,
+        }));
+      } else if (!zoneErr && (!zoneData || zoneData.length === 0)) {
+        // Seed initial zones to Supabase
+        await supabase.from('pos_zones').upsert(
+          this.zones.map((z) => ({
+            id: z.id,
+            name: z.name,
+            description: z.description,
+            sort_order: z.sort_order,
+          }))
+        );
+      }
+
+      // 2. Sync Tables
+      const { data: tableData, error: tableErr } = await supabase
+        .from('pos_tables')
+        .select('*');
+
+      if (!tableErr && tableData && tableData.length > 0) {
+        this.tables = tableData.map((t: any) => ({
+          id: t.id,
+          table_number: t.table_number,
+          capacity: t.capacity || 4,
+          status: t.status || 'available',
+          zone_id: t.zone_id,
+          current_order_id: t.current_order_id,
+        }));
+      } else if (!tableErr && (!tableData || tableData.length === 0)) {
+        // Seed initial tables to Supabase
+        await supabase.from('pos_tables').upsert(
+          this.tables.map((t) => ({
+            id: t.id,
+            table_number: t.table_number,
+            capacity: t.capacity,
+            status: t.status,
+            zone_id: t.zone_id,
+            current_order_id: t.current_order_id,
+          }))
+        );
+      }
+
+      // 3. Sync Orders (recent active & completed)
+      const { data: orderData, error: orderErr } = await supabase
+        .from('pos_orders')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (!orderErr && orderData && orderData.length > 0) {
+        this.orders = orderData.map((o: any) => ({
+          id: o.id,
+          table_id: o.table_id || 'tbl-default',
+          table_number: o.table_number || 'Bàn',
+          order_status: o.order_status,
+          payment_status: o.payment_status,
+          payment_method: o.payment_method,
+          subtotal: Number(o.subtotal) || 0,
+          discount_amount: Number(o.discount_amount) || 0,
+          tax_amount: Number(o.tax_amount) || 0,
+          total_amount: Number(o.total_amount) || 0,
+          customer_id: o.customer_id,
+          customer_name: o.customer_name,
+          customer_phone: o.customer_phone,
+          items: Array.isArray(o.items) ? o.items : [],
+          notes: o.notes,
+          created_at: o.created_at,
+          updated_at: o.updated_at,
+        }));
+      }
+
+      this.save();
+      realtimeEngine.emit('TABLE_STATUS_CHANGED', {});
+      realtimeEngine.emit('ORDER_UPDATED', { type: 'SUPABASE_SYNC_COMPLETED' });
+    } catch (err) {
+      console.warn('[OrderService] Error during Supabase cloud sync:', err);
+    }
+  }
+
+  // Helper to upsert order to Supabase
+  private async persistOrderToCloud(order: Order) {
+    if (!supabase) return;
+    try {
+      await supabase.from('pos_orders').upsert({
+        id: order.id,
+        table_id: order.table_id,
+        table_number: order.table_number,
+        order_status: order.order_status,
+        payment_status: order.payment_status,
+        payment_method: order.payment_method,
+        subtotal: order.subtotal,
+        discount_amount: order.discount_amount,
+        tax_amount: order.tax_amount,
+        total_amount: order.total_amount,
+        customer_id: order.customer_id,
+        customer_name: order.customer_name,
+        customer_phone: order.customer_phone,
+        items: order.items,
+        notes: order.notes,
+        created_at: order.created_at,
+        updated_at: order.updated_at || new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('[OrderService] Cloud order upsert error:', e);
+    }
+  }
+
+  // Helper to upsert table to Supabase
+  private async persistTableToCloud(table: RestaurantTable) {
+    if (!supabase || table.id === 'takeaway') return;
+    try {
+      await supabase.from('pos_tables').upsert({
+        id: table.id,
+        table_number: table.table_number,
+        capacity: table.capacity,
+        status: table.status,
+        zone_id: table.zone_id,
+        current_order_id: table.current_order_id,
+      });
+    } catch (e) {
+      console.warn('[OrderService] Cloud table upsert error:', e);
+    }
+  }
+
   // ==================== ZONES MANAGEMENT ====================
   public getZones(): Zone[] {
     return [...this.zones];
@@ -107,6 +251,16 @@ class OrderService {
     };
     this.zones.push(newZone);
     this.save();
+
+    if (supabase) {
+      supabase.from('pos_zones').upsert({
+        id: newZone.id,
+        name: newZone.name,
+        description: newZone.description,
+        sort_order: newZone.sort_order,
+      }).then();
+    }
+
     return newZone;
   }
 
@@ -115,6 +269,15 @@ class OrderService {
     if (idx === -1) return null;
     this.zones[idx] = { ...this.zones[idx], ...updates };
     this.save();
+
+    if (supabase) {
+      supabase.from('pos_zones').update({
+        name: this.zones[idx].name,
+        description: this.zones[idx].description,
+        sort_order: this.zones[idx].sort_order,
+      }).eq('id', id).then();
+    }
+
     return this.zones[idx];
   }
 
@@ -122,11 +285,15 @@ class OrderService {
     const idx = this.zones.findIndex((z) => z.id === id);
     if (idx === -1) return false;
     this.zones.splice(idx, 1);
-    // Unassign zone from tables
     this.tables.forEach((t) => {
       if (t.zone_id === id) t.zone_id = undefined;
     });
     this.save();
+
+    if (supabase) {
+      supabase.from('pos_zones').delete().eq('id', id).then();
+    }
+
     return true;
   }
 
@@ -143,6 +310,7 @@ class OrderService {
     };
     this.tables.push(newTable);
     this.save();
+    this.persistTableToCloud(newTable);
     realtimeEngine.emit('TABLE_STATUS_CHANGED', newTable);
     return newTable;
   }
@@ -152,6 +320,7 @@ class OrderService {
     if (idx === -1) return null;
     this.tables[idx] = { ...this.tables[idx], ...updates };
     this.save();
+    this.persistTableToCloud(this.tables[idx]);
     realtimeEngine.emit('TABLE_STATUS_CHANGED', this.tables[idx]);
     return this.tables[idx];
   }
@@ -161,6 +330,11 @@ class OrderService {
     if (idx === -1) return false;
     this.tables.splice(idx, 1);
     this.save();
+
+    if (supabase) {
+      supabase.from('pos_tables').delete().eq('id', id).then();
+    }
+
     return true;
   }
 
@@ -169,6 +343,7 @@ class OrderService {
     if (!table) return null;
     table.status = status;
     this.save();
+    this.persistTableToCloud(table);
     realtimeEngine.emit('TABLE_STATUS_CHANGED', table);
     return table;
   }
@@ -196,10 +371,12 @@ class OrderService {
     if (table && table.current_order_id === orderId) {
       table.status = 'available';
       table.current_order_id = undefined;
+      this.persistTableToCloud(table);
       realtimeEngine.emit('TABLE_STATUS_CHANGED', table);
     }
     
     this.save();
+    this.persistOrderToCloud(order);
     realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
     realtimeEngine.emit('ORDER_UPDATED', order);
     return order;
@@ -216,15 +393,19 @@ class OrderService {
   public createOrder(newOrder: Order): Order {
     this.orders.unshift(newOrder);
 
-    // Update table status to occupied
-    const tableIndex = this.tables.findIndex((t) => t.id === newOrder.table_id);
-    if (tableIndex !== -1) {
-      this.tables[tableIndex].status = 'occupied';
-      this.tables[tableIndex].current_order_id = newOrder.id;
-      realtimeEngine.emit('TABLE_STATUS_CHANGED', this.tables[tableIndex]);
+    // Update physical table status to occupied (ignore takeaway)
+    if (newOrder.table_id && newOrder.table_id !== 'takeaway') {
+      const tableIndex = this.tables.findIndex((t) => t.id === newOrder.table_id);
+      if (tableIndex !== -1) {
+        this.tables[tableIndex].status = 'occupied';
+        this.tables[tableIndex].current_order_id = newOrder.id;
+        this.persistTableToCloud(this.tables[tableIndex]);
+        realtimeEngine.emit('TABLE_STATUS_CHANGED', this.tables[tableIndex]);
+      }
     }
 
     this.save();
+    this.persistOrderToCloud(newOrder);
     realtimeEngine.emit('ORDER_CREATED', newOrder);
     return newOrder;
   }
@@ -240,6 +421,7 @@ class OrderService {
     order.customer_phone = customer.phone;
     order.updated_at = new Date().toISOString();
     this.save();
+    this.persistOrderToCloud(order);
     realtimeEngine.emit('ORDER_UPDATED', order);
     return order;
   }
@@ -258,17 +440,31 @@ class OrderService {
     item.item_status = newStatus;
     item.updated_at = new Date().toISOString();
 
-    const allReady = order.items.every(
-      (i) => i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled'
+    const allCancelled = order.items.every((i) => i.item_status === 'cancelled');
+    const allCompleted = order.items.every(
+      (i) => i.item_status === 'served' || i.item_status === 'cancelled'
     );
-    if (allReady && order.order_status === 'cooking') {
+    const anyCooking = order.items.some((i) => i.item_status === 'cooking');
+    const anyReady = order.items.some((i) => i.item_status === 'ready');
+
+    if (allCancelled) {
+      order.order_status = 'cancelled';
+    } else if (allCompleted) {
+      order.order_status = 'completed';
+    } else if (anyReady) {
       order.order_status = 'ready';
-      realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
+    } else if (anyCooking) {
+      order.order_status = 'cooking';
     }
 
+    order.updated_at = new Date().toISOString();
     this.save();
+    this.persistOrderToCloud(order);
+
     realtimeEngine.emit('ITEM_STATUS_CHANGED', { orderId, item });
+    realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
     realtimeEngine.emit('ORDER_UPDATED', order);
+
     return order;
   }
 
@@ -301,6 +497,7 @@ class OrderService {
 
     order.updated_at = new Date().toISOString();
     this.save();
+    this.persistOrderToCloud(order);
     realtimeEngine.emit('ORDER_UPDATED', order);
     realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
     return order;
@@ -318,12 +515,15 @@ class OrderService {
       if (table) {
         table.status = 'available';
         table.current_order_id = undefined;
+        this.persistTableToCloud(table);
         realtimeEngine.emit('TABLE_STATUS_CHANGED', table);
       }
     }
 
     this.save();
+    this.persistOrderToCloud(order);
     realtimeEngine.emit('ORDER_STATUS_CHANGED', order);
+    realtimeEngine.emit('ORDER_UPDATED', order);
     return order;
   }
 
@@ -337,17 +537,18 @@ class OrderService {
 
     order.payment_status = 'paid';
     order.payment_method = paymentMethod;
+    order.order_status = 'completed';
     order.discount_amount = discountAmount;
     order.total_amount = Math.max(0, order.subtotal + order.tax_amount - discountAmount);
-    order.order_status = 'completed';
     order.updated_at = new Date().toISOString();
 
-    const tableIndex = this.tables.findIndex((t) => t.id === order.table_id);
     let table: RestaurantTable;
+    const tableIndex = this.tables.findIndex((t) => t.id === order.table_id);
     if (tableIndex !== -1) {
       this.tables[tableIndex].status = 'available';
       this.tables[tableIndex].current_order_id = undefined;
       table = this.tables[tableIndex];
+      this.persistTableToCloud(table);
     } else {
       table = {
         id: order.table_id,
@@ -370,6 +571,7 @@ class OrderService {
     }
 
     this.save();
+    this.persistOrderToCloud(order);
 
     realtimeEngine.emit('PAYMENT_COMPLETED', { order, table });
     realtimeEngine.emit('TABLE_STATUS_CHANGED', table);
@@ -420,6 +622,9 @@ class OrderService {
     toTable.current_order_id = currentOrder.id;
 
     this.save();
+    this.persistTableToCloud(fromTable);
+    this.persistTableToCloud(toTable);
+    this.persistOrderToCloud(currentOrder);
 
     // Realtime notification
     realtimeEngine.emit('TABLE_STATUS_CHANGED', fromTable);
@@ -484,6 +689,10 @@ class OrderService {
     sourceTable.current_order_id = undefined;
 
     this.save();
+    this.persistTableToCloud(sourceTable);
+    this.persistTableToCloud(targetTable);
+    this.persistOrderToCloud(sourceOrder);
+    this.persistOrderToCloud(targetOrder);
 
     realtimeEngine.emit('TABLE_STATUS_CHANGED', sourceTable);
     realtimeEngine.emit('TABLE_STATUS_CHANGED', targetTable);
@@ -542,6 +751,48 @@ class OrderService {
 
   public getShiftHistory(): WorkShift[] {
     return [...this.shiftsHistory];
+  }
+
+  /**
+   * FACTORY RESET ORDERS & TRANSACTIONS
+   * Wipes all test orders, shifts, and resets tables to available.
+   * Keeps menu items, BOM, raw materials, zones, tables and users intact!
+   */
+  public async factoryResetOrders(): Promise<void> {
+    this.orders = [];
+    this.shiftsHistory = [];
+    this.currentShift = null;
+
+    // Reset all tables to available
+    this.tables.forEach((t) => {
+      t.status = 'available';
+      t.current_order_id = undefined;
+    });
+
+    this.save();
+
+    // Wipe orders and reset tables on Supabase Cloud
+    if (supabase) {
+      try {
+        await supabase.from('pos_orders').delete().neq('id', '___non_existent___');
+        await supabase.from('pos_tables').upsert(
+          this.tables.map((t) => ({
+            id: t.id,
+            table_number: t.table_number,
+            capacity: t.capacity,
+            status: 'available',
+            zone_id: t.zone_id,
+            current_order_id: null,
+          }))
+        );
+      } catch (e) {
+        console.warn('[OrderService] Cloud factory reset error:', e);
+      }
+    }
+
+    realtimeEngine.emit('TABLE_STATUS_CHANGED', {});
+    realtimeEngine.emit('ORDER_UPDATED', { type: 'FACTORY_RESET_COMPLETED' });
+    realtimeEngine.emit('PAYMENT_COMPLETED', { order: null, table: null });
   }
 }
 

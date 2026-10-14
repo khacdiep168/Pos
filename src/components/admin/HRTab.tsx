@@ -14,6 +14,8 @@ import {
   UserX,
   X,
   Lock,
+  KeyRound,
+  CheckCircle2,
 } from 'lucide-react';
 
 interface HRTabProps {
@@ -26,6 +28,13 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [role, setRole] = useState<UserRole>('waiter');
+  const [password, setPassword] = useState('123456');
+
+  // Change Password Modal State
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordUser, setPasswordUser] = useState<UserAccount | null>(null);
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [passwordSuccessMsg, setPasswordSuccessMsg] = useState('');
 
   const roleConfig: Record<UserRole, { label: string; bg: string; icon: any }> = {
     admin: { label: 'Quản Trị Viên (Admin)', bg: 'bg-purple-600 text-white', icon: Shield },
@@ -47,17 +56,41 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
       full_name: fullName.trim(),
       username: username.trim().toLowerCase(),
       role,
+      password: password.trim() || '123456',
     });
 
     onRefresh();
     setIsModalOpen(false);
     setFullName('');
     setUsername('');
+    setPassword('123456');
   };
 
   const handleToggleStatus = (id: string) => {
     adminService.toggleUserStatus(id);
     onRefresh();
+  };
+
+  const handleOpenPasswordModal = (u: UserAccount) => {
+    setPasswordUser(u);
+    setNewPasswordInput('');
+    setPasswordSuccessMsg('');
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleSavePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!passwordUser || !newPasswordInput.trim()) return;
+
+    adminService.updateUserPassword(passwordUser.id, newPasswordInput.trim());
+    setPasswordSuccessMsg(`Đã đổi mật khẩu cho @${passwordUser.username} thành công!`);
+    onRefresh();
+    setTimeout(() => {
+      setIsPasswordModalOpen(false);
+      setPasswordUser(null);
+      setNewPasswordInput('');
+      setPasswordSuccessMsg('');
+    }, 1500);
   };
 
   return (
@@ -70,7 +103,7 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
             <span>Đội Ngũ Nhân Sự & Phân Quyền (RBAC) ({users.length})</span>
           </h3>
           <p className="text-xs text-stone-400 mt-0.5">
-            Quản lý tài khoản đăng nhập và phạm vi phân quyền hệ thống
+            Quản lý tài khoản đăng nhập, đổi mật khẩu và phạm vi phân quyền hệ thống
           </p>
         </div>
 
@@ -124,16 +157,27 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
                   {user.is_active ? '🟢 Đang hoạt động' : '🔴 Tạm khóa'}
                 </span>
 
-                <button
-                  onClick={() => handleToggleStatus(user.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
-                    user.is_active
-                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100'
-                      : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'
-                  }`}
-                >
-                  {user.is_active ? 'Khóa tài khoản' : 'Mở lại'}
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => handleOpenPasswordModal(user)}
+                    className="px-2.5 py-1 rounded-lg text-xs font-bold bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 hover:bg-amber-100 hover:text-amber-700 dark:hover:bg-amber-950/40 transition-colors flex items-center gap-1"
+                    title="Đổi mật khẩu cho tài khoản này"
+                  >
+                    <KeyRound className="w-3 h-3 text-amber-500" />
+                    <span>Đổi MK</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleToggleStatus(user.id)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors ${
+                      user.is_active
+                        ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100'
+                        : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'
+                    }`}
+                  >
+                    {user.is_active ? 'Khóa' : 'Mở lại'}
+                  </button>
+                </div>
               </div>
             </div>
           );
@@ -145,7 +189,7 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <form
             onSubmit={handleCreateUser}
-            className="bg-white dark:bg-stone-900 rounded-2xl max-w-md w-full p-5 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-4"
+            className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full p-5 sm:p-6 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-4"
           >
             <div className="flex items-center justify-between pb-2 border-b border-stone-200 dark:border-stone-800">
               <h3 className="font-bold text-sm text-stone-900 dark:text-white flex items-center gap-2">
@@ -164,12 +208,12 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
             <div className="space-y-3 text-xs">
               <div>
                 <label className="font-bold text-stone-600 dark:text-stone-400 block mb-1">
-                  Họ và tên:
+                  Họ và tên *:
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="VD: Lê Thị Phục Vụ"
+                  placeholder="VD: Lê Thị Hồng"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-bold"
@@ -178,15 +222,28 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
 
               <div>
                 <label className="font-bold text-stone-600 dark:text-stone-400 block mb-1">
-                  Tên đăng nhập (Username):
+                  Tên đăng nhập (Username) *:
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="VD: le_waiter"
+                  placeholder="VD: hongle"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold"
+                  className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-stone-600 dark:text-stone-400 block mb-1">
+                  Mật khẩu khởi tạo:
+                </label>
+                <input
+                  type="text"
+                  placeholder="Mặc định: 123456"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono"
                 />
               </div>
 
@@ -209,7 +266,7 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="flex justify-end gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
@@ -219,9 +276,81 @@ export const HRTab: React.FC<HRTabProps> = ({ users, onRefresh }) => {
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-colors"
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs transition-colors shadow-md shadow-purple-600/20"
               >
                 Tạo Tài Khoản
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {isPasswordModalOpen && passwordUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <form
+            onSubmit={handleSavePassword}
+            className="bg-white dark:bg-stone-900 rounded-3xl max-w-sm w-full p-5 sm:p-6 border border-stone-200 dark:border-stone-800 shadow-2xl space-y-4"
+          >
+            <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800">
+              <h3 className="font-extrabold text-sm text-stone-900 dark:text-white flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-amber-500" />
+                <span>Đổi Mật Khẩu</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsPasswordModalOpen(false)}
+                className="p-1 rounded-lg text-stone-400 hover:text-stone-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-stone-50 dark:bg-stone-800 rounded-2xl border border-stone-200 dark:border-stone-700">
+                <p className="font-bold text-stone-800 dark:text-stone-200">{passwordUser.full_name}</p>
+                <p className="text-stone-400 font-mono">Tài khoản: @{passwordUser.username}</p>
+              </div>
+
+              <div>
+                <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                  Mật khẩu mới *:
+                </label>
+                <div className="relative">
+                  <Lock className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nhập mật khẩu mới..."
+                    value={newPasswordInput}
+                    onChange={(e) => setNewPasswordInput(e.target.value)}
+                    className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono font-bold"
+                  />
+                </div>
+              </div>
+
+              {passwordSuccessMsg && (
+                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-500/30 rounded-xl text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2 text-xs">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>{passwordSuccessMsg}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+              <button
+                type="button"
+                onClick={() => setIsPasswordModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 font-bold text-xs"
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={!newPasswordInput.trim()}
+                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-40 text-white font-extrabold text-xs transition-colors shadow-md shadow-amber-500/20"
+              >
+                Lưu Mật Khẩu
               </button>
             </div>
           </form>

@@ -3,7 +3,7 @@
 import React from 'react';
 import { Order, PaymentMethod } from '@/types';
 import { formatCurrencyVND, formatDateTime } from '@/lib/utils';
-import { initialStoreSettings } from '@/database/mockData';
+import { adminService } from '@/services/adminService';
 import { orderService } from '@/services/orderService';
 import { Printer, X, CheckCircle2 } from 'lucide-react';
 
@@ -74,14 +74,14 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           {/* Header */}
           <div className="text-center space-y-1 pb-3 border-b border-dashed border-stone-400">
             <h2 className="text-base font-black tracking-tight uppercase">
-              {initialStoreSettings.store_name}
+              {adminService.getSettings().store_name}
             </h2>
             <p className="text-[11px] text-stone-600 leading-tight">
-              {initialStoreSettings.address}
+              {adminService.getSettings().address}
             </p>
-            <p className="text-[11px] text-stone-600">Hotline: {initialStoreSettings.phone}</p>
+            <p className="text-[11px] text-stone-600">Hotline: {adminService.getSettings().phone}</p>
             <div className="text-[10px] text-stone-500 pt-1">
-              Wifi: {initialStoreSettings.wifi_password}
+              Wifi: {adminService.getSettings().wifi_ssid ? `${adminService.getSettings().wifi_ssid} - ` : ''}Pass: {adminService.getSettings().wifi_password}
             </div>
           </div>
 

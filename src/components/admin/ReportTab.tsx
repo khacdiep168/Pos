@@ -22,7 +22,9 @@ import {
   ChevronRight,
   ShieldAlert,
   CheckCircle2,
+  FileSpreadsheet,
 } from 'lucide-react';
+import { exportToCSV } from '@/lib/exportUtils';
 
 interface ReportTabProps {
   orders: Order[];
@@ -102,6 +104,53 @@ export const ReportTab: React.FC<ReportTabProps> = ({ orders, materials }) => {
     window.print();
   };
 
+  const handleExportRevenue = () => {
+    const headers = ['Chỉ Số / Mục Báo Cáo', 'Giá Trị / Doanh Số (VNĐ)', 'Ghi Chú'];
+    const rows: (string | number)[][] = [
+      ['Doanh Thu Thuần (Net Sales)', netRevenue, `${completedOrders.length} hóa đơn thành công`],
+      ['Tiền Hàng Gộp (Gross Sales)', grossSales, 'Tổng tiền món trước giảm giá & thuế'],
+      ['Tổng Khuyến Mãi / Giảm Giá', totalDiscount, 'Voucher & Giảm giá thủ công'],
+      ['Thuế GTGT VAT (8%)', totalTax, 'Thuế giá trị gia tăng'],
+      ['--- HÌNH THỨC THANH TOÁN ---', '', ''],
+      ['Tiền Mặt (Cash)', paymentSummary.cash, 'Thu trực tiếp tại quầy'],
+      ['Chuyển Khoản VietQR 24/7', paymentSummary.qr, 'Tài khoản ngân hàng'],
+      ['Thẻ Ngân Hàng (POS Card)', paymentSummary.card, 'Máy quẹt thẻ ngân hàng'],
+      ['Ví Điện Tử (Momo/ZaloPay)', paymentSummary.ewallet, 'Cổng thanh toán số'],
+      ['--- ĐỐI SOÁT & HỦY ĐƠN ---', '', ''],
+      ['Số Đơn Bị Hủy', cancelledOrders.length, 'Đơn hủy đối soát gian lận/thất thoát'],
+    ];
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    exportToCSV(`Bao_Cao_Doanh_Thu_ZReport_${dateStr}`, headers, rows);
+  };
+
+  const handleExportInventory = () => {
+    const headers = [
+      'Mã Nguyên Liệu',
+      'Tên Nguyên Vật Liệu',
+      'Tồn Kho Hiện Tại',
+      'Đơn Vị',
+      'Tồn Tối Thiểu',
+      'Giá Vốn Bình Quân (VNĐ)',
+      'Tổng Giá Trị Tồn (VNĐ)',
+      'Tình Trạng Kho',
+    ];
+
+    const rows = materials.map((m) => [
+      m.id,
+      m.name,
+      m.current_stock,
+      m.recipe_unit,
+      m.min_stock_level,
+      m.avg_cost,
+      Math.round(m.current_stock * m.avg_cost),
+      m.current_stock < m.min_stock_level ? '⚠️ CẢNH BÁO: Dưới định mức' : '🟢 An toàn',
+    ]);
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    exportToCSV(`Bao_Cao_Ton_Kho_${dateStr}`, headers, rows);
+  };
+
   return (
     <div className="space-y-5">
       {/* Top Header & Sub-Tab Navigation */}
@@ -139,6 +188,17 @@ export const ReportTab: React.FC<ReportTabProps> = ({ orders, materials }) => {
               Báo Cáo Kho Hàng
             </button>
           </div>
+
+          <button
+            onClick={reportSubTab === 'z_report' ? handleExportRevenue : handleExportInventory}
+            className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-600/20 active:scale-95 shrink-0"
+            title="Xuất file Excel CSV có dấu tiếng Việt chuẩn"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">
+              {reportSubTab === 'z_report' ? 'Xuất Excel Doanh Thu' : 'Xuất Excel Tồn Kho'}
+            </span>
+          </button>
 
           <button
             onClick={handlePrint}

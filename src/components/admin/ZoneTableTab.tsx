@@ -16,12 +16,18 @@ import {
   X,
   AlertCircle,
   Building2,
+  QrCode,
 } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+import { TableQRCodeModal } from './TableQRCodeModal';
 
 export const ZoneTableTab: React.FC = () => {
   const [zones, setZones] = useState<Zone[]>([]);
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [selectedZoneFilter, setSelectedZoneFilter] = useState<string>('all');
+  const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+  const [qrModalTables, setQrModalTables] = useState<RestaurantTable[]>([]);
+  const [qrModalTitle, setQrModalTitle] = useState('Mã QR Đặt Món Tại Bàn');
 
   // Modal Zone
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
@@ -262,8 +268,21 @@ export const ZoneTableTab: React.FC = () => {
             </h3>
           </div>
 
-          {/* Filter Pills by Zone */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs">
+          {/* Filter Pills by Zone & Action */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 text-xs">
+            <button
+              onClick={() => {
+                const list = filteredTables.length > 0 ? filteredTables : tables;
+                setQrModalTables(list);
+                setQrModalTitle('In Tất Cả Mã QR Bàn');
+                setIsQRModalOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 hover:bg-amber-500 hover:text-white font-bold text-xs transition-all active:scale-95 shrink-0"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              <span>In Tất Cả QR Bàn</span>
+            </button>
+
             <button
               onClick={() => setSelectedZoneFilter('all')}
               className={`px-3 py-1.5 rounded-xl font-bold transition-all ${
@@ -335,6 +354,17 @@ export const ZoneTableTab: React.FC = () => {
                     </td>
 
                     <td className="p-3 text-right">
+                      <button
+                        onClick={() => {
+                          setQrModalTables([t]);
+                          setQrModalTitle(`Mã QR Đặt Món - ${t.table_number}`);
+                          setIsQRModalOpen(true);
+                        }}
+                        className="p-1.5 rounded-lg text-stone-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors mr-1"
+                        title="Xem & In Mã QR Bàn"
+                      >
+                        <QrCode className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => handleOpenEditTable(t)}
                         className="p-1.5 rounded-lg text-stone-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors mr-1"
@@ -519,6 +549,16 @@ export const ZoneTableTab: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Dynamic Table QR Code Modal */}
+      <TableQRCodeModal
+        isOpen={isQRModalOpen}
+        onClose={() => setIsQRModalOpen(false)}
+        tables={qrModalTables}
+        zones={zones}
+        settings={adminService.getSettings()}
+        title={qrModalTitle}
+      />
     </div>
   );
 };

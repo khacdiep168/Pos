@@ -25,7 +25,12 @@ export const initialStoreSettings: StoreSettings = {
   phone: '0901 234 567',
   business_hours: '08:00 - 23:00',
   tax_rate: 0.08,
+  wifi_ssid: 'VIBE TASTE 5G',
   wifi_password: 'vibetaste_guest',
+  bank_id: 'MB',
+  bank_account_no: '0901234567',
+  bank_account_name: 'VIBE TASTE RESTAURANT',
+  is_demo_mode: true,
 };
 
 export const initialZones: Zone[] = [

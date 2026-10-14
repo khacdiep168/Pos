@@ -18,6 +18,8 @@ import {
   LogOut,
   User,
 } from 'lucide-react';
+import { adminService } from '@/services/adminService';
+import { realtimeEngine } from '@/services/realtimeEngine';
 
 export default function Home() {
   const { user, isLoading, logout, canAccess, allowedModules, roleLabel } = useAuth();
@@ -26,6 +28,14 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'foh' | 'kds' | 'cashier' | 'erp' | 'admin'>('foh');
   const [isE2EModalOpen, setIsE2EModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(() => adminService.getSettings().is_demo_mode !== false);
+
+  useEffect(() => {
+    const unsub = realtimeEngine.subscribe('ORDER_UPDATED', () => {
+      setIsDemoMode(adminService.getSettings().is_demo_mode !== false);
+    });
+    return () => unsub();
+  }, []);
 
   // Route Guard: redirect to /login if unauthenticated
   useEffect(() => {
@@ -190,15 +200,17 @@ export default function Home() {
 
         {/* Right Top Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
-          <button
-            onClick={() => setIsE2EModalOpen(true)}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all"
-            title="Kịch bản giả lập E2E"
-          >
-            <span>⚡</span>
-            <span className="hidden sm:inline">Giả Lập E2E</span>
-            <span className="sm:hidden text-[11px]">E2E</span>
-          </button>
+          {isDemoMode && (
+            <button
+              onClick={() => setIsE2EModalOpen(true)}
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all"
+              title="Kịch bản giả lập E2E"
+            >
+              <span>⚡</span>
+              <span className="hidden sm:inline">Giả Lập E2E</span>
+              <span className="sm:hidden text-[11px]">E2E</span>
+            </button>
+          )}
 
           <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-800/80 border border-stone-700/60 text-[11px] text-stone-300">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -362,16 +374,18 @@ export default function Home() {
 
             {/* Drawer Footer */}
             <div className="p-3 border-t border-stone-800 bg-stone-950/40 space-y-2">
-              <button
-                onClick={() => {
-                  setIsDrawerOpen(false);
-                  setIsE2EModalOpen(true);
-                }}
-                className="w-full flex items-center justify-center gap-2 p-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-xs shadow-md active:scale-95 transition-all"
-              >
-                <span>⚡</span>
-                <span>Kịch Bản Giả Lập E2E</span>
-              </button>
+              {isDemoMode && (
+                <button
+                  onClick={() => {
+                    setIsDrawerOpen(false);
+                    setIsE2EModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 p-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-white font-bold text-xs shadow-md active:scale-95 transition-all"
+                >
+                  <span>⚡</span>
+                  <span>Kịch Bản Giả Lập E2E</span>
+                </button>
+              )}
 
               <button
                 onClick={() => {

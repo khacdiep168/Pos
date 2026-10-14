@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Order } from '@/types';
 import { formatCurrencyVND, formatDateTime } from '@/lib/utils';
+import { exportToCSV } from '@/lib/exportUtils';
 import { InvoiceDetailModal } from './InvoiceDetailModal';
 import {
   Search,
@@ -103,6 +104,53 @@ export const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ orders }) 
     });
   }, [orders, statusFilter, searchQuery]);
 
+  const handleExportInvoices = () => {
+    const headers = [
+      'Mã Đơn',
+      'Thời Gian',
+      'Bàn',
+      'Khách Hàng',
+      'Số Điện Thoại',
+      'Tiền Món (Subtotal)',
+      'Giảm Giá',
+      'Thuế VAT',
+      'Tổng Tiền (VNĐ)',
+      'Hình Thức Thanh Toán',
+      'Trạng Thái Đơn',
+      'Chi Tiết Món',
+      'Ghi Chú / Lý Do Hủy',
+    ];
+
+    const rows = filteredOrders.map((o) => [
+      o.id,
+      formatDateTime(o.created_at),
+      o.table_number,
+      o.customer_name || 'Khách vãng lai',
+      o.customer_phone || '',
+      o.subtotal,
+      o.discount_amount,
+      o.tax_amount,
+      o.total_amount,
+      o.payment_method === 'cash'
+        ? 'Tiền mặt'
+        : o.payment_method === 'transfer_qr'
+        ? 'VietQR'
+        : o.payment_method === 'card'
+        ? 'Thẻ POS'
+        : 'Khác',
+      o.order_status === 'completed'
+        ? 'Hoàn tất'
+        : o.order_status === 'cancelled'
+        ? 'Đã hủy'
+        : o.order_status,
+      o.items.map((i) => `${i.quantity}x ${i.menu_item_name}`).join('; '),
+      o.notes || '',
+    ]);
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    exportToCSV(`Danh_Sach_Hoa_Don_${dateStr}`, headers, rows);
+  };
+
   return (
     <div className="space-y-5">
       {/* Top Metrics Cards */}
@@ -198,6 +246,16 @@ export const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ orders }) 
             <span>Hóa Đơn Bị Hủy ({cancelledCount})</span>
           </button>
         </div>
+
+        {/* Export Excel Button */}
+        <button
+          onClick={handleExportInvoices}
+          className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all shrink-0"
+          title="Xuất file Excel CSV có dấu tiếng Việt chuẩn"
+        >
+          <FileSpreadsheet className="w-4 h-4" />
+          <span>Xuất Excel Hóa Đơn ({filteredOrders.length})</span>
+        </button>
       </div>
 
       {/* Invoices Container (Table on Desktop, Card List on Mobile) */}
