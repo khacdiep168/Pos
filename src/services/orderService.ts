@@ -519,6 +519,9 @@ class OrderService {
   ): Order | null {
     const order = this.orders.find((o) => o.id === orderId);
     if (!order) return null;
+    if (!Array.isArray(order.items)) {
+      order.items = [];
+    }
 
     const item = order.items.find((i) => i.id === itemId);
     if (!item) return null;
@@ -561,18 +564,21 @@ class OrderService {
   ): Order | null {
     const order = this.orders.find((o) => o.id === orderId);
     if (!order) return null;
+    if (!Array.isArray(order.items)) {
+      order.items = [];
+    }
 
     order.items
-      .filter((i) => i.station === station)
+      .filter((i) => i && i.station === station)
       .forEach((item) => {
         item.item_status = newStatus;
         item.updated_at = new Date().toISOString();
         realtimeEngine.emit('ITEM_STATUS_CHANGED', { orderId, item });
       });
 
-    const hasCooking = order.items.some((i) => i.item_status === 'cooking');
+    const hasCooking = order.items.some((i) => i && i.item_status === 'cooking');
     const allReady = order.items.every(
-      (i) => i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled'
+      (i) => i && (i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled')
     );
 
     if (allReady) {

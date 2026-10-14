@@ -44,8 +44,17 @@ export const KDSTicketCard: React.FC<KDSTicketCardProps> = ({
   // Live timer for elapsed waiting time
   useEffect(() => {
     const calculateElapsed = () => {
-      const diffMs = Date.now() - new Date(ticket.createdAt).getTime();
-      setElapsedMinutes(Math.floor(diffMs / 60000));
+      if (!ticket.createdAt) {
+        setElapsedMinutes(0);
+        return;
+      }
+      const parsedTime = new Date(ticket.createdAt).getTime();
+      if (isNaN(parsedTime)) {
+        setElapsedMinutes(0);
+        return;
+      }
+      const diffMs = Date.now() - parsedTime;
+      setElapsedMinutes(Math.max(0, Math.floor(diffMs / 60000)));
     };
 
     calculateElapsed();
@@ -64,6 +73,12 @@ export const KDSTicketCard: React.FC<KDSTicketCardProps> = ({
     : isWarning
     ? 'bg-amber-500/20 text-amber-400 border-amber-500/40'
     : 'bg-stone-800 text-stone-300 border-stone-700';
+
+  const formattedCreatedTime = React.useMemo(() => {
+    if (!ticket.createdAt) return '';
+    const d = new Date(ticket.createdAt);
+    return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('vi-VN');
+  }, [ticket.createdAt]);
 
   return (
     <div
@@ -107,7 +122,7 @@ export const KDSTicketCard: React.FC<KDSTicketCardProps> = ({
         <div className="flex items-center gap-1.5">
           <span
             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-semibold border ${timerColor}`}
-            title={`Tạo lúc: ${new Date(ticket.createdAt).toLocaleTimeString('vi-VN')}`}
+            title={formattedCreatedTime ? `Tạo lúc: ${formattedCreatedTime}` : undefined}
           >
             {isUrgent && <AlertTriangle className="w-3 h-3 text-rose-400 animate-bounce" />}
             <Clock className="w-3 h-3" />

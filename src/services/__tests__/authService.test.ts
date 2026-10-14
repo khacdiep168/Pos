@@ -16,6 +16,13 @@ describe('AuthService - Đăng Nhập & Phân Quyền (RBAC)', () => {
     expect(res.user?.role).toBe('waiter');
   });
 
+  it('đăng nhập thành công với tài khoản Pha Chế (bartender) và mật khẩu demo', () => {
+    const res = authService.login('bartender', '123456');
+    expect(res.success).toBe(true);
+    expect(res.user?.role).toBe('bar');
+    expect(authService.getAllowedModules(res.user!.role)).toEqual(['kds']);
+  });
+
   it('từ chối đăng nhập khi sai mật khẩu', () => {
     const res = authService.login('admin', 'wrongpassword_999');
     expect(res.success).toBe(false);

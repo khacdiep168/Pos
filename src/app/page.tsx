@@ -63,10 +63,16 @@ export default function Home() {
   useEffect(() => {
     if (user && allowedModules.length > 0) {
       if (!canAccess(activeTab)) {
-        setActiveTab(allowedModules[0]);
+        setActiveTab(allowedModules[0] as 'foh' | 'kds' | 'cashier' | 'erp' | 'admin');
       }
     }
   }, [user, allowedModules, activeTab, canAccess]);
+
+  // Compute effective tab immediately to avoid rendering forbidden views (e.g. FOH for Bar/Chef)
+  const effectiveTab: 'foh' | 'kds' | 'cashier' | 'erp' | 'admin' =
+    user && !canAccess(activeTab) && allowedModules.length > 0
+      ? (allowedModules[0] as 'foh' | 'kds' | 'cashier' | 'erp' | 'admin')
+      : activeTab;
 
   const allModules = [
     {
@@ -123,7 +129,7 @@ export default function Home() {
 
   // RBAC Filter: Only show modules the user has access to
   const visibleModules = allModules.filter((m) => canAccess(m.id));
-  const currentModule = allModules.find((m) => m.id === activeTab) || allModules[0];
+  const currentModule = allModules.find((m) => m.id === effectiveTab) || allModules[0];
 
   if (isLoading) {
     return (
@@ -189,7 +195,7 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-1 overflow-x-auto no-scrollbar py-1">
             {visibleModules.map((m) => {
               const Icon = m.icon;
-              const isActive = activeTab === m.id;
+              const isActive = effectiveTab === m.id;
               return (
                 <button
                   key={m.id}
@@ -348,7 +354,7 @@ export default function Home() {
                 <div className="space-y-1">
                   {visibleModules.map((m) => {
                     const Icon = m.icon;
-                    const isActive = activeTab === m.id;
+                    const isActive = effectiveTab === m.id;
                     return (
                       <button
                         key={m.id}
@@ -440,22 +446,22 @@ export default function Home() {
 
       {/* Main View Area */}
       <div className="flex-1 overflow-hidden relative">
-        {activeTab === 'foh' && <FOHView />}
+        {effectiveTab === 'foh' && <FOHView />}
 
-        {activeTab === 'kds' && <KDSView />}
+        {effectiveTab === 'kds' && <KDSView />}
 
-        {activeTab === 'cashier' && <CashierView />}
+        {effectiveTab === 'cashier' && <CashierView />}
 
-        {activeTab === 'erp' && <ERPView />}
+        {effectiveTab === 'erp' && <ERPView />}
 
-        {activeTab === 'admin' && <AdminView />}
+        {effectiveTab === 'admin' && <AdminView />}
       </div>
 
       {/* Zero-Hamburger, Thumb-Friendly Mobile Bottom Navigation Bar (Fixed bottom-0 inset-x-0 z-40 h-16) */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 backdrop-blur-md bg-white/95 dark:bg-slate-900/95 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-around px-1 shadow-xl select-none">
         {visibleModules.map((m) => {
           const Icon = m.icon;
-          const isActive = activeTab === m.id;
+          const isActive = effectiveTab === m.id;
 
           return (
             <button

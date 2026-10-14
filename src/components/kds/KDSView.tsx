@@ -5,48 +5,66 @@ import { Order, OrderItem, StationType, ItemStatus } from '@/types';
 import { orderService } from '@/services/orderService';
 import { realtimeEngine } from '@/services/realtimeEngine';
 import { playNewOrderSound, toggleAudioMute, isAudioAlertMuted } from '@/lib/audioAlert';
+import { useAuth } from '@/context/AuthContext';
 import { KDSTicket } from './KDSTicketCard';
 import { KDSKanbanBoard } from './KDSKanbanBoard';
 import { KitchenReceiptModal } from './KitchenReceiptModal';
 
 export const KDSView: React.FC = () => {
+  const { user } = useAuth();
   const [tickets, setTickets] = useState<KDSTicket[]>([]);
-  const [selectedStation, setSelectedStation] = useState<StationType | 'all'>('all');
+  const [selectedStation, setSelectedStation] = useState<StationType | 'all'>(() => {
+    if (user?.role === 'bar') return 'bar';
+    if (user?.role === 'kitchen') return 'kitchen';
+    return 'all';
+  });
   const [isMuted, setIsMuted] = useState(false);
   const [printTicket, setPrintTicket] = useState<KDSTicket | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
+  // Synchronize station filter when user account changes
+  useEffect(() => {
+    if (user?.role === 'bar') {
+      setSelectedStation('bar');
+    } else if (user?.role === 'kitchen') {
+      setSelectedStation('kitchen');
+    }
+  }, [user?.role]);
+
   // Convert an Order into 1 or 2 station tickets (Kitchen and/or Bar)
-  const breakOrderIntoTickets = useCallback((order: Order): KDSTicket[] => {
+  const breakOrderIntoTickets = useCallback((order: any): KDSTicket[] => {
     const stationTickets: KDSTicket[] = [];
+    if (!order || !order.id || !Array.isArray(order.items)) {
+      return stationTickets;
+    }
 
     // Lookup table and its zone
-    const allTables = orderService.getTables();
-    const allZones = orderService.getZones();
+    const allTables = orderService.getTables() || [];
+    const allZones = orderService.getZones() || [];
     const table = allTables.find(
       (t) => t.id === order.table_id || t.table_number === order.table_number
     );
     const zone = table?.zone_id ? allZones.find((z) => z.id === table.zone_id) : undefined;
     const zoneName = zone?.name;
 
-    const kitchenItems = order.items.filter((i) => i.station === 'kitchen');
-    const barItems = order.items.filter((i) => i.station === 'bar');
+    const kitchenItems = order.items.filter((i: any) => i && i.station === 'kitchen');
+    const barItems = order.items.filter((i: any) => i && i.station === 'bar');
 
     if (kitchenItems.length > 0) {
       // Determine kitchen ticket status
       const allReady = kitchenItems.every(
-        (i) => i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled'
+        (i: any) => i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled'
       );
-      const anyCooking = kitchenItems.some((i) => i.item_status === 'cooking');
+      const anyCooking = kitchenItems.some((i: any) => i.item_status === 'cooking');
       const ticketStatus = allReady ? 'ready' : anyCooking ? 'cooking' : 'pending';
 
       stationTickets.push({
         id: `${order.id}_kitchen`,
         orderId: order.id,
-        tableNumber: order.table_number,
+        tableNumber: order.table_number || 'Bàn',
         zoneName,
         station: 'kitchen',
-        createdAt: order.created_at,
+        createdAt: order.created_at || new Date().toISOString(),
         items: kitchenItems,
         status: ticketStatus,
       });
@@ -55,18 +73,18 @@ export const KDSView: React.FC = () => {
     if (barItems.length > 0) {
       // Determine bar ticket status
       const allReady = barItems.every(
-        (i) => i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled'
+        (i: any) => i.item_status === 'ready' || i.item_status === 'served' || i.item_status === 'cancelled'
       );
-      const anyCooking = barItems.some((i) => i.item_status === 'cooking');
+      const anyCooking = barItems.some((i: any) => i.item_status === 'cooking');
       const ticketStatus = allReady ? 'ready' : anyCooking ? 'cooking' : 'pending';
 
       stationTickets.push({
         id: `${order.id}_bar`,
         orderId: order.id,
-        tableNumber: order.table_number,
+        tableNumber: order.table_number || 'Bàn',
         zoneName,
         station: 'bar',
-        createdAt: order.created_at,
+        createdAt: order.created_at || new Date().toISOString(),
         items: barItems,
         status: ticketStatus,
       });
@@ -80,13 +98,14 @@ export const KDSView: React.FC = () => {
     const allOrders = orderService.getOrders();
     const allTickets: KDSTicket[] = [];
 
-    // Filter out completely closed/cancelled orders if desired, or keep active
-    allOrders.forEach((order) => {
-      if (order.order_status !== 'cancelled') {
-        const orderTickets = breakOrderIntoTickets(order);
-        allTickets.push(...orderTickets);
-      }
-    });
+    if (Array.isArray(allOrders)) {
+      allOrders.forEach((order) => {
+        if (order && order.order_status !== 'cancelled') {
+          const orderTickets = breakOrderIntoTickets(order);
+          allTickets.push(...orderTickets);
+        }
+      });
+    }
 
     setTickets(allTickets);
   }, [breakOrderIntoTickets]);
@@ -97,11 +116,18 @@ export const KDSView: React.FC = () => {
     refreshTickets();
 
     // 1. Subscribe to ORDER_CREATED (New orders incoming)
-    const unsubOrderCreated = realtimeEngine.subscribe<Order>('ORDER_CREATED', (newOrder) => {
+    const unsubOrderCreated = realtimeEngine.subscribe<any>('ORDER_CREATED', (newOrder) => {
+      if (!newOrder || !newOrder.id || !Array.isArray(newOrder.items)) {
+        refreshTickets();
+        return;
+      }
+
       // Bếp & Bar: Tiếng bíp dồn dập báo món mới
       playNewOrderSound();
 
       const newTickets = breakOrderIntoTickets(newOrder);
+      if (newTickets.length === 0) return;
+
       setTickets((prev) => {
         // Remove duplicates if any and prepend new tickets
         const idsToRemove = new Set(newTickets.map((t) => t.id));
@@ -111,9 +137,15 @@ export const KDSView: React.FC = () => {
     });
 
     // 2. Subscribe to ORDER_UPDATED & ORDER_STATUS_CHANGED
-    const unsubOrderUpdated = realtimeEngine.subscribe<Order>('ORDER_UPDATED', (updatedOrder) => {
+    const unsubOrderUpdated = realtimeEngine.subscribe<any>('ORDER_UPDATED', (payload) => {
+      // If payload is a generic signal (e.g. { type: 'SUPABASE_SYNC_COMPLETED' }) or lacks items
+      if (!payload || !payload.id || !Array.isArray(payload.items)) {
+        refreshTickets();
+        return;
+      }
+
       setTickets((prev) => {
-        const updatedTickets = breakOrderIntoTickets(updatedOrder);
+        const updatedTickets = breakOrderIntoTickets(payload);
         const updatedMap = new Map(updatedTickets.map((t) => [t.id, t]));
 
         return prev.map((t) => (updatedMap.has(t.id) ? updatedMap.get(t.id)! : t));
