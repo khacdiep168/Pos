@@ -178,7 +178,23 @@ export const TaxDeclarationTab: React.FC = () => {
       o.cancelled_by || '',
     ]);
 
-    exportToCSV(`Bang_Ke_HDDT_May_Tinh_Tien_ND254_${selectedPeriod}.csv`, headers, rows);
+    const periodLabel =
+      selectedPeriod === 'this_month'
+        ? 'Tháng 10/2026'
+        : selectedPeriod === 'q1'
+        ? 'Quý 1/2026'
+        : selectedPeriod === 'q2'
+        ? 'Quý 2/2026'
+        : selectedPeriod === 'q3'
+        ? 'Quý 3/2026'
+        : selectedPeriod === 'q4'
+        ? 'Quý 4/2026'
+        : 'Năm 2026';
+
+    exportToCSV(`Bang_Ke_HDDT_May_Tinh_Tien_ND254_${selectedPeriod}.csv`, headers, rows, {
+      reportTitle: 'BẢNG KÊ CHI TIẾT HÓA ĐƠN KHỞI TẠO TỪ MÁY TÍNH TIỀN & BIÊN BẢN ĐƠN HỦY (CHUẨN NĐ 254/2026/NĐ-CP)',
+      periodText: `Kỳ tính thuế: ${periodLabel}`,
+    });
     showToast('Đã xuất Bảng Kê Hóa Đơn Máy Tính Tiền (NĐ 254/2026/NĐ-CP)!');
   };
 
@@ -205,7 +221,23 @@ export const TaxDeclarationTab: React.FC = () => {
       Math.round(o.total_amount * 0.015),
     ]);
 
-    exportToCSV(`Mau_S1_So_Chi_Tiet_Doanh_Thu_TT91_${selectedPeriod}.csv`, headers, rows);
+    const periodLabel =
+      selectedPeriod === 'this_month'
+        ? 'Tháng 10/2026'
+        : selectedPeriod === 'q1'
+        ? 'Quý 1/2026'
+        : selectedPeriod === 'q2'
+        ? 'Quý 2/2026'
+        : selectedPeriod === 'q3'
+        ? 'Quý 3/2026'
+        : selectedPeriod === 'q4'
+        ? 'Quý 4/2026'
+        : 'Năm 2026';
+
+    exportToCSV(`Mau_S1_So_Chi_Tiet_Doanh_Thu_TT91_${selectedPeriod}.csv`, headers, rows, {
+      reportTitle: 'SỔ CHI TIẾT DOANH THU BÁN HÀNG HÓA, DỊCH VỤ (MẪU S1 - TT 91/2026/TT-BTC)',
+      periodText: `Kỳ tính thuế: ${periodLabel}`,
+    });
     showToast('Đã xuất Sổ Chi Tiết Doanh Thu (Mẫu S1 - TT 91/2026)!');
   };
 
@@ -232,7 +264,10 @@ export const TaxDeclarationTab: React.FC = () => {
       m.name.toLowerCase().includes('ly') || m.name.toLowerCase().includes('túi') ? 'Bao Bì' : 'Cốt Món',
     ]);
 
-    exportToCSV(`Mau_S2_So_Nhap_Xuat_Ton_Kho_TT91.csv`, headers, rows);
+    exportToCSV(`Mau_S2_So_Nhap_Xuat_Ton_Kho_TT91.csv`, headers, rows, {
+      reportTitle: 'SỔ CHI TIẾT VẬT LIỆU, DỤNG CỤ, SẢN PHẨM, HÀNG HÓA NHẬP - XUẤT - TỒN (MẪU S2 - TT 91/2026/TT-BTC)',
+      periodText: `Thời điểm chốt sổ: ${new Date().toLocaleDateString('vi-VN')}`,
+    });
     showToast('Đã xuất Sổ Nhập-Xuất-Tồn (Mẫu S2 - TT 91/2026)!');
   };
 
@@ -259,7 +294,10 @@ export const TaxDeclarationTab: React.FC = () => {
       e.is_tax_valid ? 'Được khấu trừ' : 'Không có HĐ',
     ]);
 
-    exportToCSV(`Mau_S3_So_Chi_Phi_San_Xuat_Kinh_Doanh_TT91.csv`, headers, rows);
+    exportToCSV(`Mau_S3_So_Chi_Phi_San_Xuat_Kinh_Doanh_TT91.csv`, headers, rows, {
+      reportTitle: 'SỔ CHI PHÍ SẢN XUẤT, KINH DOANH & NGHĨA VỤ THUẾ (MẪU S3 & S4 - TT 91/2026/TT-BTC)',
+      periodText: `Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')}`,
+    });
     showToast('Đã xuất Sổ Chi Phí Sản Xuất Kinh Doanh (Mẫu S3 - TT 91/2026)!');
   };
 
@@ -286,7 +324,10 @@ export const TaxDeclarationTab: React.FC = () => {
       t.type === 'out' ? t.amount : 0,
     ]);
 
-    exportToCSV(`Mau_S6_S7_So_Quy_Tien_Mat_Ngan_Hang_TT91.csv`, headers, rows);
+    exportToCSV(`Mau_S6_S7_So_Quy_Tien_Mat_Ngan_Hang_TT91.csv`, headers, rows, {
+      reportTitle: 'SỔ QUỸ TIỀN MẶT & SỔ TIỀN GỬI NGÂN HÀNG (MẪU S6 & S7 - TT 91/2026/TT-BTC)',
+      periodText: `Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')}`,
+    });
     showToast('Đã xuất Sổ Quỹ Tiền Mặt & Ngân Hàng (Mẫu S6/S7 - TT 91/2026)!');
   };
 

@@ -21,6 +21,10 @@ import {
 export const initialStoreSettings: StoreSettings = {
   id: 'store-1',
   store_name: 'Nhà Hàng Vibe Taste & Bistro',
+  business_name: 'HỘ KINH DOANH VIBE BISTRO',
+  tax_code: '8329102834-001',
+  owner_name: 'Nguyễn Văn A',
+  registration_date: '2024-03-15',
   logo_url: '/logo.png',
   address: '123 Đường Ẩm Thực, Quận 1, TP. Hồ Chí Minh',
   phone: '0901 234 567',

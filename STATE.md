@@ -708,7 +708,45 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 18. Luật vận hành (Agent Working Rules)
+## 18. Phase 2.5: Header Metadata & Official Tax Report Export (Thêm Tiêu Đề Hộ Kinh Doanh & Chuẩn Hóa File Xuất Excel/CSV) - HOÀN TẤT
+Đã chuẩn hóa toàn diện hồ sơ sổ sách kế toán xuất ra sẵn sàng in ấn, nộp cho cơ quan thuế hoặc kiểm toán nội bộ theo đúng biểu mẫu pháp lý của Bộ Tài chính:
+
+1. **Quản Lý Thông Tin Pháp Lý Quán ([src/types/index.ts](file:///e:/Vibe%20Coding/POS/src/types/index.ts), [mockData.ts](file:///e:/Vibe%20Coding/POS/src/database/mockData.ts), [StoreSettingsTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/StoreSettingsTab.tsx))**:
+   - **Mở rộng `StoreSettings`**:
+     - `business_name`: Tên chính thức của Hộ kinh doanh / Công ty (VD: `HỘ KINH DOANH VIBE BISTRO`).
+     - `tax_code`: Mã số thuế (MST) của quán (VD: `8329102834-001`).
+     - `owner_name`: Tên chủ hộ kinh doanh / Người đại diện pháp luật (VD: `Nguyễn Văn A`).
+     - `address`: Địa chỉ đăng ký kinh doanh chính thức.
+     - `registration_date`: Ngày cấp giấy phép đăng ký kinh doanh (VD: `2024-03-15`).
+   - **Giao diện Cấu Hình Cửa Hàng ([StoreSettingsTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/StoreSettingsTab.tsx))**:
+     - Bổ sung Card riêng biệt phong cách hiện đại: *"🏢 Thông Tin Pháp Lý & Kê Khai Thuế (NĐ 254/2026 & TT 91/2026)"*.
+     - Cho phép chủ quán dễ dàng nhập/sửa tên pháp nhân, MST, chủ hộ, ngày cấp GPKD và lưu đồng bộ 2 chiều lên Supabase Cloud.
+
+2. **Nâng Cấp Tiêu Chuẩn Xuất File Excel/CSV Biểu Mẫu Bộ Tài Chính ([exportUtils.ts](file:///e:/Vibe%20Coding/POS/src/lib/exportUtils.ts))**:
+   - Khi xuất bất kỳ file Sổ kế toán nào (Mẫu S1, S2, S3, S4, S6, S7 hoặc Bảng kê NĐ 254), file CSV với tiền tố Byte Order Mark `\uFEFF` (UTF-8 BOM) được định dạng chuẩn xác:
+     - **Dòng 1**: `CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM` (In hoa).
+     - **Dòng 2**: `Độc lập - Tự do - Hạnh phúc`.
+     - **Dòng 3**: `Đơn vị: [Tên Hộ kinh doanh / Công ty lấy từ StoreSettings]` (In hoa, đậm).
+     - **Dòng 4**: `Mã số thuế: [MST] | Địa chỉ: [Địa chỉ quán]`.
+     - **Dòng 5**: `[TÊN SỔ KẾ TOÁN HOẶC BÁO CÁO THUẾ] (Kỳ báo cáo: Từ ngày ... Đến ngày ... / Kỳ tính thuế: ...)`.
+     - **Dòng 6**: Dòng trống phân cách.
+     - **Dòng 7 trở đi**: Bảng dữ liệu chi tiết (Tiêu đề cột + Dữ liệu đồng bộ real-time).
+     - **Cuối file**: Dòng ngày tháng lập báo cáo + Khung chữ ký hai bên: `Người lập sổ (Ký, ghi rõ họ tên)` và `Chủ hộ kinh doanh (Ký, đóng dấu nếu có)` kèm họ tên tương ứng.
+
+3. **Liên Thông Đồng Bộ Các Phân Hệ Kết Xuất Báo Cáo**:
+   - **Trợ Lý Khai Thuế ([TaxDeclarationTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/TaxDeclarationTab.tsx))**: Cả 5 sổ kế toán (Bảng kê HĐĐT máy tính tiền NĐ 254, Mẫu S1, S2, S3, S6/S7) đều tự động nhận diện `periodLabel` và metadata pháp lý từ cửa hàng.
+   - **Sổ Quỹ Thu/Chi ([CashbookTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/CashbookTab.tsx))**: Tự động áp dụng tiêu đề Mẫu S6 (Sổ Quỹ Tiền Mặt) hoặc Mẫu S7 (Sổ Tiền Gửi Ngân Hàng).
+   - **Lịch Sử Hóa Đơn ([InvoiceHistoryTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/InvoiceHistoryTab.tsx))** & **Báo Cáo Tổng Hợp ([ReportTab.tsx](file:///e:/Vibe%20Coding/POS/src/components/admin/ReportTab.tsx))**: Tự động tích hợp tiêu đề Z-Report và Báo cáo tồn kho theo chuẩn pháp nhân.
+
+4. **Kiểm Thử & Đóng Gói Deployment**:
+   - Type Checking (`npx tsc --noEmit`): Đạt 0 lỗi TypeScript (100% clean).
+   - Unit Tests (`npx vitest run`): Đạt 29/29 tests PASS (100%).
+   - Next.js Production Build (`npm run build`): Biên dịch 11/11 routes thành công.
+   - Tự động deploy lên Vercel Production: [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
+
+---
+
+## 19. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.

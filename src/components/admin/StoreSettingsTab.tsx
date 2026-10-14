@@ -23,6 +23,11 @@ import {
   ToggleLeft,
   ToggleRight,
   X,
+  Scale,
+  FileText,
+  Calendar,
+  Building2,
+  UserCheck,
 } from 'lucide-react';
 
 interface StoreSettingsTabProps {
@@ -42,6 +47,12 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
   const [taxRate, setTaxRate] = useState(settings.tax_rate * 100);
   const [wifiSsid, setWifiSsid] = useState(settings.wifi_ssid || 'VIBE TASTE 5G');
   const [wifiPassword, setWifiPassword] = useState(settings.wifi_password || '');
+
+  // Legal & Tax Info (NĐ 254/2026 & TT 91/2026)
+  const [businessName, setBusinessName] = useState(settings.business_name || 'HỘ KINH DOANH VIBE BISTRO');
+  const [taxCode, setTaxCode] = useState(settings.tax_code || '8329102834-001');
+  const [ownerName, setOwnerName] = useState(settings.owner_name || 'Nguyễn Văn A');
+  const [registrationDate, setRegistrationDate] = useState(settings.registration_date || '2024-03-15');
 
   // VietQR & Banking
   const [bankId, setBankId] = useState(settings.bank_id || 'MB');
@@ -64,6 +75,10 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
 
     adminService.updateSettings({
       store_name: storeName,
+      business_name: businessName,
+      tax_code: taxCode,
+      owner_name: ownerName,
+      registration_date: registrationDate,
       logo_url: logoUrl,
       address,
       phone,
@@ -142,6 +157,91 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
                 onChange={(e) => setLogoUrl(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-stone-50 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl font-mono text-xs"
               />
+            </div>
+          </div>
+
+          {/* THÔNG TIN PHÁP LÝ & KÊ KHAI THUẾ (NĐ 254/2026/NĐ-CP & TT 91/2026/TT-BTC) */}
+          <div className="p-4 bg-purple-50/70 dark:bg-purple-950/20 rounded-2xl border border-purple-200/80 dark:border-purple-800/60 space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h4 className="font-extrabold text-sm text-purple-950 dark:text-purple-200 flex items-center gap-2">
+                <Scale className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <span>Thông Tin Pháp Lý & Kê Khai Thuế (NĐ 254/2026 & TT 91/2026)</span>
+              </h4>
+              <span className="self-start sm:self-auto px-2 py-0.5 bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 rounded text-[10px] font-bold">
+                Tự động xuất lên tiêu đề Sổ Kế Toán & HĐĐT
+              </span>
+            </div>
+            <p className="text-[11px] text-purple-800/80 dark:text-purple-300/80">
+              Thông tin này sẽ được in trên 5 dòng tiêu đề đầu tiên của Sổ S1, S2, S3, S4, S6, S7 và Bảng kê HĐĐT máy tính tiền theo chuẩn biểu mẫu của Bộ Tài chính.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+              {/* Tên chính thức HKD/Công ty */}
+              <div>
+                <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                  Tên chính thức Hộ kinh doanh / Công ty *:
+                </label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500" />
+                  <input
+                    type="text"
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value.toUpperCase())}
+                    placeholder="VD: HỘ KINH DOANH VIBE BISTRO"
+                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-stone-800 border border-purple-200 dark:border-stone-700 rounded-xl font-bold uppercase text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Mã số thuế */}
+              <div>
+                <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                  Mã số thuế (MST) *:
+                </label>
+                <div className="relative">
+                  <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500" />
+                  <input
+                    type="text"
+                    value={taxCode}
+                    onChange={(e) => setTaxCode(e.target.value)}
+                    placeholder="VD: 8329102834-001"
+                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-stone-800 border border-purple-200 dark:border-stone-700 rounded-xl font-mono font-bold text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Tên chủ hộ KD / Đại diện pháp luật */}
+              <div>
+                <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                  Chủ hộ kinh doanh / Đại diện pháp luật *:
+                </label>
+                <div className="relative">
+                  <UserCheck className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500" />
+                  <input
+                    type="text"
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="VD: Nguyễn Văn A"
+                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-stone-800 border border-purple-200 dark:border-stone-700 rounded-xl font-bold text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Ngày cấp GPKD */}
+              <div>
+                <label className="font-bold text-stone-700 dark:text-stone-300 block mb-1">
+                  Ngày cấp giấy phép đăng ký KD:
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500" />
+                  <input
+                    type="date"
+                    value={registrationDate}
+                    onChange={(e) => setRegistrationDate(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-white dark:bg-stone-800 border border-purple-200 dark:border-stone-700 rounded-xl font-mono text-xs"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

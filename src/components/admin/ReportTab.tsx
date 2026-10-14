@@ -121,7 +121,10 @@ export const ReportTab: React.FC<ReportTabProps> = ({ orders, materials }) => {
     ];
 
     const dateStr = new Date().toISOString().slice(0, 10);
-    exportToCSV(`Bao_Cao_Doanh_Thu_ZReport_${dateStr}`, headers, rows);
+    exportToCSV(`Bao_Cao_Doanh_Thu_ZReport_${dateStr}`, headers, rows, {
+      reportTitle: 'BÁO CÁO DOANH THU & CHỐT CA TỔNG HỢP (Z-REPORT)',
+      periodText: `Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')}`,
+    });
   };
 
   const handleExportInventory = () => {
@@ -148,7 +151,10 @@ export const ReportTab: React.FC<ReportTabProps> = ({ orders, materials }) => {
     ]);
 
     const dateStr = new Date().toISOString().slice(0, 10);
-    exportToCSV(`Bao_Cao_Ton_Kho_${dateStr}`, headers, rows);
+    exportToCSV(`Bao_Cao_Ton_Kho_${dateStr}`, headers, rows, {
+      reportTitle: 'BÁO CÁO TỒN KHO NGUYÊN VẬT LIỆU & ĐỊNH MỨC AN TOÀN',
+      periodText: `Thời điểm chốt sổ: ${new Date().toLocaleDateString('vi-VN')}`,
+    });
   };
 
   return (

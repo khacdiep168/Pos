@@ -148,7 +148,10 @@ export const InvoiceHistoryTab: React.FC<InvoiceHistoryTabProps> = ({ orders }) 
     ]);
 
     const dateStr = new Date().toISOString().slice(0, 10);
-    exportToCSV(`Danh_Sach_Hoa_Don_${dateStr}`, headers, rows);
+    exportToCSV(`Danh_Sach_Hoa_Don_${dateStr}`, headers, rows, {
+      reportTitle: 'BẢNG KÊ TOÀN BỘ HÓA ĐƠN BÁN HÀNG & DỊCH VỤ',
+      periodText: `Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')}`,
+    });
   };
 
   return (

@@ -203,8 +203,18 @@ export const CashbookTab: React.FC = () => {
         ? `So_Tien_Gui_Ngan_Hang_${new Date().toISOString().slice(0, 10)}.csv`
         : `So_Quy_Thu_Chi_${new Date().toISOString().slice(0, 10)}.csv`;
 
-    exportToCSV(filename, headers, rows);
-    showToast(`Đã xuất file ${filename} (UTF-8 BOM Excel)!`);
+    const reportTitle =
+      targetFund === 'cash'
+        ? 'SỔ QUỸ TIỀN MẶT (MẪU S6 - THÔNG TƯ 91/2026/TT-BTC)'
+        : targetFund === 'bank'
+        ? 'SỔ TIỀN GỬI NGÂN HÀNG (MẪU S7 - THÔNG TƯ 91/2026/TT-BTC)'
+        : 'SỔ QUỸ THU & CHI TIỀN MẶT - NGÂN HÀNG (TT 91/2026/TT-BTC)';
+
+    exportToCSV(filename, headers, rows, {
+      reportTitle,
+      periodText: `Thời điểm xuất: ${new Date().toLocaleDateString('vi-VN')}`,
+    });
+    showToast(`Đã xuất file ${filename} (Chuẩn TT 91/2026/TT-BTC)!`);
   };
 
   return (

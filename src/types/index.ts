@@ -219,8 +219,12 @@ export interface UserAccount {
 export interface StoreSettings {
   id: string;
   store_name: string;
+  business_name?: string; // Tên chính thức của Hộ kinh doanh / Công ty
+  tax_code?: string; // Mã số thuế (MST) của quán
+  owner_name?: string; // Tên chủ hộ kinh doanh / Đại diện pháp luật
+  registration_date?: string; // Ngày cấp giấy phép đăng ký kinh doanh
   logo_url: string;
-  address: string;
+  address: string; // Địa chỉ đăng ký kinh doanh chính thức
   phone: string;
   business_hours: string;
   tax_rate: number; // e.g. 0.08 for 8%
