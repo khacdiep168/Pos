@@ -268,11 +268,11 @@ class VoiceNotificationService {
       const res = await fetch(`/api/tts?apiUrl=${encodeURIComponent(this.vieneuApiUrlState)}`);
       const data = await res.json();
       if (data.online) {
-        return { online: true, message: `Kết nối VieNeu-TTS v3 Turbo thành công (${this.vieneuApiUrlState})` };
+        return { online: true, message: data.message || `Kết nối VieNeu-TTS v3 Turbo thành công` };
       }
-      return { online: false, message: `Chưa kết nối được VieNeu-TTS tại ${this.vieneuApiUrlState}. Hệ thống sẽ dùng giọng đọc trình duyệt làm dự phòng.` };
+      return { online: false, message: data.message || `Chưa phát hiện server VieNeu-TTS. Sẽ sử dụng giọng đọc trình duyệt tự nhiên.` };
     } catch {
-      return { online: false, message: `Không thể kết nối tới ${this.vieneuApiUrlState}` };
+      return { online: false, message: `Không thể kết nối tới server TTS` };
     }
   }
 

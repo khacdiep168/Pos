@@ -187,7 +187,7 @@ describe('VoiceNotificationService - Smart Voice Notification Engine (Phase 2.6 
 
     it('kiểm tra trạng thái kết nối VieNeu-TTS qua /api/tts', async () => {
       (global as any).fetch = vi.fn().mockResolvedValue({
-        json: async () => ({ online: true }),
+        json: async () => ({ online: true, message: 'Kết nối VieNeu-TTS v3 Turbo thành công' }),
       });
 
       const res = await voiceNotificationService.checkVieNeuConnection();

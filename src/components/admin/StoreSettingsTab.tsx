@@ -129,9 +129,13 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
   };
 
   const handleTestVoice = () => {
-    setTestSpeechStatus('Đang phát âm thanh mẫu...');
+    voiceNotificationService.setEnabled(true);
+    voiceNotificationService.setEngine(ttsEngine);
+    voiceNotificationService.setVieNeuVoice(vieneuVoice);
+    voiceNotificationService.setVieNeuApiUrl(vieneuApiUrl);
+    setTestSpeechStatus('Đang tổng hợp & phát âm thanh VieNeu-TTS...');
     voiceNotificationService.speakText('Khách Tầng 1, Bàn 1 đặt món: Cà phê sữa, số lượng một.');
-    setTimeout(() => setTestSpeechStatus(null), 3500);
+    setTimeout(() => setTestSpeechStatus(null), 4500);
   };
 
   const handleCheckConnection = async () => {
@@ -578,6 +582,9 @@ export const StoreSettingsTab: React.FC<StoreSettingsTabProps> = ({
                             {connectionStatus.message}
                           </p>
                         )}
+                        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-1.5 leading-relaxed">
+                          💡 <strong>Chế độ kép:</strong> Chạy file <code className="text-amber-600 dark:text-amber-400 font-bold">start_vieneu.bat</code> trên máy thu ngân để phát siêu tốc (115ms). Khi mở trên Vercel hoặc điện thoại, hệ thống tự động chuyển tiếp qua VieNeu-TTS Cloud AI (Hugging Face) không cần cấu hình.
+                        </p>
                       </div>
                     </div>
                   </div>
