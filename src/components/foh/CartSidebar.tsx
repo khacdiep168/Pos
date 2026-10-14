@@ -23,6 +23,7 @@ import {
   Phone,
   Search,
   Sparkles,
+  UtensilsCrossed,
 } from 'lucide-react';
 
 interface CartSidebarProps {
@@ -50,6 +51,13 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successOrder, setSuccessOrder] = useState<Order | null>(null);
+  const [isAddonSuccess, setIsAddonSuccess] = useState(false);
+  const [showExistingItems, setShowExistingItems] = useState(false);
+
+  // Check if selected table already has an active unpaid order (Add-on Order scenario)
+  const activeExistingOrder = selectedTable
+    ? orderService.getOrderByTableId(selectedTable.id)
+    : null;
 
   // Customer CRM State
   const [customerPhoneInput, setCustomerPhoneInput] = useState('');
@@ -153,54 +161,84 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
     }
 
     setIsSubmitting(true);
-
     const now = new Date().toISOString();
-    const orderId = `ord-${Date.now()}`;
 
-    const orderItems: OrderItem[] = items.map((cartItem, index) => ({
-      id: `item-${orderId}-${index + 1}`,
-      order_id: orderId,
-      menu_item_id: cartItem.menuItem.id,
-      menu_item_name: cartItem.menuItem.name,
-      quantity: cartItem.quantity,
-      price: cartItem.unit_price,
-      notes: cartItem.notes,
-      selected_modifiers: cartItem.selected_modifiers,
-      item_status: 'pending',
-      station: cartItem.menuItem.station,
-      created_at: now,
-    }));
+    if (activeExistingOrder) {
+      // LUỒNG 1: KHÁCH GỌI THÊM MÓN (ADD-ON ORDER) VÀO BÀN HIỆN TẠI
+      const newItems: OrderItem[] = items.map((cartItem, index) => ({
+        id: `item-addon-${Date.now()}-${index + 1}`,
+        order_id: activeExistingOrder.id,
+        menu_item_id: cartItem.menuItem.id,
+        menu_item_name: cartItem.menuItem.name,
+        quantity: cartItem.quantity,
+        price: cartItem.unit_price,
+        notes: cartItem.notes,
+        selected_modifiers: cartItem.selected_modifiers,
+        item_status: 'pending',
+        station: cartItem.menuItem.station,
+        created_at: now,
+      }));
 
-    const newOrder: Order = {
-      id: orderId,
-      table_id: selectedTable.id,
-      table_number: selectedTable.table_number,
-      customer_id: attachedCustomer?.id,
-      customer_name: attachedCustomer?.name,
-      customer_phone: attachedCustomer?.phone,
-      order_status: 'pending',
-      payment_status: 'unpaid',
-      subtotal,
-      discount_amount: discountAmount,
-      tax_amount: taxAmount,
-      total_amount: totalAmount,
-      items: orderItems,
-      created_at: now,
-      updated_at: now,
-    };
+      const updated = orderService.appendItemsToOrder(activeExistingOrder.id, newItems);
 
-    // Save order and emit ORDER_CREATED event
-    orderService.createOrder(newOrder);
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setIsAddonSuccess(true);
+        setSuccessOrder(updated || activeExistingOrder);
+        setAttachedCustomer(null);
+        setCustomerPhoneInput('');
+        setCustomerLookupMsg(null);
+        setShowAddCustomerQuick(false);
+        onClearCart();
+      }, 400);
+    } else {
+      // LUỒNG 2: MỞ ĐƠN HÀNG MỚI CHO BÀN TRỐNG / ĐƠN MANG VỀ
+      const orderId = `ord-${Date.now()}`;
+      const orderItems: OrderItem[] = items.map((cartItem, index) => ({
+        id: `item-${orderId}-${index + 1}`,
+        order_id: orderId,
+        menu_item_id: cartItem.menuItem.id,
+        menu_item_name: cartItem.menuItem.name,
+        quantity: cartItem.quantity,
+        price: cartItem.unit_price,
+        notes: cartItem.notes,
+        selected_modifiers: cartItem.selected_modifiers,
+        item_status: 'pending',
+        station: cartItem.menuItem.station,
+        created_at: now,
+      }));
 
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSuccessOrder(newOrder);
-      setAttachedCustomer(null);
-      setCustomerPhoneInput('');
-      setCustomerLookupMsg(null);
-      setShowAddCustomerQuick(false);
-      onClearCart();
-    }, 400);
+      const newOrder: Order = {
+        id: orderId,
+        table_id: selectedTable.id,
+        table_number: selectedTable.table_number,
+        customer_id: attachedCustomer?.id,
+        customer_name: attachedCustomer?.name,
+        customer_phone: attachedCustomer?.phone,
+        order_status: 'pending',
+        payment_status: 'unpaid',
+        subtotal,
+        discount_amount: discountAmount,
+        tax_amount: taxAmount,
+        total_amount: totalAmount,
+        items: orderItems,
+        created_at: now,
+        updated_at: now,
+      };
+
+      orderService.createOrder(newOrder);
+
+      setTimeout(() => {
+        setIsSubmitting(false);
+        setIsAddonSuccess(false);
+        setSuccessOrder(newOrder);
+        setAttachedCustomer(null);
+        setCustomerPhoneInput('');
+        setCustomerLookupMsg(null);
+        setShowAddCustomerQuick(false);
+        onClearCart();
+      }, 400);
+    }
   };
 
   return (
@@ -262,6 +300,44 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             orderService.updateTableStatus(tableId, newStatus);
           }}
         />
+
+        {/* Banner: Bàn Đang Phục Vụ & Xem Món Đã Gọi */}
+        {activeExistingOrder && (
+          <div className="mt-2.5 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-bold text-amber-800 dark:text-amber-300">
+                <UtensilsCrossed className="w-3.5 h-3.5" />
+                <span>Bàn đang có đơn #{activeExistingOrder.id.slice(-4)}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowExistingItems(!showExistingItems)}
+                className="text-[10px] font-extrabold text-amber-700 dark:text-amber-400 hover:underline cursor-pointer"
+              >
+                {showExistingItems ? 'Thu gọn' : `Xem đã gọi (${activeExistingOrder.items.reduce((s, i) => s + i.quantity, 0)} món)`}
+              </button>
+            </div>
+
+            {showExistingItems && (
+              <div className="p-2 rounded-lg bg-white/80 dark:bg-stone-900/80 border border-stone-200 dark:border-stone-800 max-h-36 overflow-y-auto space-y-1">
+                {activeExistingOrder.items.map((it) => (
+                  <div key={it.id} className="flex justify-between text-[11px]">
+                    <span className="text-stone-700 dark:text-stone-300">
+                      <strong className="text-amber-600 dark:text-amber-400 tabular-nums">{it.quantity}x</strong> {it.menu_item_name}
+                    </span>
+                    <span className="text-stone-500 font-mono tabular-nums">
+                      {formatCurrencyVND(it.price * it.quantity)}
+                    </span>
+                  </div>
+                ))}
+                <div className="pt-1 border-t border-stone-100 dark:border-stone-800 flex justify-between font-bold text-[11px] text-stone-900 dark:text-white">
+                  <span>Tổng bill trước:</span>
+                  <span className="tabular-nums">{formatCurrencyVND(activeExistingOrder.total_amount)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Customer CRM Attachment Bar */}
@@ -658,14 +734,21 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
             <button
               onClick={handleSendOrder}
               disabled={isSubmitting || !selectedTable}
-              className={`flex-1 py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all shadow-md ${
+              className={`flex-1 py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 font-black text-sm text-white transition-all shadow-md active:scale-[0.98] ${
                 !selectedTable
                   ? 'bg-stone-400 dark:bg-stone-700 cursor-not-allowed opacity-75'
-                  : 'bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] shadow-emerald-600/20'
+                  : activeExistingOrder
+                  ? 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/25'
+                  : 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/20'
               }`}
             >
               {isSubmitting ? (
                 <span className="animate-pulse">Đang định tuyến đơn...</span>
+              ) : activeExistingOrder ? (
+                <>
+                  <Send className="w-4 h-4" />
+                  <span>GỬI BẾP (GỌI THÊM {items.reduce((s, i) => s + i.quantity, 0)} MÓN)</span>
+                </>
               ) : (
                 <>
                   <Send className="w-4 h-4" />
@@ -681,16 +764,20 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
       {successOrder && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white dark:bg-stone-900 rounded-2xl max-w-sm w-full p-6 text-center border border-emerald-500/30 shadow-2xl space-y-4">
-            <div className="w-14 h-14 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center mx-auto">
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto ${
+              isAddonSuccess ? 'bg-indigo-500/10 text-indigo-500' : 'bg-emerald-500/10 text-emerald-500'
+            }`}>
               <CheckCircle className="w-8 h-8" />
             </div>
 
             <div>
               <h3 className="text-lg font-bold text-stone-900 dark:text-white">
-                Gửi Order Thành Công!
+                {isAddonSuccess ? 'Gọi Thêm Món Thành Công!' : 'Gửi Order Thành Công!'}
               </h3>
               <p className="text-xs text-stone-500 mt-1">
-                Đơn hàng đã được định tuyến trực tiếp xuống Màn hình Bếp & Bar theo thời gian thực.
+                {isAddonSuccess
+                  ? 'Món gọi thêm đã được cộng dồn vào đơn và phát tín hiệu chuông xuống Bếp / Bar.'
+                  : 'Đơn hàng đã được định tuyến trực tiếp xuống Màn hình Bếp & Bar theo thời gian thực.'}
               </p>
             </div>
 
@@ -706,14 +793,14 @@ export const CartSidebar: React.FC<CartSidebarProps> = ({
                 </span>
               </div>
               <div className="flex justify-between font-semibold">
-                <span className="text-stone-500">Số lượng món:</span>
-                <span className="text-stone-900 dark:text-stone-200">
+                <span className="text-stone-500">Tổng số món trong đơn:</span>
+                <span className="text-stone-900 dark:text-stone-200 tabular-nums">
                   {successOrder.items.reduce((s, i) => s + i.quantity, 0)} món
                 </span>
               </div>
               <div className="flex justify-between font-bold pt-1 border-t border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white">
-                <span>Tổng tiền:</span>
-                <span className="text-amber-600 dark:text-amber-400 font-bold">
+                <span>Tổng tiền sau cộng dồn:</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold tabular-nums">
                   {formatCurrencyVND(successOrder.total_amount)}
                 </span>
               </div>

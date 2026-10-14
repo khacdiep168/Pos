@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Category, StationType } from '@/types';
-import { Search, UtensilsCrossed, Wine, Flame, Sparkles } from 'lucide-react';
+import { Search, UtensilsCrossed, Wine, Flame, Sparkles, LayoutGrid, List } from 'lucide-react';
 
 interface CategoryNavProps {
   categories: Category[];
@@ -12,6 +12,8 @@ interface CategoryNavProps {
   onSearchChange: (query: string) => void;
   selectedStation: StationType | 'all';
   onStationChange: (station: StationType | 'all') => void;
+  viewMode?: 'grid' | 'list';
+  onViewModeChange?: (mode: 'grid' | 'list') => void;
 }
 
 export const CategoryNav: React.FC<CategoryNavProps> = ({
@@ -22,6 +24,8 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
   onSearchChange,
   selectedStation,
   onStationChange,
+  viewMode = 'grid',
+  onViewModeChange,
 }) => {
   return (
     <div className="space-y-4 mb-6">
@@ -47,41 +51,74 @@ export const CategoryNav: React.FC<CategoryNavProps> = ({
           )}
         </div>
 
-        {/* Station Tabs (All, Kitchen, Bar) */}
-        <div className="inline-flex p-1 bg-stone-100 dark:bg-stone-900 rounded-xl border border-stone-200/80 dark:border-stone-800 self-start sm:self-auto">
-          <button
-            onClick={() => onStationChange('all')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              selectedStation === 'all'
-                ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-xs font-semibold'
-                : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            Tất cả
-          </button>
-          <button
-            onClick={() => onStationChange('kitchen')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              selectedStation === 'kitchen'
-                ? 'bg-orange-500 text-white shadow-xs font-semibold'
-                : 'text-stone-500 hover:text-orange-600 dark:hover:text-orange-400'
-            }`}
-          >
-            <Flame className="w-3.5 h-3.5" />
-            Bếp
-          </button>
-          <button
-            onClick={() => onStationChange('bar')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              selectedStation === 'bar'
-                ? 'bg-cyan-600 text-white shadow-xs font-semibold'
-                : 'text-stone-500 hover:text-cyan-600 dark:hover:text-cyan-400'
-            }`}
-          >
-            <Wine className="w-3.5 h-3.5" />
-            Quầy Bar
-          </button>
+        {/* Right side: Station Tabs + View Mode Toggle */}
+        <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+          {/* Station Tabs (All, Kitchen, Bar) */}
+          <div className="inline-flex p-1 bg-stone-100 dark:bg-stone-900 rounded-xl border border-stone-200/80 dark:border-stone-800">
+            <button
+              onClick={() => onStationChange('all')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedStation === 'all'
+                  ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-xs font-semibold'
+                  : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Tất cả</span>
+            </button>
+            <button
+              onClick={() => onStationChange('kitchen')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedStation === 'kitchen'
+                  ? 'bg-orange-500 text-white shadow-xs font-semibold'
+                  : 'text-stone-500 hover:text-orange-600 dark:hover:text-orange-400'
+              }`}
+            >
+              <Flame className="w-3.5 h-3.5" />
+              <span>Bếp</span>
+            </button>
+            <button
+              onClick={() => onStationChange('bar')}
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                selectedStation === 'bar'
+                  ? 'bg-cyan-600 text-white shadow-xs font-semibold'
+                  : 'text-stone-500 hover:text-cyan-600 dark:hover:text-cyan-400'
+              }`}
+            >
+              <Wine className="w-3.5 h-3.5" />
+              <span>Bar</span>
+            </button>
+          </div>
+
+          {/* View Mode Toggle: [Grid | List] */}
+          {onViewModeChange && (
+            <div className="inline-flex p-1 bg-stone-100 dark:bg-stone-900 rounded-xl border border-stone-200/80 dark:border-stone-800">
+              <button
+                type="button"
+                onClick={() => onViewModeChange('grid')}
+                className={`p-1.5 rounded-lg text-xs transition-all ${
+                  viewMode === 'grid'
+                    ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-xs'
+                    : 'text-stone-400 hover:text-stone-700 dark:hover:text-stone-200'
+                }`}
+                title="Chế độ Lưới (Grid)"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => onViewModeChange('list')}
+                className={`p-1.5 rounded-lg text-xs transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white shadow-xs'
+                    : 'text-stone-400 hover:text-stone-700 dark:hover:text-stone-200'
+                }`}
+                title="Chế độ Danh sách gọn (List)"
+              >
+                <List className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -5,9 +5,18 @@
 ---
 
 ## 1. Trạng thái hiện tại (Project Status)
-* **Trạng thái tổng thể**: **HOÀN TẤT TOÀN DIỆN PHASE 1, PHASE 1.9 & PHASE 1.10 - NATIVE MOBILE APP REDESIGN** (100% Giao diện Mobile Admin & ERP chuẩn KiotViet App: Bottom Navigation Bar 5 tabs, App Header cố định, Màn hình "Nhiều hơn" Grid App Menu, và Hệ thống Mobile Card List cho Hóa đơn, Khách hàng & Đối tác).
-* **Kết quả Build**: `next build` và `npx tsc --noEmit` biên dịch thành công 100% (Turbopack, TypeScript strict mode, 0 lỗi type/lint/prerender).
-* **Thời gian cập nhật**: 2026-10-13
+* **Trạng thái tổng thể**: **HOÀN TẤT TOÀN DIỆN PHASE 2.3 - EXPERT POS OPERATIONAL FIX & LINEAR/BENTO UI OVERHAUL**.
+* **Đơn Mang Về & Hàng Đợi (Takeaway Queue)**: Bento Grid Takeaway Queue nổi bật trên đầu màn hình Thu ngân (`CashierView.tsx`, `TableMap.tsx`), tự động đánh số thứ tự `Mang Về #01`, `#02`... Hỗ trợ tạo và thanh toán/hủy đơn mang về đa luồng độc lập với bàn ăn tại chỗ.
+* **Nút Hủy Đơn / Trả Bàn Đa Điểm Chạm**: Đặt nút màu Rose nổi bật trên cả Header & Footer của `CheckoutPanel.tsx` với modal chọn lý do thực tế (Khách đổi ý, Nhập sai bàn, Khách mang về không đợi được, Chờ lâu/hết món...), giải phóng bàn về `available` và đồng bộ tức thời với Supabase.
+* **Luồng Khách Gọi Thêm Món (Add-on Order)**: `TableSelector.tsx` phân tách 2 Tab rõ rệt: *Bàn Trống / Đặt Trước* vs *Đang Phục Vụ*. Chọn bàn đang có khách cho phép xem lịch sử món đã gọi, giỏ hàng chuyển sang CTA `"GỬI BẾP (GỌI THÊM X MÓN)"` màu Indigo, gọi `appendItemsToOrder` cộng dồn tài chính và bắn realtime tới KDS.
+* **Tối Ưu Mobile Menu & Layout**: `MenuCard.tsx` chuyển sang Compact Horizontal Card trên Mobile (< md) với thumbnail vuông `w-16 h-16` / `w-20 h-20`, badge trạm Bếp/Bar, giá tiền `tabular-nums` và nút `+` cực nhạy. Bổ sung nút chuyển đổi `[Chế độ Lưới | Danh sách gọn]` trên thanh tìm kiếm.
+* **Linear-Style Command Palette & Zero-Hamburger Bottom Nav**:
+  - `CommandPalette.tsx` kích hoạt bằng phím tắt `Ctrl + K` / `Cmd + K` hoặc nút Tìm kiếm nhanh trên Header: tìm kiếm tức thì bàn ăn, đơn mang về, phân hệ và món ăn.
+  - Zero-Hamburger, Thumb-Friendly Mobile Bottom Nav Bar (`fixed bottom-0 h-16 backdrop-blur-md`).
+  - Nâng thanh Floating Cart Bar của FOH lên `bottom-16` để không bao giờ bị đè khuất.
+  - Chuẩn hóa typography `tabular-nums` cho toàn bộ các con số giá tiền, số lượng và tổng hóa đơn.
+* **Kiểm thử & Build**: 18/18 Unit Tests PASS 100%, `next build` hoàn tất 100% (0 lỗi TypeScript / 0 cảnh báo lint).
+* **Thời gian cập nhật**: 2026-10-14
 
 ---
 

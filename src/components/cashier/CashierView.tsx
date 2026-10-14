@@ -203,7 +203,7 @@ export const CashierView: React.FC = () => {
       </header>
 
       {/* Main Layout Area: Table Map + Responsive Checkout Panel */}
-      <div className="flex-1 flex overflow-hidden p-3 md:p-4 gap-4 relative">
+      <div className="flex-1 flex overflow-hidden p-3 md:p-4 pb-20 md:pb-4 gap-4 relative">
         {/* Table Map Area (Full width on mobile, flexible on desktop) */}
         <div className="flex-1 h-full overflow-hidden">
           <TableMap

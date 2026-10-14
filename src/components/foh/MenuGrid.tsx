@@ -8,9 +8,10 @@ import { UtensilsCrossed } from 'lucide-react';
 interface MenuGridProps {
   items: MenuItem[];
   onSelectItem: (item: MenuItem) => void;
+  viewMode?: 'grid' | 'list';
 }
 
-export const MenuGrid: React.FC<MenuGridProps> = ({ items, onSelectItem }) => {
+export const MenuGrid: React.FC<MenuGridProps> = ({ items, onSelectItem, viewMode = 'grid' }) => {
   if (items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-center rounded-2xl border-2 border-dashed border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50">
@@ -27,10 +28,20 @@ export const MenuGrid: React.FC<MenuGridProps> = ({ items, onSelectItem }) => {
     );
   }
 
+  if (viewMode === 'list') {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3">
+        {items.map((item) => (
+          <MenuCard key={item.id} item={item} onSelect={onSelectItem} viewMode="list" />
+        ))}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-4">
       {items.map((item) => (
-        <MenuCard key={item.id} item={item} onSelect={onSelectItem} />
+        <MenuCard key={item.id} item={item} onSelect={onSelectItem} viewMode="grid" />
       ))}
     </div>
   );

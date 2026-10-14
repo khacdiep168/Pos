@@ -86,6 +86,7 @@ export const FOHView: React.FC = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStation, setSelectedStation] = useState<StationType | 'all'>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Modal State
   const [activeItemForModal, setActiveItemForModal] = useState<MenuItem | null>(null);
@@ -276,8 +277,8 @@ export const FOHView: React.FC = () => {
           </div>
         </header>
 
-        {/* Scrollable Menu Content (Extra bottom padding on mobile for Fixed Bottom Bar) */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-28 md:pb-6">
+        {/* Scrollable Menu Content (Extra bottom padding on mobile for Floating Cart Bar & Fixed Bottom Nav) */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-44 md:pb-6">
           <CategoryNav
             categories={categories}
             selectedCategoryId={selectedCategoryId}
@@ -286,13 +287,15 @@ export const FOHView: React.FC = () => {
             onSearchChange={setSearchQuery}
             selectedStation={selectedStation}
             onStationChange={setSelectedStation}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
           />
 
-          <MenuGrid items={filteredItems} onSelectItem={handleSelectItem} />
+          <MenuGrid items={filteredItems} onSelectItem={handleSelectItem} viewMode={viewMode} />
         </div>
 
-        {/* Mobile Fixed Bottom Bar (KiotViet Inspiration) */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-t border-stone-200 dark:border-stone-800 p-2.5 sm:p-3 shadow-2xl">
+        {/* Mobile Fixed Floating Cart Bar: elevated to bottom-16 above the Thumb-Friendly Bottom Nav */}
+        <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200/80 dark:border-slate-800 p-2.5 sm:p-3 shadow-2xl">
           <div className="flex items-center justify-between gap-3 max-w-lg mx-auto">
             {/* Left side: Cart Info & Total */}
             <div
@@ -302,7 +305,7 @@ export const FOHView: React.FC = () => {
               <div className="relative w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow-md shadow-amber-500/30 shrink-0">
                 <ShoppingBag className="w-5 h-5" />
                 {totalCartCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-4.5 px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-stone-900 shadow-2xs">
+                  <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-4.5 px-1 rounded-full bg-rose-600 text-white text-[10px] font-black flex items-center justify-center border-2 border-white dark:border-stone-900 shadow-2xs tabular-nums">
                     {totalCartCount}
                   </span>
                 )}
@@ -310,12 +313,12 @@ export const FOHView: React.FC = () => {
               <div className="min-w-0">
                 <div className="text-[11px] text-stone-500 dark:text-stone-400 font-medium truncate">
                   {totalCartCount > 0 ? (
-                    <span>{totalCartCount} món • Bàn {selectedTable?.table_number || '?'}</span>
+                    <span><strong className="tabular-nums">{totalCartCount}</strong> món • Bàn {selectedTable?.table_number || '?'}</span>
                   ) : (
                     <span>Giỏ hàng đang trống</span>
                   )}
                 </div>
-                <div className="text-sm font-black text-stone-900 dark:text-white truncate">
+                <div className="text-sm font-black text-stone-900 dark:text-white truncate tabular-nums">
                   {formatCurrencyVND(totalCartPrice)}
                 </div>
               </div>

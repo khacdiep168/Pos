@@ -169,7 +169,7 @@ export const KDSKanbanBoard: React.FC<KDSKanbanBoardProps> = ({
       </div>
 
       {/* Mobile Single Column Ticket View (md:hidden) */}
-      <div className="md:hidden flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
+      <div className="md:hidden flex-1 overflow-y-auto p-3 pb-24 space-y-3 min-h-0">
         {mobileStatus === 'pending' && (
           pendingTickets.length === 0 ? (
             <div className="h-64 flex flex-col items-center justify-center p-6 text-center text-stone-600 bg-stone-900/40 rounded-2xl border border-stone-800">

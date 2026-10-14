@@ -364,7 +364,16 @@ class OrderService {
     if (reason) {
       order.notes = [order.notes, `[Lý do hủy: ${reason}]`].filter(Boolean).join(' - ');
     }
-    order.updated_at = new Date().toISOString();
+    const now = new Date().toISOString();
+    order.updated_at = now;
+
+    // Set all items inside to cancelled
+    if (Array.isArray(order.items)) {
+      order.items.forEach((item) => {
+        item.item_status = 'cancelled';
+        item.updated_at = now;
+      });
+    }
     
     // Free table if this was the current order
     const table = this.tables.find((t) => t.id === order.table_id);
@@ -382,6 +391,82 @@ class OrderService {
     return order;
   }
 
+  public getTakeawayOrders(): Order[] {
+    return this.orders.filter(
+      (o) =>
+        (o.table_id === 'takeaway' || o.table_id?.startsWith('takeaway')) &&
+        o.payment_status === 'unpaid' &&
+        o.order_status !== 'cancelled'
+    );
+  }
+
+  public generateNextTakeawayLabel(): { tableId: string; tableNumber: string } {
+    const today = new Date().toISOString().split('T')[0];
+    const todayTakeaways = this.orders.filter(
+      (o) =>
+        (o.table_id === 'takeaway' || o.table_id?.startsWith('takeaway')) &&
+        o.created_at?.startsWith(today)
+    );
+    const count = todayTakeaways.length + 1;
+    const formattedNum = count.toString().padStart(2, '0');
+    const tableId = `takeaway-${Date.now().toString().slice(-4)}-${count}`;
+    const tableNumber = `Mang Về #${formattedNum}`;
+    return { tableId, tableNumber };
+  }
+
+  public appendItemsToOrder(orderId: string, newItems: OrderItem[]): Order | null {
+    const order = this.orders.find((o) => o.id === orderId);
+    if (!order) return null;
+
+    if (!Array.isArray(order.items)) {
+      order.items = [];
+    }
+
+    const now = new Date().toISOString();
+    const formattedNewItems: OrderItem[] = newItems.map((item, index) => ({
+      ...item,
+      id: item.id || `item-addon-${Date.now()}-${index + 1}`,
+      order_id: order.id,
+      item_status: item.item_status || 'pending',
+      created_at: item.created_at || now,
+    }));
+
+    order.items = [...order.items, ...formattedNewItems];
+
+    // Recalculate financial totals
+    const subtotal = order.items.reduce((sum, item) => {
+      if (item.item_status === 'cancelled') return sum;
+      return sum + item.price * item.quantity;
+    }, 0);
+
+    const discountAmount = Math.min(order.discount_amount || 0, subtotal);
+    const taxAmount = Math.round(Math.max(0, subtotal - discountAmount) * 0.08);
+    const totalAmount = Math.max(0, subtotal - discountAmount + taxAmount);
+
+    order.subtotal = subtotal;
+    order.discount_amount = discountAmount;
+    order.tax_amount = taxAmount;
+    order.total_amount = totalAmount;
+
+    // Reset status to cooking if it was ready/completed
+    if (order.order_status === 'completed' || order.order_status === 'ready') {
+      order.order_status = 'cooking';
+    }
+
+    order.updated_at = now;
+
+    this.save();
+    this.persistOrderToCloud(order);
+
+    // Emit events for realtime KDS and UI
+    realtimeEngine.emit('ORDER_UPDATED', order);
+    formattedNewItems.forEach((item) => {
+      realtimeEngine.emit('ITEM_STATUS_CHANGED', { orderId: order.id, item });
+    });
+
+    return order;
+  }
+
   public getOrderByTableId(tableId: string): Order | null {
     return (
       this.orders.find(
@@ -394,7 +479,8 @@ class OrderService {
     this.orders.unshift(newOrder);
 
     // Update physical table status to occupied (ignore takeaway)
-    if (newOrder.table_id && newOrder.table_id !== 'takeaway') {
+    const isTakeaway = newOrder.table_id === 'takeaway' || newOrder.table_id?.startsWith('takeaway');
+    if (newOrder.table_id && !isTakeaway) {
       const tableIndex = this.tables.findIndex((t) => t.id === newOrder.table_id);
       if (tableIndex !== -1) {
         this.tables[tableIndex].status = 'occupied';

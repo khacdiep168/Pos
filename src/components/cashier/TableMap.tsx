@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { RestaurantTable, TableStatus, Order, Zone } from '@/types';
 import { formatCurrencyVND } from '@/lib/utils';
+import { orderService } from '@/services/orderService';
 import { MoveMergeTableModal } from './MoveMergeTableModal';
 import {
   Users,
@@ -122,7 +123,7 @@ export const TableMap: React.FC<TableMapProps> = ({
 
       {/* Zone Navigation Tabs */}
       {zones.length > 0 && (
-        <div className="px-4 py-2 border-b border-stone-200 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-900/40 flex items-center gap-2 overflow-x-auto text-xs">
+        <div className="px-4 py-2 border-b border-stone-200 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-900/40 flex items-center gap-2 overflow-x-auto text-xs shrink-0">
           <span className="text-[11px] font-bold text-stone-400 shrink-0 flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5 text-amber-500" />
             <span>Khu vực:</span>
@@ -153,7 +154,7 @@ export const TableMap: React.FC<TableMapProps> = ({
                 }`}
               >
                 <span>{z.name}</span>
-                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono tabular-nums ${
                   hasOccupied
                     ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
                     : 'bg-stone-200 dark:bg-stone-700 text-stone-500'
@@ -165,6 +166,129 @@ export const TableMap: React.FC<TableMapProps> = ({
           })}
         </div>
       )}
+
+      {/* Bento Section: 🛍️ Đơn Mang Về Đang Chờ (Takeaway Queue) */}
+      <div className="p-4 border-b border-stone-200/80 dark:border-stone-800 bg-gradient-to-r from-orange-500/5 via-amber-500/5 to-transparent shrink-0">
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🛍️</span>
+            <div>
+              <h3 className="text-xs font-black uppercase tracking-wider text-stone-900 dark:text-white flex items-center gap-2">
+                <span>Đơn Mang Về Đang Chờ (Takeaway Queue)</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-400 font-mono tabular-nums">
+                  {orders.filter(
+                    (o) =>
+                      (o.table_id === 'takeaway' || o.table_id?.startsWith('takeaway')) &&
+                      o.payment_status === 'unpaid' &&
+                      o.order_status !== 'cancelled'
+                  ).length}{' '}
+                  đơn
+                </span>
+              </h3>
+              <p className="text-[10px] text-stone-400">
+                Click vào thẻ để mở cổng thanh toán hoặc hủy đơn ngay lập tức
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              // Tạo nhanh một đơn mang về trống và mở checkout
+              const { tableId, tableNumber } = orderService.generateNextTakeawayLabel();
+              const takeawayTable: RestaurantTable = {
+                id: tableId,
+                table_number: tableNumber,
+                capacity: 1,
+                status: 'occupied',
+              };
+              onSelectTable(takeawayTable);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
+          >
+            <span>+</span>
+            <span className="hidden sm:inline">Tạo Đơn Mang Về</span>
+            <span className="sm:hidden">Mang về</span>
+          </button>
+        </div>
+
+        {/* Horizontal scrollable takeaway cards queue */}
+        {(() => {
+          const takeawayList = orders.filter(
+            (o) =>
+              (o.table_id === 'takeaway' || o.table_id?.startsWith('takeaway')) &&
+              o.payment_status === 'unpaid' &&
+              o.order_status !== 'cancelled'
+          );
+
+          if (takeawayList.length === 0) {
+            return (
+              <div className="p-3 rounded-xl border border-dashed border-stone-200 dark:border-stone-800 bg-white/60 dark:bg-stone-900/60 text-center text-xs text-stone-400">
+                Chưa có đơn mang về nào đang chờ thanh toán
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex items-center gap-2.5 overflow-x-auto pb-1 no-scrollbar">
+              {takeawayList.map((tkOrder) => {
+                const isSelected = selectedTableId === tkOrder.table_id;
+                const itemCount = tkOrder.items.reduce((s, i) => s + i.quantity, 0);
+
+                return (
+                  <div
+                    key={tkOrder.id}
+                    onClick={() => {
+                      onSelectTable({
+                        id: tkOrder.table_id,
+                        table_number: tkOrder.table_number || 'Mang Về',
+                        capacity: 1,
+                        status: 'occupied',
+                      });
+                    }}
+                    className={`shrink-0 w-52 sm:w-56 p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between shadow-xs hover:shadow-md ${
+                      isSelected
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-950/40 ring-2 ring-orange-500/30'
+                        : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-orange-400'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <div>
+                        <div className="text-xs font-black text-stone-900 dark:text-white flex items-center gap-1.5">
+                          <span>🛍️ {tkOrder.table_number}</span>
+                          <span className="text-[10px] font-mono text-stone-400">
+                            #{tkOrder.id.slice(-4)}
+                          </span>
+                        </div>
+                        {tkOrder.customer_name && (
+                          <p className="text-[10px] text-purple-600 dark:text-purple-400 font-bold truncate max-w-[130px] mt-0.5">
+                            👤 {tkOrder.customer_name}
+                          </p>
+                        )}
+                      </div>
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">
+                        {tkOrder.order_status === 'ready'
+                          ? 'Sẵn sàng'
+                          : tkOrder.order_status === 'cooking'
+                          ? 'Đang làm'
+                          : 'Đang chờ'}
+                      </span>
+                    </div>
+
+                    <div className="mt-2 pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between">
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 tabular-nums">
+                        {itemCount} món
+                      </span>
+                      <span className="text-xs font-black text-orange-600 dark:text-orange-400 tabular-nums">
+                        {formatCurrencyVND(tkOrder.total_amount)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
 
       {/* Grid of Tables */}
       <div className="flex-1 p-5 overflow-y-auto">

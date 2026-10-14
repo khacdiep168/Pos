@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { RestaurantTable, Zone, TableStatus } from '@/types';
+import { RestaurantTable, Zone, TableStatus, Order } from '@/types';
 import { orderService } from '@/services/orderService';
 import { realtimeEngine } from '@/services/realtimeEngine';
+import { formatCurrencyVND } from '@/lib/utils';
 import {
   Users,
   CheckCircle2,
@@ -13,6 +14,10 @@ import {
   RotateCcw,
   ChevronDown,
   ChevronUp,
+  Receipt,
+  UtensilsCrossed,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 
 interface TableSelectorProps {
@@ -33,16 +38,36 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
   onAfterSelect,
 }) => {
   const [zones, setZones] = useState<Zone[]>(() => orderService.getZones());
+  const [orders, setOrders] = useState<Order[]>(() => orderService.getOrders());
 
-  // Listen to zone/table updates
+  // Dual Tabs: Mở Đơn Mới vs Đang Phục Vụ
+  const [activeTab, setActiveTab] = useState<'new_order' | 'serving'>('new_order');
+
+  // Listen to zone/table/order updates
   useEffect(() => {
-    const unsub = realtimeEngine.subscribe('TABLE_STATUS_CHANGED', () => {
+    const unsubTable = realtimeEngine.subscribe('TABLE_STATUS_CHANGED', () => {
       setZones(orderService.getZones());
+      setOrders(orderService.getOrders());
     });
-    return () => unsub();
+    const unsubOrder = realtimeEngine.subscribe('ORDER_UPDATED', () => {
+      setOrders(orderService.getOrders());
+    });
+    return () => {
+      unsubTable();
+      unsubOrder();
+    };
   }, []);
 
-  const selectedTable = tables.find((t) => t.id === selectedTableId);
+  const selectedTable = tables.find((t) => t.id === selectedTableId) || (
+    selectedTableId?.startsWith('takeaway')
+      ? {
+          id: selectedTableId,
+          table_number: orders.find((o) => o.table_id === selectedTableId)?.table_number || 'Mang Về',
+          capacity: 1,
+          status: 'occupied' as TableStatus,
+        }
+      : null
+  );
 
   // Initialize selected zone with the selected table's zone, or first available zone
   const [selectedZoneId, setSelectedZoneId] = useState<string>(() => {
@@ -82,28 +107,35 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
     onAfterSelect?.();
   };
 
-  // Filter tables: Step 1 must match selectedZoneId,
-  // Step 2: ONLY show tables that are 'available' or 'reserved' (hide occupied and billing completely)
+  // Tab 1: Available & Reserved tables in zone
   const eligibleTablesInZone = useMemo(() => {
     return tables.filter((t) => {
-      // Must match selected zone
       if (selectedZoneId && t.zone_id !== selectedZoneId) return false;
-      // Must only be available or reserved (hide occupied & billing)
       return t.status === 'available' || t.status === 'reserved';
+    });
+  }, [tables, selectedZoneId]);
+
+  // Tab 2: Occupied & Billing tables (Serving) across all zones or selected zone
+  const occupiedTables = useMemo(() => {
+    return tables.filter((t) => {
+      if (t.status !== 'occupied' && t.status !== 'billing') return false;
+      if (selectedZoneId && t.zone_id !== selectedZoneId) return false;
+      return true;
     });
   }, [tables, selectedZoneId]);
 
   // Calculate available/reserved count per zone for badges
   const zoneStats = useMemo(() => {
-    const stats: Record<string, { available: number; reserved: number; totalEligible: number }> = {};
+    const stats: Record<string, { available: number; reserved: number; occupied: number }> = {};
     zones.forEach((z) => {
       const zTables = tables.filter((t) => t.zone_id === z.id);
       const avail = zTables.filter((t) => t.status === 'available').length;
       const res = zTables.filter((t) => t.status === 'reserved').length;
+      const occ = zTables.filter((t) => t.status === 'occupied' || t.status === 'billing').length;
       stats[z.id] = {
         available: avail,
         reserved: res,
-        totalEligible: avail + res,
+        occupied: occ,
       };
     });
     return stats;
@@ -111,33 +143,64 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
 
   const activeZone = zones.find((z) => z.id === selectedZoneId);
 
+  // Overall counts for tabs
+  const totalAvailableCount = tables.filter((t) => t.status === 'available' || t.status === 'reserved').length;
+  const totalOccupiedCount = tables.filter((t) => t.status === 'occupied' || t.status === 'billing').length;
+
+  // Active order for selected table (if occupied)
+  const activeExistingOrder = selectedTable
+    ? orders.find(
+        (o) =>
+          o.table_id === selectedTable.id &&
+          o.payment_status === 'unpaid' &&
+          o.order_status !== 'cancelled'
+      ) || null
+    : null;
+
   // If collapsible and not expanded, render compact view
   if (collapsible && !isExpanded && selectedTable) {
-    const isTakeaway = selectedTable.id === 'takeaway';
+    const isTakeaway = selectedTable.id === 'takeaway' || selectedTable.id.startsWith('takeaway');
     const tableZone = zones.find((z) => z.id === selectedTable.zone_id);
+
     return (
-      <div className="p-3 bg-amber-50/90 dark:bg-amber-950/40 border border-amber-500/30 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+      <div className={`p-3 rounded-2xl border transition-all flex items-center justify-between gap-2 shadow-xs ${
+        activeExistingOrder
+          ? 'bg-rose-50/80 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800'
+          : 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-500/30'
+      }`}>
         <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center font-bold text-xs shrink-0">
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 ${
+            activeExistingOrder ? 'bg-rose-600 text-white' : 'bg-amber-500 text-white'
+          }`}>
             {isTakeaway ? <span>🛍️</span> : <CheckCircle2 className="w-4 h-4" />}
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-bold text-stone-900 dark:text-white truncate flex items-center gap-1.5">
-              <span>{isTakeaway ? 'Khách Mang Về (Takeaway)' : `${tableZone ? `${tableZone.name} - ` : ''}Bàn ${selectedTable.table_number}`}</span>
+            <div className="text-xs font-black text-stone-900 dark:text-white truncate flex items-center gap-1.5">
+              <span>
+                {isTakeaway
+                  ? selectedTable.table_number || 'Khách Mang Về'
+                  : `${tableZone ? `${tableZone.name} - ` : ''}Bàn ${selectedTable.table_number}`}
+              </span>
               <span
                 className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
-                  isTakeaway
+                  activeExistingOrder
+                    ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/60 dark:text-rose-300'
+                    : isTakeaway
                     ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/60 dark:text-orange-300'
                     : selectedTable.status === 'reserved'
                     ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'
                     : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
                 }`}
               >
-                {isTakeaway ? 'Mang về' : selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
+                {activeExistingOrder ? 'Đang phục vụ' : isTakeaway ? 'Mang về' : selectedTable.status === 'reserved' ? 'Đã đặt' : 'Trống'}
               </span>
             </div>
-            <p className="text-[10px] text-stone-500 dark:text-stone-400">
-              {isTakeaway ? 'Đơn bán nhanh mang đi • Bấm để đổi sang bàn' : `${selectedTable.capacity} chỗ ngồi • Bấm để đổi bàn`}
+            <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
+              {activeExistingOrder
+                ? `Đang có đơn #${activeExistingOrder.id.slice(-4)} (${activeExistingOrder.items.reduce((s, i) => s + i.quantity, 0)} món) • Gọi thêm món`
+                : isTakeaway
+                ? 'Đơn mang về • Bấm để đổi sang bàn'
+                : `${selectedTable.capacity} chỗ ngồi • Bấm để đổi bàn`}
             </p>
           </div>
         </div>
@@ -145,7 +208,7 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
         <button
           type="button"
           onClick={() => setIsExpanded(true)}
-          className="px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-amber-500/40 rounded-lg text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors shrink-0 flex items-center gap-1"
+          className="px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-700 dark:text-stone-300 hover:border-amber-500 transition-colors shrink-0 flex items-center gap-1 shadow-2xs"
         >
           <span>Đổi bàn</span>
           <ChevronDown className="w-3.5 h-3.5" />
@@ -156,81 +219,88 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
 
   return (
     <div className="space-y-3">
-      {/* QUICK OPTION: KHÁCH MANG VỀ (TAKEAWAY) */}
-      <button
-        type="button"
-        onClick={() => {
-          const takeawayTable: RestaurantTable = {
-            id: 'takeaway',
-            table_number: 'Mang Về (Takeaway)',
-            capacity: 1,
-            status: 'available',
-          };
-          handleSelect(takeawayTable);
-        }}
-        className={`w-full p-2.5 rounded-2xl border-2 transition-all flex items-center justify-between shadow-xs ${
-          selectedTableId === 'takeaway'
-            ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-500 ring-2 ring-orange-400/40 font-bold'
-            : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40'
-        }`}
-      >
-        <div className="flex items-center gap-2.5">
-          <span className="text-xl">🛍️</span>
-          <div className="text-left">
-            <div className="text-xs font-black leading-tight flex items-center gap-1.5">
-              <span>🛍️ Khách Mang Về (Takeaway)</span>
-              <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/20 dark:bg-stone-800 font-extrabold uppercase tracking-wider">
-                Bán Nhanh
-              </span>
-            </div>
-            <p className="text-[10px] opacity-80 mt-0.5">
-              Không làm bận bàn vật lý, lên đơn và thu tiền nhanh
-            </p>
-          </div>
-        </div>
-        <div className="text-xs font-extrabold px-3 py-1 rounded-xl bg-white dark:bg-stone-800 text-amber-700 dark:text-amber-300 shadow-2xs shrink-0">
-          {selectedTableId === 'takeaway' ? '✓ Đang chọn' : 'Chọn nhanh'}
-        </div>
-      </button>
+      {/* 2 Tabs: [Bàn Trống / Đặt Trước] vs [Đang Phục Vụ (Gọi thêm)] */}
+      <div className="grid grid-cols-2 p-1 bg-stone-100 dark:bg-stone-800 rounded-xl gap-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('new_order')}
+          className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            activeTab === 'new_order'
+              ? 'bg-white dark:bg-stone-900 text-emerald-700 dark:text-emerald-400 shadow-xs'
+              : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          <span>Bàn Trống ({totalAvailableCount})</span>
+        </button>
 
-      {/* Header Info */}
-      <div className="flex items-center justify-between text-xs font-semibold text-stone-600 dark:text-stone-400">
-        <span className="flex items-center gap-1.5 font-bold text-stone-800 dark:text-stone-200">
-          <MapPin className="w-3.5 h-3.5 text-amber-500" />
-          <span>Hoặc chọn bàn ngồi tại quán</span>
-        </span>
-        <div className="flex items-center gap-1.5">
-          {selectedTable && (
-            <span className="text-amber-600 dark:text-amber-400 font-bold flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-500/20 text-[11px]">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-              {selectedTable.id === 'takeaway' ? 'Đơn Mang Về' : `Bàn: ${selectedTable.table_number}`}
-            </span>
-          )}
-          {collapsible && selectedTable && (
-            <button
-              type="button"
-              onClick={() => setIsExpanded(false)}
-              className="p-1 rounded text-stone-400 hover:text-stone-600 dark:hover:text-stone-200"
-              title="Thu gọn"
-            >
-              <ChevronUp className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('serving')}
+          className={`py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+            activeTab === 'serving'
+              ? 'bg-white dark:bg-stone-900 text-rose-700 dark:text-rose-400 shadow-xs'
+              : 'text-stone-500 hover:text-stone-800 dark:hover:text-stone-200'
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+          <span>Đang Phục Vụ ({totalOccupiedCount})</span>
+        </button>
       </div>
 
-      {/* BƯỚC 1: Chọn Khu Vực (Zone) Trước */}
+      {/* QUICK OPTION: KHÁCH MANG VỀ (TAKEAWAY) - Chỉ hiện khi ở Tab Bàn Trống */}
+      {activeTab === 'new_order' && (
+        <button
+          type="button"
+          onClick={() => {
+            const { tableId, tableNumber } = orderService.generateNextTakeawayLabel();
+            const takeawayTable: RestaurantTable = {
+              id: tableId,
+              table_number: tableNumber,
+              capacity: 1,
+              status: 'available',
+            };
+            handleSelect(takeawayTable);
+          }}
+          className={`w-full p-2.5 rounded-2xl border-2 transition-all flex items-center justify-between shadow-xs ${
+            selectedTableId?.startsWith('takeaway')
+              ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white border-orange-500 ring-2 ring-orange-400/40 font-bold'
+              : 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-900/40'
+          }`}
+        >
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🛍️</span>
+            <div className="text-left">
+              <div className="text-xs font-black leading-tight flex items-center gap-1.5">
+                <span>🛍️ Khách Mang Về (Tạo Đơn Mới)</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] bg-white/20 dark:bg-stone-800 font-extrabold uppercase tracking-wider">
+                  Bán Nhanh
+                </span>
+              </div>
+              <p className="text-[10px] opacity-80 mt-0.5">
+                Tự động đánh số thứ tự: Mang Về #01, #02...
+              </p>
+            </div>
+          </div>
+          <div className="text-xs font-extrabold px-3 py-1 rounded-xl bg-white dark:bg-stone-800 text-amber-700 dark:text-amber-300 shadow-2xs shrink-0">
+            {selectedTableId?.startsWith('takeaway') ? '✓ Đang chọn' : '+ Chọn nhanh'}
+          </div>
+        </button>
+      )}
+
+      {/* Chọn Khu Vực (Zone) */}
       <div className="space-y-1">
         <div className="flex items-center justify-between text-[11px] font-bold text-stone-500">
-          <span>Bước 1: Chọn Khu Vực (Zone) *</span>
+          <span>Khu Vực (Zone):</span>
           <span className="text-stone-400 font-normal">
-            {activeZone ? activeZone.name : 'Chưa chọn'}
+            {activeZone ? activeZone.name : 'Tất cả'}
           </span>
         </div>
         <div className="grid grid-cols-2 xs:grid-cols-4 gap-1.5">
           {zones.map((zone) => {
             const isSelected = zone.id === selectedZoneId;
-            const stats = zoneStats[zone.id] || { available: 0, reserved: 0, totalEligible: 0 };
+            const stats = zoneStats[zone.id] || { available: 0, reserved: 0, occupied: 0 };
+            const count = activeTab === 'new_order' ? stats.available + stats.reserved : stats.occupied;
 
             return (
               <button
@@ -239,21 +309,19 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
                 onClick={() => setSelectedZoneId(zone.id)}
                 className={`px-2 py-1.5 rounded-xl text-left border transition-all flex flex-col justify-between ${
                   isSelected
-                    ? 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-500/20 font-bold'
+                    ? activeTab === 'new_order'
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-500/20 font-bold'
+                      : 'bg-rose-600 text-white border-rose-600 shadow-xs ring-2 ring-rose-600/20 font-bold'
                     : 'bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:border-amber-400'
                 }`}
               >
                 <div className="truncate text-xs leading-tight">{zone.name}</div>
                 <div
-                  className={`text-[10px] mt-0.5 ${
-                    isSelected ? 'text-amber-100 font-medium' : 'text-stone-400 dark:text-stone-500'
+                  className={`text-[10px] mt-0.5 tabular-nums ${
+                    isSelected ? 'text-white/80 font-medium' : 'text-stone-400 dark:text-stone-500'
                   }`}
                 >
-                  {stats.totalEligible > 0 ? (
-                    <span>{stats.totalEligible} bàn nhận</span>
-                  ) : (
-                    <span className="text-rose-500 dark:text-rose-400 font-medium">Hết bàn</span>
-                  )}
+                  {count} bàn
                 </div>
               </button>
             );
@@ -261,95 +329,158 @@ export const TableSelector: React.FC<TableSelectorProps> = ({
         </div>
       </div>
 
-      {/* BƯỚC 2: Chọn Bàn Khả Dụng (Trống hoặc Đã Đặt) */}
-      <div className="space-y-1.5 pt-1 border-t border-stone-200/60 dark:border-stone-800">
-        <div className="flex items-center justify-between text-[11px] font-bold text-stone-500">
-          <span>Bước 2: Chọn Bàn Khả Dụng ({eligibleTablesInZone.length} bàn) *</span>
-          <span className="text-[10px] text-stone-400 italic">Ẩn bàn đang dùng & chờ tính</span>
-        </div>
+      {/* DANH SÁCH BÀN TƯƠNG ỨNG THEO TAB */}
+      <div>
+        {activeTab === 'new_order' ? (
+          // TAB 1: BÀN TRỐNG / ĐẶT TRƯỚC
+          eligibleTablesInZone.length === 0 ? (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1">
+              <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                Khu vực này hiện không còn bàn trống!
+              </p>
+              <p className="text-[11px] text-stone-500 dark:text-stone-400">
+                Tất cả các bàn tại {activeZone?.name || 'khu vực này'} đang có khách. Chọn tab "Đang Phục Vụ" để gọi thêm món hoặc chọn khu vực khác.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-52 overflow-y-auto p-0.5">
+              {eligibleTablesInZone.map((table) => {
+                const isSelected = table.id === selectedTableId;
+                const isReserved = table.status === 'reserved';
 
-        {eligibleTablesInZone.length === 0 ? (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-center space-y-1">
-            <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
-              Khu vực này hiện không còn bàn trống!
-            </p>
-            <p className="text-[11px] text-stone-500 dark:text-stone-400">
-              Tất cả các bàn tại {activeZone?.name || 'khu vực này'} đang có khách hoặc đang thanh toán. Vui lòng chọn khu vực khác.
-            </p>
-          </div>
+                return (
+                  <div
+                    key={table.id}
+                    onClick={() => handleSelect(table)}
+                    className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between text-left relative group ${
+                      isSelected
+                        ? 'border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 ring-2 ring-amber-500/20 shadow-xs'
+                        : isReserved
+                        ? 'border-purple-200 dark:border-purple-800/80 bg-purple-50/50 dark:bg-purple-950/20 hover:border-purple-400'
+                        : 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 hover:border-emerald-400'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="font-extrabold text-xs text-stone-900 dark:text-white leading-tight">
+                        {table.table_number}
+                      </span>
+                      <span
+                        className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
+                          isReserved
+                            ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'
+                            : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
+                        }`}
+                      >
+                        {isReserved ? 'Đã đặt' : 'Trống'}
+                      </span>
+                    </div>
+
+                    <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-1 flex items-center gap-1 font-medium tabular-nums">
+                      <Users className="w-2.5 h-2.5" />
+                      <span>{table.capacity} chỗ ngồi</span>
+                    </div>
+
+                    <div className="mt-2 pt-1.5 border-t border-stone-200/50 dark:border-stone-800 flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-stone-400 group-hover:text-amber-600 transition-colors">
+                        {isSelected ? '✓ Đang chọn' : 'Bấm chọn'}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleReservation(e, table)}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5 transition-all active:scale-95 ${
+                          isReserved
+                            ? 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-stone-300'
+                            : 'bg-purple-600 text-white hover:bg-purple-500 shadow-2xs'
+                        }`}
+                        title={isReserved ? 'Hủy trạng thái đặt chỗ' : 'Chuyển sang trạng thái Đặt trước (Reserved)'}
+                      >
+                        {isReserved ? (
+                          <>
+                            <RotateCcw className="w-2.5 h-2.5" />
+                            <span>Hủy đặt</span>
+                          </>
+                        ) : (
+                          <>
+                            <CalendarCheck className="w-2.5 h-2.5" />
+                            <span>Đặt bàn</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-0.5">
-            {eligibleTablesInZone.map((table) => {
-              const isSelected = table.id === selectedTableId;
-              const isReserved = table.status === 'reserved';
+          // TAB 2: ĐANG PHỤC VỤ (GỌI THÊM / XEM ĐƠN)
+          occupiedTables.length === 0 ? (
+            <div className="p-4 rounded-xl bg-stone-50 dark:bg-stone-800/60 border border-dashed border-stone-200 dark:border-stone-700 text-center space-y-1">
+              <p className="text-xs font-bold text-stone-700 dark:text-stone-300">
+                Không có bàn nào đang phục vụ tại khu vực này
+              </p>
+              <p className="text-[11px] text-stone-400">
+                Chọn tab "Bàn Trống" để mở order bàn mới cho khách.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto p-0.5">
+              {occupiedTables.map((table) => {
+                const isSelected = table.id === selectedTableId;
+                const order = orders.find(
+                  (o) =>
+                    o.table_id === table.id &&
+                    o.payment_status === 'unpaid' &&
+                    o.order_status !== 'cancelled'
+                );
+                const itemCount = order ? order.items.reduce((s, i) => s + i.quantity, 0) : 0;
 
-              return (
-                <div
-                  key={table.id}
-                  onClick={() => handleSelect(table)}
-                  className={`p-2.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between text-left relative group ${
-                    isSelected
-                      ? 'border-amber-500 bg-amber-50/80 dark:bg-amber-950/40 ring-2 ring-amber-500/20 shadow-xs'
-                      : isReserved
-                      ? 'border-purple-200 dark:border-purple-800/80 bg-purple-50/50 dark:bg-purple-950/20 hover:border-purple-400'
-                      : 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/40 dark:bg-emerald-950/20 hover:border-emerald-400'
-                  }`}
-                >
-                  {/* Top: Table Number & Status Indicator */}
-                  <div className="flex items-center justify-between gap-1">
-                    <span className="font-extrabold text-xs text-stone-900 dark:text-white leading-tight">
-                      {table.table_number}
-                    </span>
-                    <span
-                      className={`text-[9px] px-1.5 py-0.2 rounded font-bold uppercase ${
-                        isReserved
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/60 dark:text-purple-300'
-                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-300'
-                      }`}
-                    >
-                      {isReserved ? 'Đã đặt' : 'Trống'}
-                    </span>
+                return (
+                  <div
+                    key={table.id}
+                    onClick={() => handleSelect(table)}
+                    className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between text-left shadow-xs hover:shadow-md ${
+                      isSelected
+                        ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 ring-2 ring-rose-500/20'
+                        : 'border-rose-200 dark:border-rose-800/70 bg-white dark:bg-stone-900 hover:border-rose-400'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="font-extrabold text-xs text-stone-900 dark:text-white flex items-center gap-1.5">
+                          <span>Bàn {table.table_number}</span>
+                          {order && (
+                            <span className="text-[10px] font-mono font-semibold px-1 py-0.2 rounded bg-stone-100 dark:bg-stone-800 text-amber-600 dark:text-amber-400">
+                              #{order.id.slice(-4)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[10px] text-stone-400 mt-0.5 tabular-nums">
+                          {table.capacity} chỗ ngồi • {order ? `${itemCount} món` : 'Đang bận'}
+                        </div>
+                      </div>
+
+                      <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-300">
+                        {table.status === 'billing' ? 'Chờ thanh toán' : 'Đang dùng'}
+                      </span>
+                    </div>
+
+                    {order && (
+                      <div className="mt-2 pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-xs">
+                        <span className="font-black text-rose-600 dark:text-rose-400 tabular-nums">
+                          {formatCurrencyVND(order.total_amount)}
+                        </span>
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                          <span>+ Gọi thêm món</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Middle: Capacity */}
-                  <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-1 flex items-center gap-1 font-medium">
-                    <Users className="w-2.5 h-2.5" />
-                    <span>{table.capacity} chỗ ngồi</span>
-                  </div>
-
-                  {/* Bottom: Fast Action Button (Đặt bàn / Hủy đặt) */}
-                  <div className="mt-2 pt-1.5 border-t border-stone-200/50 dark:border-stone-800 flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-stone-400 group-hover:text-amber-600 transition-colors">
-                      {isSelected ? '✓ Đang chọn' : 'Bấm chọn'}
-                    </span>
-
-                    <button
-                      type="button"
-                      onClick={(e) => handleToggleReservation(e, table)}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex items-center gap-0.5 transition-all active:scale-95 ${
-                        isReserved
-                          ? 'bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 hover:bg-stone-300'
-                          : 'bg-purple-600 text-white hover:bg-purple-500 shadow-2xs'
-                      }`}
-                      title={isReserved ? 'Hủy trạng thái đặt chỗ' : 'Chuyển sang trạng thái Đặt trước (Reserved)'}
-                    >
-                      {isReserved ? (
-                        <>
-                          <RotateCcw className="w-2.5 h-2.5" />
-                          <span>Hủy đặt</span>
-                        </>
-                      ) : (
-                        <>
-                          <CalendarCheck className="w-2.5 h-2.5" />
-                          <span>Đặt bàn</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )
         )}
       </div>
 

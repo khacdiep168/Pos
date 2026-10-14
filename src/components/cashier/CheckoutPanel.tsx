@@ -274,15 +274,36 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
             </div>
           </div>
 
-          {/* Prominent Mobile Close (X) Button */}
-          <button
-            onClick={onClose}
-            className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white flex items-center justify-center active:scale-95 transition-all shrink-0 shadow-xs"
-            aria-label="Đóng ngăn kéo thanh toán"
-            title="Đóng (Quay lại sơ đồ bàn)"
-          >
-            <X className="w-5 h-5 text-stone-200" />
-          </button>
+          {/* Header Action Buttons: Cancel Order & Close */}
+          <div className="flex items-center gap-2 shrink-0">
+            {canCancel && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCancelReason('Khách đổi ý không dùng');
+                  setCustomReason('');
+                  setCancelError('');
+                  setIsCancelModalOpen(true);
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-600 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-xs"
+                title="Hủy đơn hàng / Giải phóng bàn"
+              >
+                <span>🗑️</span>
+                <span className="hidden sm:inline">Hủy Đơn / Trả Bàn</span>
+                <span className="sm:hidden">Hủy đơn</span>
+              </button>
+            )}
+
+            {/* Prominent Mobile Close (X) Button */}
+            <button
+              onClick={onClose}
+              className="w-9 h-9 sm:w-8 sm:h-8 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white flex items-center justify-center active:scale-95 transition-all shrink-0 shadow-xs"
+              aria-label="Đóng ngăn kéo thanh toán"
+              title="Đóng (Quay lại sơ đồ bàn)"
+            >
+              <X className="w-5 h-5 text-stone-200" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -581,13 +602,13 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
         <div className="bg-stone-50 dark:bg-stone-800/60 p-3.5 rounded-xl border border-stone-200 dark:border-stone-700 space-y-1.5 text-xs">
           <div className="flex justify-between text-stone-500 dark:text-stone-400">
             <span>Tạm tính</span>
-            <span className="font-semibold text-stone-800 dark:text-stone-200">
+            <span className="font-semibold text-stone-800 dark:text-stone-200 tabular-nums">
               {formatCurrencyVND(subtotal)}
             </span>
           </div>
 
           {discountAmount > 0 && (
-            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+            <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">
               <span>
                 Giảm giá {selectedPromo ? `(${selectedPromo.promo_code})` : discountPercent > 0 ? `(${discountPercent}%)` : ''}
               </span>
@@ -597,14 +618,14 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
 
           <div className="flex justify-between text-stone-500 dark:text-stone-400">
             <span>Thuế VAT (8%)</span>
-            <span className="font-semibold text-stone-800 dark:text-stone-200">
+            <span className="font-semibold text-stone-800 dark:text-stone-200 tabular-nums">
               {formatCurrencyVND(taxAmount)}
             </span>
           </div>
 
           <div className="flex justify-between text-base font-extrabold pt-2 border-t border-stone-200 dark:border-stone-700 text-stone-900 dark:text-white">
             <span>Tổng thanh toán:</span>
-            <span className="text-lg text-amber-600 dark:text-amber-400 font-black">
+            <span className="text-lg text-amber-600 dark:text-amber-400 font-black tabular-nums">
               {formatCurrencyVND(finalTotal)}
             </span>
           </div>
@@ -743,11 +764,12 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
               setCancelError('');
               setIsCancelModalOpen(true);
             }}
-            className="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-rose-200 dark:border-rose-800 shrink-0"
+            className="px-3 py-3.5 rounded-xl bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-1.5 transition-colors border border-rose-200 dark:border-rose-800 shrink-0 shadow-2xs active:scale-95"
             title="Hủy đơn hàng có lý do và giải phóng bàn"
           >
-            <Ban className="w-4 h-4" />
-            <span className="hidden sm:inline">Hủy Đơn</span>
+            <span className="text-sm">🗑️</span>
+            <span className="hidden sm:inline">Hủy Đơn / Trả Bàn</span>
+            <span className="sm:hidden">Hủy đơn</span>
           </button>
         )}
 
@@ -812,8 +834,9 @@ export const CheckoutPanel: React.FC<CheckoutPanelProps> = ({
               {[
                 'Khách đổi ý không dùng',
                 'Gọi nhầm món / Nhập sai bàn',
+                'Khách mang về không đợi được',
+                'Chờ quá lâu / Bếp báo hết món',
                 'Khách có việc gấp về sớm',
-                'Món hết / Thời gian chờ quá lâu',
                 'Lý do khác',
               ].map((reason) => (
                 <label

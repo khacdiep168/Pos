@@ -319,7 +319,7 @@ export const ERPView: React.FC = () => {
         </header>
 
         {/* Tab View Body */}
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 pb-24 md:pb-6">
           {activeTab === 'inventory' && (
             <InventoryTab
               materials={materials}

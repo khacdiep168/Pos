@@ -7,6 +7,7 @@ import { CashierView } from '@/components/cashier/CashierView';
 import { ERPView } from '@/components/erp/ERPView';
 import { AdminView } from '@/components/admin/AdminView';
 import { E2ESimulationModal } from '@/components/ui/E2ESimulationModal';
+import { CommandPalette } from '@/components/ui/CommandPalette';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,6 +18,7 @@ import {
   Shield,
   LogOut,
   User,
+  Search,
 } from 'lucide-react';
 import { adminService } from '@/services/adminService';
 import { realtimeEngine } from '@/services/realtimeEngine';
@@ -28,7 +30,20 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'foh' | 'kds' | 'cashier' | 'erp' | 'admin'>('foh');
   const [isE2EModalOpen, setIsE2EModalOpen] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isDemoMode, setIsDemoMode] = useState<boolean>(() => adminService.getSettings().is_demo_mode !== false);
+
+  // Global Keyboard Shortcut: Ctrl + K or Cmd + K for Linear Command Palette
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     const unsub = realtimeEngine.subscribe('ORDER_UPDATED', () => {
@@ -200,6 +215,19 @@ export default function Home() {
 
         {/* Right Top Actions */}
         <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+          {/* Quick Command Palette Button (Ctrl + K) */}
+          <button
+            onClick={() => setIsCommandPaletteOpen(true)}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-300 hover:text-white border border-stone-700/60 text-xs transition-all active:scale-95 cursor-pointer"
+            title="Mở bảng lệnh nhanh (Ctrl + K)"
+          >
+            <Search className="w-3.5 h-3.5 text-stone-400" />
+            <span className="hidden sm:inline text-stone-300">Tìm kiếm</span>
+            <kbd className="hidden sm:inline-block px-1 py-0.2 text-[9px] font-mono text-stone-400 bg-stone-900 border border-stone-700 rounded shadow-2xs">
+              Ctrl+K
+            </kbd>
+          </button>
+
           {isDemoMode && (
             <button
               onClick={() => setIsE2EModalOpen(true)}
@@ -422,6 +450,47 @@ export default function Home() {
 
         {activeTab === 'admin' && <AdminView />}
       </div>
+
+      {/* Zero-Hamburger, Thumb-Friendly Mobile Bottom Navigation Bar (Fixed bottom-0 inset-x-0 z-40 h-16) */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 h-16 backdrop-blur-md bg-white/95 dark:bg-slate-900/95 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-around px-1 shadow-xl select-none">
+        {visibleModules.map((m) => {
+          const Icon = m.icon;
+          const isActive = activeTab === m.id;
+
+          return (
+            <button
+              key={m.id}
+              onClick={() => setActiveTab(m.id)}
+              className={`flex flex-col items-center justify-center flex-1 py-1 px-0.5 rounded-xl transition-all ${
+                isActive
+                  ? 'text-indigo-600 dark:text-indigo-400 font-black'
+                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium'
+              }`}
+            >
+              <div
+                className={`p-1.5 rounded-xl transition-transform ${
+                  isActive
+                    ? 'scale-110 bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400'
+                    : ''
+                }`}
+              >
+                <Icon className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] tracking-tight mt-0.5 truncate max-w-[64px] font-bold">
+                {m.shortName}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Linear-Style Command Palette (Ctrl + K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onNavigateTab={setActiveTab}
+        allowedModules={allowedModules}
+      />
 
       {/* End-to-End Simulation Modal */}
       <E2ESimulationModal
