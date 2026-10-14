@@ -165,18 +165,19 @@ export const FOHView: React.FC = () => {
     const cartItemId = `${item.id}_${modifierIds}_${notes.trim()}`;
 
     // Dynamic price based on serving channel (Dine-in / Takeaway / Delivery App)
-    let basePrice = item.price;
+    const defaultPrice = typeof item.price === 'number' ? item.price : 0;
+    let basePrice = defaultPrice;
     if (currentChannel === 'takeaway') {
       basePrice = item.takeaway_price && item.takeaway_price > 0
         ? item.takeaway_price
-        : item.price + (item.packaging_cost ?? 2000);
+        : defaultPrice + (item.packaging_cost ?? 2000);
     } else if (currentChannel === 'delivery') {
       if (item.delivery_price && item.delivery_price > 0) {
         basePrice = item.delivery_price;
       } else {
         const pkg = item.packaging_cost ?? 2000;
         const commission = item.app_commission_rate ?? 25;
-        const grossUp = (item.price + pkg) / (1 - commission / 100);
+        const grossUp = (defaultPrice + pkg) / (1 - commission / 100);
         basePrice = Math.round(grossUp / 1000) * 1000;
       }
     }
@@ -480,13 +481,15 @@ export const FOHView: React.FC = () => {
       )}
 
       {/* Modifier Customizer Modal */}
-      <ModifierModal
-        item={activeItemForModal}
-        isOpen={isModifierModalOpen}
-        onClose={() => setIsModifierModalOpen(false)}
-        orderChannel={currentChannel}
-        onAddToCart={handleAddToCart}
-      />
+      {isModifierModalOpen && activeItemForModal && (
+        <ModifierModal
+          item={activeItemForModal}
+          isOpen={isModifierModalOpen}
+          onClose={() => setIsModifierModalOpen(false)}
+          orderChannel={currentChannel}
+          onAddToCart={handleAddToCart}
+        />
+      )}
     </div>
   );
 };

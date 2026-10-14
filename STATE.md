@@ -779,6 +779,17 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
+## 19.1 Hotfix - Sửa Lỗi Crash Client Khi Order Món (React Error #310)
+- **Hiện tượng**: Khi nhân viên phục vụ / thu ngân bấm chọn món bất kỳ trên màn hình FOH (Gọi Món), giao diện bị crash toàn bộ và hiển thị màn hình lỗi Next.js: *"This page couldn't load. Reload to try again, or go back."*
+- **Nguyên nhân cốt lõi**: Trong [ModifierModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/ModifierModal.tsx), hook `useMemo` tính toán `channelBasePrice` bị đặt bên dưới câu lệnh điều kiện thoát sớm `if (!isOpen || !item) return null;`. Khi modal chưa mở (`isOpen = false`), React chỉ chạy 5 hook; khi người dùng bấm chọn món (`isOpen = true`), modal render tiếp hook thứ 6 (`useMemo`). Điều này vi phạm nghiêm trọng **React Rules of Hooks** và làm ném ra ngoại lệ `Minified React error #310: Rendered more hooks than during the previous render`.
+- **Giải pháp xử lý**:
+  1. Đưa toàn bộ các React Hooks (`useMemo`, `useState`, `useEffect`) lên đầu component [ModifierModal.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/ModifierModal.tsx), tuyệt đối trước bất kỳ lệnh `return null` nào.
+  2. Thêm điều kiện render an toàn ở [FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx): Chỉ render `<ModifierModal />` khi `isModifierModalOpen && activeItemForModal`.
+  3. Bổ sung giá trị dự phòng `(item.price || 0)` trong [MenuCard.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/MenuCard.tsx) và [FOHView.tsx](file:///e:/Vibe%20Coding/POS/src/components/foh/FOHView.tsx) để tránh lỗi số học nếu dữ liệu giá món ăn bị null/undefined.
+- **Kiểm chứng**: 34/34 tests pass, `npm run build` thành công 11/11 routes.
+
+---
+
 ## 20. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
