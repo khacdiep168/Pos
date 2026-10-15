@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { UserAccount, UserRole } from '@/types';
-import { authService, AppModule, ROLE_LABELS } from '@/services/authService';
+import { authService, AppModule, ROLE_LABELS, setAuthCookie, clearAuthCookie } from '@/services/authService';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -27,6 +27,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const current = authService.getCurrentUser();
       setUser(current);
+      if (current) {
+        setAuthCookie(current);
+      }
     } catch (e) {
       console.error('Error loading current user:', e);
     } finally {

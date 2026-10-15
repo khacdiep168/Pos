@@ -1,7 +1,19 @@
-import { describe, it, expect } from 'vitest';
-import { authService, ROLE_PERMISSIONS } from '../authService';
+import { describe, it, expect, beforeEach } from 'vitest';
+import {
+  authService,
+  ROLE_PERMISSIONS,
+  validateRouteAccess,
+  AUTH_COOKIE_NAME,
+  getAuthCookie,
+  clearAuthCookie,
+} from '../authService';
 
 describe('AuthService - Đăng Nhập & Phân Quyền (RBAC)', () => {
+  beforeEach(() => {
+    authService.logout();
+    clearAuthCookie();
+  });
+
   it('đăng nhập thành công với tài khoản Admin hợp lệ', () => {
     const res = authService.login('admin', 'password123');
     expect(res.success).toBe(true);
@@ -77,6 +89,86 @@ describe('AuthService - Đăng Nhập & Phân Quyền (RBAC)', () => {
       expect(authService.getDefaultModuleForRole('bar')).toBe('kds');
       expect(authService.getDefaultModuleForRole('cashier')).toBe('foh');
       expect(authService.getDefaultModuleForRole('admin')).toBe('foh');
+    });
+  });
+
+  describe('Kiểm thử Bảo Vệ Tuyến Đường URL (Route Protection & Penetration Testing)', () => {
+    it('chặn hoàn toàn truy cập URL bảo vệ khi chưa xác thực (unauthenticated)', () => {
+      const checkAdmin = validateRouteAccess(undefined, '/admin');
+      expect(checkAdmin.allowed).toBe(false);
+      expect(checkAdmin.reason).toContain('Chưa xác thực');
+
+      const checkCashier = validateRouteAccess(undefined, '/cashier');
+      expect(checkCashier.allowed).toBe(false);
+
+      const checkERP = validateRouteAccess(undefined, '/erp');
+      expect(checkERP.allowed).toBe(false);
+
+      const checkKDS = validateRouteAccess(undefined, '/kds');
+      expect(checkKDS.allowed).toBe(false);
+    });
+
+    it('chặn nhân viên phục vụ (waiter) cố tình truy cập trái phép URL /admin, /cashier, /erp, /kds', () => {
+      const checkAdmin = validateRouteAccess('waiter', '/admin');
+      expect(checkAdmin.allowed).toBe(false);
+      expect(checkAdmin.requiredModule).toBe('admin');
+      expect(checkAdmin.reason).toContain('không có quyền truy cập');
+
+      const checkCashier = validateRouteAccess('waiter', '/cashier');
+      expect(checkCashier.allowed).toBe(false);
+
+      const checkERP = validateRouteAccess('waiter', '/erp');
+      expect(checkERP.allowed).toBe(false);
+
+      const checkKDS = validateRouteAccess('waiter', '/kds');
+      expect(checkKDS.allowed).toBe(false);
+
+      // Nhưng cho phép vào trang chính / (FOH)
+      const checkHome = validateRouteAccess('waiter', '/');
+      expect(checkHome.allowed).toBe(true);
+    });
+
+    it('cho phép bếp/bar vào /kds nhưng chặn truy cập /admin và /cashier', () => {
+      expect(validateRouteAccess('kitchen', '/kds').allowed).toBe(true);
+      expect(validateRouteAccess('kitchen', '/admin').allowed).toBe(false);
+      expect(validateRouteAccess('kitchen', '/cashier').allowed).toBe(false);
+
+      expect(validateRouteAccess('bar', '/kds').allowed).toBe(true);
+      expect(validateRouteAccess('bar', '/admin').allowed).toBe(false);
+    });
+
+    it('cho phép thu ngân vào /cashier nhưng chặn truy cập /admin và /erp', () => {
+      expect(validateRouteAccess('cashier', '/cashier').allowed).toBe(true);
+      expect(validateRouteAccess('cashier', '/admin').allowed).toBe(false);
+      expect(validateRouteAccess('cashier', '/erp').allowed).toBe(false);
+    });
+
+    it('cho phép Admin và Quản lý truy cập tất cả các URL chức năng', () => {
+      const protectedRoutes = ['/', '/admin', '/admin/settings', '/cashier', '/erp', '/kds'];
+      protectedRoutes.forEach((route) => {
+        expect(validateRouteAccess('admin', route).allowed).toBe(true);
+        expect(validateRouteAccess('manager', route).allowed).toBe(true);
+      });
+    });
+  });
+
+  describe('Quản lý Cookie Xác Thực & Session (vibe_pos_auth)', () => {
+    it('tự động tạo cookie vibe_pos_auth khi đăng nhập thành công', () => {
+      const res = authService.login('admin', '123456');
+      expect(res.success).toBe(true);
+
+      const cookieData = getAuthCookie();
+      expect(cookieData).toBeDefined();
+      expect(cookieData?.username).toBe('admin');
+      expect(cookieData?.role).toBe('admin');
+    });
+
+    it('tự động xóa sạch cookie vibe_pos_auth khi đăng xuất (logout)', () => {
+      authService.login('cashier', '123456');
+      expect(getAuthCookie()).toBeDefined();
+
+      authService.logout();
+      expect(getAuthCookie()).toBeNull();
     });
   });
 });

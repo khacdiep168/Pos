@@ -25,6 +25,102 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   waiter: 'Nhân Viên Phục Vụ',
 };
 
+export const AUTH_COOKIE_NAME = 'vibe_pos_auth';
+
+export const MODULE_LABELS: Record<AppModule, { name: string; description: string }> = {
+  foh: { name: 'Phục Vụ & Gọi Món (FOH)', description: 'Sơ đồ bàn, gọi món và chuyển đơn xuống bếp' },
+  kds: { name: 'Màn Hình Bếp & Bar (KDS)', description: 'Điều phối và chế biến món ăn/thức uống theo thời gian thực' },
+  cashier: { name: 'Thu Ngân & Thanh Toán (Cashier)', description: 'Thanh toán hóa đơn, in phiếu K80 và xuất VietQR động' },
+  erp: { name: 'Kế Toán & Sổ Quỹ Thu Chi (ERP)', description: 'Sổ quỹ, báo cáo thuế NĐ 254/TT 91 và quản lý giá vốn kho' },
+  admin: { name: 'Quản Trị Hệ Thống (Admin)', description: 'Cấu hình quán, tài khoản nhân viên và bảng giá kênh bán' },
+};
+
+let memoryCookieStore = '';
+
+export function setAuthCookie(user: UserAccount): void {
+  const payload = encodeURIComponent(
+    JSON.stringify({
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      role: user.role,
+    })
+  );
+
+  if (typeof document !== 'undefined') {
+    try {
+      document.cookie = `${AUTH_COOKIE_NAME}=${payload}; path=/; max-age=86400; SameSite=Lax`;
+    } catch (err) {
+      console.error('Failed to set auth cookie:', err);
+    }
+  } else {
+    memoryCookieStore = `${AUTH_COOKIE_NAME}=${payload}`;
+  }
+}
+
+export function clearAuthCookie(): void {
+  if (typeof document !== 'undefined') {
+    document.cookie = `${AUTH_COOKIE_NAME}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`;
+  }
+  memoryCookieStore = '';
+}
+
+export function getAuthCookie(): { id: string; username: string; role: UserRole; full_name: string } | null {
+  const cookieString = typeof document !== 'undefined' ? document.cookie : memoryCookieStore;
+  if (!cookieString) return null;
+  try {
+    const match = cookieString
+      .split(';')
+      .map((c) => c.trim())
+      .find((c) => c.startsWith(`${AUTH_COOKIE_NAME}=`));
+    if (!match) return null;
+    const raw = decodeURIComponent(match.substring(AUTH_COOKIE_NAME.length + 1));
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+export function hasAuthCookie(): boolean {
+  const cookieString = typeof document !== 'undefined' ? document.cookie : memoryCookieStore;
+  if (!cookieString) return false;
+  return cookieString.split(';').some((item) => item.trim().startsWith(`${AUTH_COOKIE_NAME}=`));
+}
+
+export function validateRouteAccess(
+  role: UserRole | undefined,
+  pathname: string
+): { allowed: boolean; requiredModule?: AppModule; reason?: string } {
+  if (!role) {
+    return { allowed: false, reason: 'Chưa xác thực danh tính người dùng' };
+  }
+
+  const cleanPath = pathname.toLowerCase();
+
+  let requiredModule: AppModule = 'foh';
+  if (cleanPath.startsWith('/admin')) {
+    requiredModule = 'admin';
+  } else if (cleanPath.startsWith('/cashier')) {
+    requiredModule = 'cashier';
+  } else if (cleanPath.startsWith('/erp')) {
+    requiredModule = 'erp';
+  } else if (cleanPath.startsWith('/kds')) {
+    requiredModule = 'kds';
+  } else {
+    // POS Hub root
+    return { allowed: true };
+  }
+
+  const allowed = (ROLE_PERMISSIONS[role] || []).includes(requiredModule);
+  return {
+    allowed,
+    requiredModule,
+    reason: allowed
+      ? undefined
+      : `Vai trò [${ROLE_LABELS[role] || role}] không có quyền truy cập phân hệ [${MODULE_LABELS[requiredModule]?.name || requiredModule}]`,
+  };
+}
+
 class AuthService {
   private users: UserAccount[] = [];
 
@@ -106,6 +202,7 @@ class AuthService {
         console.error('Failed to save current user:', err);
       }
     }
+    setAuthCookie(updatedUser);
 
     return { success: true, user: updatedUser };
   }
@@ -118,6 +215,7 @@ class AuthService {
         console.error('Failed to remove current user:', err);
       }
     }
+    clearAuthCookie();
   }
 
   public canAccessModule(role: UserRole | undefined, module: AppModule): boolean {

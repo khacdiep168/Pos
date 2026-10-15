@@ -847,7 +847,37 @@ Hoàn thành đóng gói toàn diện phiên bản bàn giao khách hàng (Clien
 
 ---
 
-## 22. Luật vận hành (Agent Working Rules)
+## 22. Phase 2.9: Enterprise-Grade Security & Route Protection (Khóa Chặt Lỗ Hổng Truy Cập URL Trái Phép) - HOÀN TẤT
+Đã hoàn tất xây dựng và triển khai toàn diện giải pháp bảo mật 2 lớp chuẩn Enterprise (Edge Middleware Protection + Client-Side Role Guard & Access Denied):
+
+1. **Next.js Edge Middleware Bảo Vệ Tuyến Đường ([src/middleware.ts](file:///e:/Vibe%20Coding/POS/src/middleware.ts))**:
+   - **Matcher bao phủ các URL bảo mật**: `['/', '/admin/:path*', '/cashier/:path*', '/erp/:path*', '/kds/:path*', '/login']`.
+   - **Xác thực Cookie `vibe_pos_auth`**: Đọc và giải mã cookie xác thực session người dùng ở tầng Edge/Server trước khi trang HTML được render.
+   - **Tự động chuyển hướng không gây gián đoạn**:
+     - Chưa đăng nhập truy cập route nội bộ $\rightarrow$ Chuyển hướng tức thì về `/login?returnUrl=...`.
+     - Đã đăng nhập truy cập lại `/login` $\rightarrow$ Chuyển hướng tự động vào POS Hub `/`.
+   - **Bảo toàn công khai tuyệt đối**: Ngoại trừ `/_next`, `/api`, `/favicon.ico` và đặc biệt là phân hệ thực khách quét mã QR xem thực đơn `/menu/:path*`.
+
+2. **Nâng Cấp Route Guard & Màn Hình Cảnh Báo Bảo Mật ([src/components/auth/RouteGuard.tsx](file:///e:/Vibe%20Coding/POS/src/components/auth/RouteGuard.tsx))**:
+   - Tích hợp sâu với `AuthContext` và ma trận quyền hạn vai trò `ROLE_PERMISSIONS`.
+   - **Giao diện Access Denied (403 Forbidden) chuẩn Enterprise**: Khi người dùng đã đăng nhập nhưng cố ý truy cập URL vượt quá quyền hạn (ví dụ Phục vụ `waiter` vào `/admin`, Bếp `kitchen` vào `/cashier`), hệ thống hiển thị màn hình từ chối trực quan:
+     - Biểu tượng `ShieldAlert` và viền Aura màu đỏ hồng hiện đại.
+     - Thẻ thông tin tài khoản: Họ tên, Username, Vai trò hiện tại, Phân hệ đang bị khóa và danh sách các phân hệ hợp lệ.
+     - Cảnh báo nhật ký bảo mật: `"Hành động truy cập URL trái phép này đã được ghi nhận vào nhật ký bảo mật của hệ thống POS Enterprise."`
+     - Nút bấm `"Quay Lại Trang Chính POS"` và `"Đăng Xuất"` tiện dụng, xóa bỏ hoàn toàn hiện tượng màn hình trắng hoặc crash ứng dụng.
+
+3. **Đồng Bộ Cookie Đa Nền Tảng ([src/services/authService.ts](file:///e:/Vibe%20Coding/POS/src/services/authService.ts) & [src/context/AuthContext.tsx](file:///e:/Vibe%20Coding/POS/src/context/AuthContext.tsx))**:
+   - `setAuthCookie()` & `clearAuthCookie()`: Tự động ghi/xóa cookie `vibe_pos_auth` khi đăng nhập hoặc đăng xuất, có cơ chế `memoryCookieStore` dự phòng khi chạy trong môi trường Node.js/Vitest.
+   - Hàm tiện ích `validateRouteAccess(role, pathname)`: Cung cấp API kiểm tra quyền truy cập đường dẫn nhất quán dùng chung cho cả backend, frontend và unit test.
+
+4. **Kiểm Thử & Đóng Gói Deployment**:
+   - **Unit Tests**: Mở rộng [src/services/__tests__/authService.test.ts](file:///e:/Vibe%20Coding/POS/src/services/__tests__/authService.test.ts) lên 17 test cases bao quát mọi kịch bản tấn công URL giả lập, kiểm thử ma trận phân quyền RBAC và quản lý vòng đời cookie. Toàn bộ **48/48 tests PASS 100%**.
+   - **Production Build (`npm run build`)**: 12/12 routes và `ƒ Proxy (Middleware)` biên dịch thành công với 0 lỗi TypeScript.
+   - Sẵn sàng đồng bộ production trên Vercel: [https://pos-kd.vercel.app/](https://pos-kd.vercel.app/).
+
+---
+
+## 23. Luật vận hành (Agent Working Rules)
 - **Trước mỗi câu lệnh mới**: Luôn đọc `STATE.md` để nắm bắt ngay hiện trạng và quyết định kỹ thuật, không đọc lại toàn bộ code để tiết kiệm token.
 - **Sau mỗi tính năng/task**: Tự động cập nhật `STATE.md`.
 - **Kỷ luật chất lượng**: Tuân thủ TDD, modular components, phong cách giao diện hiện đại và an toàn dữ liệu.
